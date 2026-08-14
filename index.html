@@ -228,7 +228,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 <span class="text-[9px] leading-tight text-center">Save</span>
             </button>
-            <button onclick="document.getElementById('file-upload').click()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Load Topology">
+            <button onclick="loadTopology()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Load Topology">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 <span class="text-[9px] leading-tight text-center">Load</span>
             </button>
@@ -5800,7 +5800,7 @@
 
         // --- Save / Load Topology ---
 
-        window.saveTopology = () => {
+        function buildTopologyData() {
             // Deep-clone and strip volatile runtime state so files stay lean and fresh on load
             const cleanDevices = JSON.parse(JSON.stringify(devices));
             for (const id in cleanDevices) {
@@ -5809,43 +5809,83 @@
                 if (d.arpCache) d.arpCache = {};
                 if (d.cli && Array.isArray(d.cli.history)) d.cli.history = [];
             }
-            const data = { devices: cleanDevices, links, labels, deviceCounter, stpEnabled };
-            const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+            return { devices: cleanDevices, links, labels, deviceCounter, stpEnabled };
+        }
+
+        function applyLoadedTopology(data, sourceName) {
+            pushUndo();
+            hydrateState(data);          // re-instantiate classes so methods are restored
+            flushMacTables();
+            renderNodes();
+            if (stpEnabled) calculateSTP(); else renderLinks();
+            updatePropertiesPanel();
+            log(`Topology${sourceName ? ' "' + sourceName + '"' : ''} loaded successfully.`, 'success');
+        }
+
+        window.saveTopology = async () => {
+            const json = JSON.stringify(buildTopologyData(), null, 2);
+            const suggestedName = 'network_topology.json';
+            // Preferred: a real Save As dialog (choose folder + filename) via the File System Access API
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName,
+                        types: [{ description: 'Network topology', accept: { 'application/json': ['.json'] } }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(json);
+                    await writable.close();
+                    log(`Topology saved to ${handle.name}.`, 'success');
+                    return;
+                } catch (err) {
+                    if (err && err.name === 'AbortError') { log('Save cancelled.', 'info'); return; } // user closed the dialog
+                    // otherwise (unsupported context / no user gesture) fall through to the download fallback
+                }
+            }
+            // Fallback (Firefox/Safari): ask for a filename, then download
+            let name = window.prompt('Save topology as:', suggestedName);
+            if (name === null) { log('Save cancelled.', 'info'); return; }
+            name = name.trim() || suggestedName;
+            if (!/\.json$/i.test(name)) name += '.json';
+            const blob = new Blob([json], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = 'network_topology.json';
-            a.click();
+            a.href = url; a.download = name; a.click();
             URL.revokeObjectURL(url);
-            log("Topology saved to file.", "success");
+            log(`Topology saved as ${name}.`, 'success');
         };
 
-        window.loadTopology = (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
+        window.loadTopology = async (event) => {
+            // Called either from the Load button (no event -> open a picker) or from the
+            // hidden <input type="file"> change event (fallback path).
+            let file = null;
+            if (event && event.target && event.target.files) {
+                file = event.target.files[0];
+                event.target.value = ''; // allow re-loading the same file later
+            } else if (window.showOpenFilePicker) {
                 try {
-                    const data = JSON.parse(e.target.result);
-                    
-                    pushUndo();
-                    // Re-instantiate classes to maintain methods; unknown device types are skipped safely
-                    hydrateState(data);
-                    
-                    flushMacTables();
-                    renderNodes();
-                    if (stpEnabled) calculateSTP();
-                    else renderLinks();
-                    updatePropertiesPanel();
-                    
-                    log("Topology loaded successfully.", "success");
+                    const [handle] = await window.showOpenFilePicker({
+                        types: [{ description: 'Network topology', accept: { 'application/json': ['.json'] } }],
+                        multiple: false
+                    });
+                    file = await handle.getFile();
                 } catch (err) {
-                    log("Failed to load topology. Invalid file.", "error");
-                    console.error(err);
+                    if (err && err.name === 'AbortError') return; // user closed the dialog
+                    document.getElementById('file-upload').click(); // fall back to the input picker
+                    return;
                 }
-            };
-            reader.readAsText(file);
-            event.target.value = ''; // reset input
+            } else {
+                document.getElementById('file-upload').click();
+                return;
+            }
+            if (!file) return;
+            try {
+                const data = JSON.parse(await file.text());
+                applyLoadedTopology(data, file.name);
+            } catch (err) {
+                log('Failed to load topology. Invalid file.', 'error');
+                console.error(err);
+            }
         };
 
         // --- Rendering ---
