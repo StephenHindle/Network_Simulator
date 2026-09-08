@@ -12,36 +12,6 @@
         .pal-cat.pal-open > .pal-flyout { display: flex !important; }
         @keyframes pbPulse { 0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 0 10px 3px rgba(59,130,246,0.7); } 50% { box-shadow: 0 0 0 3px rgba(255,255,255,1), 0 0 16px 6px rgba(59,130,246,0.95); } }
         .pb-clickable > div:first-child { animation: pbPulse 1.1s ease-in-out infinite; border-radius: 9999px; }
-        /* On tablet-width screens the bottom-centre Playback bar would sit on top of the
-           bottom-left toolbar and cover Load/Undo/Redo/Snap/Legend. Lift it clear of them. */
-        @media (max-width: 1250px) {
-            /* Drop Playback just below the top HUD band (console + always-on Ping tool),
-               staying centred and clear of the bottom toolbar/minimap row. */
-            #playback-bar { top: 9rem !important; bottom: auto !important; }
-            #playback-bar #pb-status { min-width: 0 !important; max-width: 30vw !important; }
-            /* The 780px packet sniffer overruns the right edge even on a full iPad in landscape */
-            #floating-sniffer { left: 0.75rem !important; right: 0.75rem !important; width: auto !important; max-width: none !important; }
-        }
-        /* Small tablets / phone-landscape (<=1024px): the fixed-width tool windows would run
-           off the right edge, so make the wide ones fill the visible canvas and cap tall ones,
-           and keep the right-docked panels on-screen. Each panel already scrolls internally. */
-        @media (max-width: 1024px) {
-            #floating-cli, #floating-browser, #floating-sniffer {
-                left: 0.75rem !important; right: 0.75rem !important; width: auto !important; max-width: none !important;
-            }
-            #floating-cli     { top: 0.75rem !important; height: min(400px, calc(100vh - 1.5rem)) !important; }
-            #floating-browser { top: 0.75rem !important; height: min(450px, calc(100vh - 1.5rem)) !important; }
-            #floating-sniffer { top: 0.75rem !important; max-height: calc(100vh - 1.5rem) !important; }
-            #floating-properties, #floating-ping {
-                right: 0.5rem !important; max-width: calc(100vw - 1rem) !important; max-height: calc(100vh - 5rem) !important;
-            }
-            /* Keep the bottom toolbar clear of the minimap: wrap extra buttons onto a row above
-               rather than letting the right-hand buttons hide under the minimap. */
-            #bottom-toolbar { flex-wrap: wrap; max-width: calc(100vw - 320px); }
-            /* Drop the Playback status caption on the narrowest screens so the transport
-               controls stay compact and clear of the Ping tool. */
-            #playback-bar #pb-status { display: none !important; }
-        }
         /* Custom scrollbar for a cleaner look */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -213,8 +183,6 @@
 
     <!-- Main Workspace -->
     <div class="flex-1 relative" id="workspace" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
-        <!-- Build marker so you can confirm the running version at a glance -->
-        <div id="build-tag" class="absolute bottom-1 left-2 z-30 text-[10px] font-mono text-slate-400/70 dark:text-slate-500/70 pointer-events-none select-none">build v7</div>
         <div id="viewport" class="pointer-events-none">
             <svg id="cables" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
             <div id="nodes" class="absolute inset-0 w-full h-full pointer-events-none"></div>
@@ -1137,7 +1105,7 @@
                 tbody.innerHTML = Object.entries(sw.macTable).map(([key, data]) => {
                     const age = Math.floor((Date.now() - data.time) / 1000);
                     const macStr = data.mac ? data.mac : key;
-                    return `<tr><td class="px-2 py-1 border-t text-slate-500 dark:text-slate-400">${data.vlan || 1}</td><td class="px-2 py-1 border-t font-bold">${macStr}</td><td class="px-2 py-1 border-t">Fa0/${data.portId}</td><td class="px-2 py-1 border-t">${age}s</td></tr>`;
+                    return `<tr><td class="px-2 py-1 border-t text-slate-500 dark:text-slate-400">${data.vlan || 1}</td><td class="px-2 py-1 border-t font-bold">${macStr}</td><td class="px-2 py-1 border-t">${swPortNameById(sw, data.portId)}</td><td class="px-2 py-1 border-t">${age}s</td></tr>`;
                 }).join('');
             }, 250);
         }
@@ -1242,9 +1210,10 @@
             const a = portState(devA, link.sourcePort);
             const b = portState(devB, link.targetPort);
             const isSwitchToSwitch = devA && devB && devA.type === 'Switch' && devB.type === 'Switch';
+            const isFiber = link.media === 'fiber';
 
-            let stroke = isSwitchToSwitch ? '#64748b' : '#94a3b8';
-            let width = isSwitchToSwitch ? 4 : 3;
+            let stroke = isFiber ? '#fb923c' : (isSwitchToSwitch ? '#64748b' : '#94a3b8');
+            let width = isFiber ? 4 : (isSwitchToSwitch ? 4 : 3);
             let dash = null;
 
             if (a.admin === 'down' || b.admin === 'down') {
@@ -1257,7 +1226,7 @@
             if (selectedLinkId === link.id) {
                 stroke = '#3b82f6'; width += 1;
             }
-            return { stroke, width, dash };
+            return { stroke, width, dash, fiber: isFiber };
         }
 
         // Update selection highlight in place, without rebuilding the node tree.
@@ -1533,7 +1502,7 @@
                     else if (prev2 === 'vlan' && prev3 !== undefined && prevArgs.length === 4 && prevArgs[3] === 'root') options = ['primary', 'secondary'];
                 }
                 else if ((prev1 === 'interface' || prev1 === 'int') && prevArgs.length === 1) {
-                    if (dev.type === 'Switch') options = dev.ports.map(p => `fa0/${p.id}`).concat(['vlan']);
+                    if (dev.type === 'Switch') options = dev.ports.map(p => swPortName(p).toLowerCase()).concat(['vlan']);
                     else if (dev.type === 'Router') options = Object.keys(dev.interfaces).map(i => i.toLowerCase());
                 }
                 else if ((prev1 === 'cdp' || prev1 === 'lldp') && prevArgs.length === 1) options = ['run'];
@@ -2336,7 +2305,7 @@
                             print('----    -----------        ----              -----');
                             secured.forEach(p => (p.psSecureMacs || []).forEach(m => {
                                 const type = (p.psStatic && p.psStatic.includes(m)) ? 'SecureConfigured' : (p.psSticky ? 'SecureSticky' : 'SecureDynamic');
-                                print(`${String(p.vlan || 1).padEnd(7)} ${m.padEnd(18)} ${type.padEnd(17)} Fa0/${p.id}`);
+                                print(`${String(p.vlan || 1).padEnd(7)} ${m.padEnd(18)} ${type.padEnd(17)} ${swPortName(p)}`);
                             }));
                             return;
                         }
@@ -2358,7 +2327,7 @@
                         print('               (Count)       (Count)          (Count)');
                         print('---------------------------------------------------------------------------');
                         secured.forEach(p => {
-                            print(`Fa0/${String(p.id).padEnd(9)}${String(p.psMax || 1).padEnd(15)}${String((p.psSecureMacs || []).length).padEnd(13)}${String(p.psViolationCount || 0).padEnd(19)}${cap(p.psViolation || 'shutdown')}`);
+                            print(`${swPortName(p).padEnd(13)}${String(p.psMax || 1).padEnd(15)}${String((p.psSecureMacs || []).length).padEnd(13)}${String(p.psViolationCount || 0).padEnd(19)}${cap(p.psViolation || 'shutdown')}`);
                         });
                         print('---------------------------------------------------------------------------');
                         return;
@@ -2375,7 +2344,7 @@
                             const status = etherChannelStatus(dev, parseInt(g, 10));
                             const proto = channelProtocol(groups[g]);
                             const poState = status.bundled ? 'SU' : 'SD';
-                            const memStr = groups[g].map(p => `Fa0/${p.id}(${status.bundled ? 'P' : 'I'})`).join(' ');
+                            const memStr = groups[g].map(p => `${swPortName(p)}(${status.bundled ? 'P' : 'I'})`).join(' ');
                             print(`${g.padEnd(6)} Po${(g + '(' + poState + ')').padEnd(11)} ${proto.padEnd(11)} ${memStr}`);
                         });
                         return;
@@ -2385,7 +2354,7 @@
                         const ports = dev.ports.filter(p => p.connectedLink);
                         if (ports.length === 0) { print('No connected switchports.'); return; }
                         ports.forEach(p => {
-                            print(`Name: Fa0/${p.id}`);
+                            print(`Name: ${swPortName(p)}`);
                             print('Switchport: Enabled');
                             print(`Administrative Mode: ${adminMap[p.mode || 'access']}`);
                             print(`Operational Mode: ${isTrunkPort(dev, p) ? 'trunk' : 'static access'}`);
@@ -2424,7 +2393,7 @@
                             if (isTrunkPort(dev, p)) return;
                             let v = p.vlan || 1;
                             if (!vlans[v]) vlans[v] = { name: `VLAN${String(v).padStart(4,'0')}`, ports: [] };
-                            vlans[v].ports.push(`Fa0/${p.id}`);
+                            vlans[v].ports.push(`${swPortName(p)}`);
                         });
                         Object.keys(vlans).sort((a,b)=>a-b).forEach(vid => {
                             print(`${vid.toString().padEnd(4)} ${vlans[vid].name.padEnd(32)} active    ${vlans[vid].ports.join(', ')}`);
@@ -2468,7 +2437,7 @@
                             dev.ports.filter(p => p.connectedLink && p.stpVlan && p.stpVlan[v]).forEach(p => {
                                 const stv = p.stpVlan[v];
                                 const sts = stv.state === 'forwarding' ? 'FWD' : (stv.state === 'down' ? 'DOWN' : 'BLK');
-                                print(`Fa0/${p.id.toString().padEnd(11)} ${stv.role.padEnd(4)} ${sts.padEnd(3)} 19        128.${p.id}    P2p`);
+                                print(`${swPortName(p).padEnd(15)} ${stv.role.padEnd(4)} ${sts.padEnd(3)} ${String(p.media==='fiber'?4:19).padEnd(9)} 128.${p.id}    P2p`);
                             });
                             print('');
                         });
@@ -2513,6 +2482,7 @@
                     } else {
                         let m = ifaceName.match(/^(?:f|fa|fast\w*)\s*0\/(\d+)$/i);
                         if (m) resolvedIface = parseInt(m[1]);
+                        else { const gm = ifaceName.match(/^(?:g|gi|gig\w*)\s*0\/(\d+)$/i); if (gm) { const gp = dev.ports.find(p => p.media === 'fiber' && p.gi === parseInt(gm[1], 10)); if (gp) resolvedIface = gp.id; } }
                     }
                 }
                 if (resolvedIface !== null && resolvedIface !== undefined) {
@@ -2557,6 +2527,7 @@
                         } else {
                             let m = ifaceName.match(/fa.*0\/(\d+)/);
                             if (m) resolvedIface = parseInt(m[1]);
+                            else { const gm = ifaceName.match(/gi.*0\/(\d+)/); if (gm) { const gp = dev.ports.find(p => p.media === 'fiber' && p.gi === parseInt(gm[1], 10)); if (gp) resolvedIface = gp.id; } }
                         }
                     }
 
@@ -2981,7 +2952,7 @@
                     if (stpEnabled) calculateSTP(); else renderLinks();
                     log(`[${dev.name}] Interface state changed to UP via CLI`);
                     
-                    let niceName = String(iface.id).startsWith('Vlan') ? iface.id : (dev.type === 'Switch' ? `FastEthernet0/${iface.id}` : dev.cli.currentInterface);
+                    let niceName = String(iface.id).startsWith('Vlan') ? iface.id : (dev.type === 'Switch' ? swPortLongName(iface) : dev.cli.currentInterface);
                     print(`\n%LINK-3-UPDOWN: Interface ${niceName}, changed state to up`);
                     deviceSyslog(dev, 3, `LINK-3-UPDOWN: Interface ${niceName}, changed state to up`);
                     if (dev.snmpTraps && dev.snmpHost) originateUdp(dev, dev.snmpHost, 162, { snmp: 'TRAP', trap: 'linkUp', ifName: niceName, from: dev.name }, 162);
@@ -2995,7 +2966,7 @@
                     if (stpEnabled) calculateSTP(); else renderLinks();
                     log(`[${dev.name}] Interface state changed to DOWN via CLI`);
                     
-                    let niceName = String(iface.id).startsWith('Vlan') ? iface.id : (dev.type === 'Switch' ? `FastEthernet0/${iface.id}` : dev.cli.currentInterface);
+                    let niceName = String(iface.id).startsWith('Vlan') ? iface.id : (dev.type === 'Switch' ? swPortLongName(iface) : dev.cli.currentInterface);
                     print(`\n%LINK-5-CHANGED: Interface ${niceName}, changed state to administratively down`);
                     deviceSyslog(dev, 5, `LINK-5-CHANGED: Interface ${niceName}, changed state to administratively down`);
                     if (dev.snmpTraps && dev.snmpHost) originateUdp(dev, dev.snmpHost, 162, { snmp: 'TRAP', trap: 'linkDown', ifName: niceName, from: dev.name }, 162);
@@ -3365,7 +3336,7 @@
                 if (dev.vlanDb) Object.keys(dev.vlanDb).forEach(v => { if (parseInt(v, 10) !== 1) { L.push('!', `vlan ${v}`); if (dev.vlanDb[v]) L.push(` name ${dev.vlanDb[v]}`); } });
                 if (dev.stpPriority) Object.keys(dev.stpPriority).forEach(v => L.push('!', `spanning-tree vlan ${v} priority ${dev.stpPriority[v]}`));
                 (dev.ports || []).forEach(p => {
-                    L.push('!', `interface FastEthernet0/${p.id}`);
+                    L.push('!', `interface ${swPortLongName(p)}`);
                     if (isTrunkPort(dev, p)) L.push(' switchport mode trunk');
                     else if (p.vlan && p.vlan !== 1) L.push(` switchport access vlan ${p.vlan}`);
                     if (p.channelGroup) L.push(` channel-group ${p.channelGroup} mode ${p.channelMode}`);
@@ -3957,12 +3928,18 @@
                 super('Switch', x, y);
                 this.ports = Array.from({length: 8}, (_, i) => ({
                     id: i + 1,
+                    media: 'copper',  // FastEthernet copper (RJ45)
                     connectedLink: null,
                     stpState: 'forwarding', // forwarding, blocking
                     adminState: 'up', // up, down
                     vlan: 1,         // default VLAN
                     mode: 'access'   // access, trunk
                 }));
+                // Two GigabitEthernet SFP fibre uplink ports (Gi0/1, Gi0/2)
+                this.ports.push(
+                    { id: 9,  gi: 1, media: 'fiber', connectedLink: null, stpState: 'forwarding', adminState: 'up', vlan: 1, mode: 'access' },
+                    { id: 10, gi: 2, media: 'fiber', connectedLink: null, stpState: 'forwarding', adminState: 'up', vlan: 1, mode: 'access' }
+                );
                 this.macTable = {}; // Key: "vlan-mac" -> { portId, time, mac, vlan }
                 this.stp = { costToRoot: 0, rootBridge: this.id, rootPort: null, nextHopMac: null, nextHopPort: null };
                 this.svis = {};        // Switch Virtual Interfaces, keyed by VLAN id
@@ -5192,7 +5169,7 @@
                 updated = false; iter++;
                 for (const lid in links) {
                     const c = carries(links[lid]); if (!c) continue;
-                    const cost = 19;
+                    const cost = (c.pA.media === 'fiber' && c.pB.media === 'fiber') ? 4 : 19;
                     if (better(st[c.A.id], st[c.B.id].cost + cost, c.B.mac, c.pB.id)) { st[c.A.id] = { cost: st[c.B.id].cost + cost, rootPort: c.pA.id, nextHopMac: c.B.mac, nextHopPort: c.pB.id }; updated = true; }
                     if (better(st[c.B.id], st[c.A.id].cost + cost, c.A.mac, c.pA.id)) { st[c.B.id] = { cost: st[c.A.id].cost + cost, rootPort: c.pB.id, nextHopMac: c.A.mac, nextHopPort: c.pA.id }; updated = true; }
                 }
@@ -5550,7 +5527,9 @@
             const dev = devices[devId];
             let availablePorts = [];
             
-            if (dev.type === 'Switch' || dev.type === 'AP') {
+            if (dev.type === 'Switch') {
+                availablePorts = dev.ports.filter(p => !p.connectedLink).map(p => ({ id: p.id, label: swPortName(p), fiber: p.media === 'fiber' }));
+            } else if (dev.type === 'AP') {
                 availablePorts = dev.ports.filter(p => !p.connectedLink).map(p => ({ id: p.id, label: `Fa0/${p.id}` }));
             } else if (dev.type === 'Router') {
                 availablePorts = Object.values(dev.interfaces).filter(i => !i.connectedLink).map(i => ({ id: i.id, label: i.id }));
@@ -5566,9 +5545,12 @@
             
             availablePorts.forEach(port => {
                 const btn = document.createElement('div');
-                btn.className = 'px-4 hover:bg-blue-600 active:bg-blue-600 cursor-pointer transition-colors select-none whitespace-nowrap flex items-center';
-                btn.style.minHeight = '44px'; // Comfortable touch target
-                btn.textContent = port.label;
+                btn.className = 'px-4 py-2 hover:bg-blue-600 cursor-pointer transition-colors';
+                if (port.fiber) {
+                    btn.innerHTML = `<span style="color:#fb923c">\u25C6</span> ${port.label} <span style="color:#fbbf24;font-size:8px;text-transform:uppercase;letter-spacing:0.05em">fibre</span>`;
+                } else {
+                    btn.textContent = port.label;
+                }
                 btn.onclick = (e) => {
                     e.stopPropagation();
                     selector.classList.add('hidden');
@@ -5576,24 +5558,10 @@
                 };
                 selector.appendChild(btn);
             });
-
-            // Reveal first (so it can be measured), then keep it inside the workspace
-            // and offset from the fingertip/cursor so the tap point isn't covered.
-            selector.style.maxHeight = '55vh';
-            selector.style.overflowY = 'auto';
-            selector.style.left = '0px';
-            selector.style.top = '0px';
+            
+            selector.style.left = `${x}px`;
+            selector.style.top = `${y}px`;
             selector.classList.remove('hidden');
-            const wsRect = WORKSPACE.getBoundingClientRect();
-            const sw = selector.offsetWidth, sh = selector.offsetHeight;
-            const margin = 8;
-            let lx = x + 14, ly = y + 14;
-            if (lx + sw > wsRect.width - margin) lx = x - sw - 14;   // flip to the left of the finger
-            if (ly + sh > wsRect.height - margin) ly = wsRect.height - sh - margin;
-            lx = Math.min(Math.max(margin, lx), Math.max(margin, wsRect.width - sw - margin));
-            ly = Math.max(margin, ly);
-            selector.style.left = `${lx}px`;
-            selector.style.top = `${ly}px`;
         }
 
         function hidePortSelector() {
@@ -5729,9 +5697,6 @@
             pendingCableSourcePort = portId;
             const portName = devices[id].type === 'Switch' ? `Fa0/${portId}` : (devices[id].type === 'Router' ? portId : 'Port');
             log(`Cable started at ${devices[id].name} (${portName}). Select destination.`);
-            // Collapse the rubber-band line onto the source until the user drags toward the target
-            currentMouseX = devices[id].x;
-            currentMouseY = devices[id].y;
             renderNodes();
             renderLinks();
         }
@@ -5750,7 +5715,9 @@
 
             pushUndo();
             const linkId = generateId();
-            links[linkId] = { id: linkId, source: sourceId, target: targetId, sourcePort: sourcePort, targetPort: targetPort };
+            const fiberEnd = (dev, portId) => !!(dev && dev.type === 'Switch' && dev.ports && (() => { const p = dev.ports.find(pt => pt.id == portId); return p && p.media === 'fiber'; })());
+            const linkMedia = (fiberEnd(devA, sourcePort) && fiberEnd(devB, targetPort)) ? 'fiber' : 'copper';
+            links[linkId] = { id: linkId, source: sourceId, target: targetId, sourcePort: sourcePort, targetPort: targetPort, media: linkMedia };
 
             if (isEndDevice(devA)) devA.port = linkId;
             else if (devA.type === 'Router') devA.interfaces[sourcePort].connectedLink = linkId;
@@ -5760,8 +5727,8 @@
             else if (devB.type === 'Router') devB.interfaces[targetPort].connectedLink = linkId;
             else devB.ports.find(p => p.id === targetPort).connectedLink = linkId;
 
-            const portAName = (devA.type === 'Switch' || devA.type === 'AP') ? `Fa0/${sourcePort}` : (devA.type === 'Router' ? sourcePort : 'Port');
-            const portBName = (devB.type === 'Switch' || devB.type === 'AP') ? `Fa0/${targetPort}` : (devB.type === 'Router' ? targetPort : 'Port');
+            const portAName = linkPortName(devA, sourcePort);
+            const portBName = linkPortName(devB, targetPort);
             
             log(`Connected ${devA.name} (${portAName}) to ${devB.name} (${portBName})`);
             
@@ -6801,7 +6768,7 @@
             const HANDLES = '#console-header, #ping-header, #pb-handle, #toolbar-grip, #legend-header, #zoom-grip, #cli-header, #browser-header, #sniffer-header, #prop-header';
             const INTERACTIVE = 'button, select, input, textarea, a, option, [contenteditable="true"]';
             const PANELS = '#floating-console, #floating-ping, #floating-properties, #floating-cli, #floating-browser, #floating-sniffer, #bottom-toolbar, #zoom-controls, #protocol-legend, #help-modal, #playback-bar, #port-selector, #packet-inspector';
-            let ts = null, lastTap = null, nativeTouch = false;
+            let ts = null, lastTap = null;
             const synth = (type, target, x, y) => target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 }));
             const distance = (a, b) => Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
             const middle = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
@@ -6820,38 +6787,17 @@
                     e.preventDefault(); return;
                 }
                 if (e.touches.length !== 1) return;
-                didPan = false; // Fresh single-finger gesture; don't let a previous pan swallow this tap
-                nativeTouch = false; // Assume we handle this gesture unless a native control is tapped
                 const t = e.touches[0];
                 const target = t.target || document.elementFromPoint(t.clientX, t.clientY);
-                if (!target) { ts = null; nativeTouch = true; return; }
-                // Native controls (form fields, buttons, links) must keep their native tap so the
-                // field focuses / the keyboard opens / the button fires. Don't preventDefault those.
-                if (target.closest(INTERACTIVE)) { ts = null; nativeTouch = true; return; }
-                // Connect mode gets its own gesture: a tap (with generous slop) selects a device,
-                // and a drag from a pending source draws a following cable to the target.
-                if (currentMode === 'addCable') {
-                    const sel = target.closest('#port-selector');
-                    if (sel) {
-                        // The workspace touchend calls preventDefault(), which would cancel the
-                        // native click on a port option, so fire that option's handler ourselves.
-                        let opt = target;
-                        while (opt && opt.parentElement !== sel) opt = opt.parentElement;
-                        ts = { kind: 'portpick', option: (opt && typeof opt.onclick === 'function') ? opt : null };
-                        e.preventDefault(); return;
-                    }
-                    if (target.closest(PANELS)) { ts = null; nativeTouch = true; return; } // let panels/toolbars behave
-                    const node = target.closest('.device-node');
-                    ts = { kind: 'cable', target: node || target, startX: t.clientX, startY: t.clientY, x: t.clientX, y: t.clientY, moved: false };
-                    e.preventDefault(); return;
-                }
+                if (!target) { ts = null; return; }
+                if (target.closest(INTERACTIVE)) { ts = null; return; } // native tap -> click on buttons/inputs
                 const handle = target.closest('.device-node, .text-label-node') || target.closest(HANDLES);
                 if (handle) {
                     ts = { kind: 'drag', target, startX: t.clientX, startY: t.clientY, x: t.clientX, y: t.clientY, moved: false };
                     synth('mousedown', target, t.clientX, t.clientY);
                     e.preventDefault(); return;
                 }
-                if (target.closest(PANELS)) { ts = null; nativeTouch = true; return; } // let panel bodies scroll / controls tap natively
+                if (target.closest(PANELS)) { ts = null; return; } // let panel bodies scroll natively
                 ts = { kind: 'pan', x: t.clientX, y: t.clientY, target, moved: false };
                 e.preventDefault();
             }, { passive: false });
@@ -6865,17 +6811,6 @@
                 }
                 if (e.touches.length !== 1) return;
                 const t = e.touches[0];
-                if (ts.kind === 'cable') {
-                    if (Math.abs(t.clientX - ts.startX) > 10 || Math.abs(t.clientY - ts.startY) > 10) ts.moved = true;
-                    ts.x = t.clientX; ts.y = t.clientY;
-                    if (pendingCableSource) { // Draw the rubber-band cable following the finger
-                        const w = toWorld(t.clientX, t.clientY);
-                        currentMouseX = w.x; currentMouseY = w.y;
-                        renderPendingCable();
-                    }
-                    e.preventDefault();
-                    return;
-                }
                 if (ts.kind === 'drag') {
                     if (Math.abs(t.clientX - ts.startX) > 4 || Math.abs(t.clientY - ts.startY) > 4) ts.moved = true;
                     ts.x = t.clientX; ts.y = t.clientY;
@@ -6889,42 +6824,12 @@
             }, { passive: false });
             function endTouch() {
                 if (!ts) return;
-                if (ts.kind === 'portpick') { if (ts.option) ts.option.click(); ts = null; return; }
-                if (ts.kind === 'cable') {
-                    // Prefer the device under the fingertip at release (drag-to-connect),
-                    // falling back to the node that was first tapped (tap-then-tap).
-                    const endEl = document.elementFromPoint(ts.x, ts.y);
-                    const node = (endEl && endEl.closest && endEl.closest('.device-node')) ||
-                                 (ts.target && ts.target.closest && ts.target.closest('.device-node'));
-                    if (node && devices[node.getAttribute('data-id')]) {
-                        handleNodeClick({ clientX: ts.x, clientY: ts.y, target: node }, node.getAttribute('data-id'), 'Device');
-                    } else if (!ts.moved) {
-                        hidePortSelector(); // Tapped empty space: dismiss any open port menu
-                    } else if (pendingCableSource) {
-                        renderLinks(); // Dragged onto empty space: snap the pending line back to the source
-                    }
-                    ts = null;
-                    return;
-                }
                 if (ts.kind === 'drag') { synth('mouseup', document, ts.x, ts.y); if (!ts.moved) doTap(ts.target, ts.x, ts.y); }
                 else if (ts.kind === 'pan') { if (!ts.moved) doTap(ts.target, ts.x, ts.y); }
                 ts = null;
             }
-            WORKSPACE.addEventListener('touchend', (e) => {
-                endTouch();
-                // Only suppress the native click when we handled the gesture ourselves; a tap on a
-                // form field or button must keep its native behaviour (focus, keyboard, click).
-                if (!nativeTouch && e.cancelable) e.preventDefault();
-                nativeTouch = false;
-            }, { passive: false });
-            WORKSPACE.addEventListener('touchcancel', () => {
-                if (!ts) return;
-                // iOS Safari fires touchcancel readily (e.g. when the port menu pops up under the
-                // finger). Complete a port pick / cable tap instead of silently dropping it.
-                if (ts.kind === 'portpick' || ts.kind === 'cable') { endTouch(); return; }
-                if (ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y);
-                ts = null;
-            });
+            WORKSPACE.addEventListener('touchend', (e) => { endTouch(); if (e.cancelable) e.preventDefault(); }, { passive: false });
+            WORKSPACE.addEventListener('touchcancel', () => { if (ts && ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y); ts = null; });
         })();
 
         // --- Keyboard shortcuts ---
@@ -7010,9 +6915,25 @@
             return linkGroups;
         }
 
+        // Short interface name for a switch port object (fibre uplinks are GigabitEthernet)
+        function swPortName(p) {
+            if (p && p.media === 'fiber') return `Gi0/${p.gi}`;
+            return `Fa0/${p ? p.id : '?'}`;
+        }
+        // Long interface name used by the CLI (show run, config-if prompts and similar)
+        function swPortLongName(p) {
+            if (p && p.media === 'fiber') return `GigabitEthernet0/${p.gi}`;
+            return `FastEthernet0/${p ? p.id : '?'}`;
+        }
+        function swPortNameById(dev, portId) {
+            if (dev && dev.ports) { const p = dev.ports.find(pt => pt.id == portId); if (p) return swPortName(p); }
+            return `Fa0/${portId}`;
+        }
+
         function linkPortName(dev, portId) {
             if (!dev) return 'Port';
-            if (dev.type === 'Switch' || dev.type === 'AP') return `Fa0/${portId}`;
+            if (dev.type === 'Switch') return swPortNameById(dev, portId);
+            if (dev.type === 'AP') return `Fa0/${portId}`;
             if (dev.type === 'Router') return portId;
             return 'Port';
         }
@@ -7103,6 +7024,7 @@
                 path.setAttribute('stroke-width', vs.width);
                 if (vs.dash) path.setAttribute('stroke-dasharray', vs.dash);
                 path.setAttribute('data-link-id', link.id);
+                if (vs.fiber) path.setAttribute('style', 'filter: drop-shadow(0 0 3px rgba(251,146,60,0.95))');
                 g.appendChild(path);
 
                 // Invisible wider path so clicking or double-clicking the line is easy
@@ -7265,7 +7187,7 @@
             p.adminState = p.adminState === 'up' ? 'down' : 'up';
             
             if (dev.type === 'Router') { dev.updateConnectedRoutes(); dev.ripBroadcastCount = 0; }
-            log(`[${dev.name}] Interface ${(dev.type==='Switch'||dev.type==='AP')?'Fa0/':''}${portId} changed state to ${p.adminState}`);
+            log(`[${dev.name}] Interface ${dev.type==='Switch'?swPortName(p):(dev.type==='AP'?'Fa0/'+portId:portId)} changed state to ${p.adminState}`);
 
             flushMacTables();
 
@@ -7491,7 +7413,7 @@
                             ${dev.ports.map(p => `
                                 <div class="p-2 bg-slate-50 dark:bg-slate-900 border rounded text-xs relative ${p.adminState==='down'?'opacity-60':''}">
                                     <div class="font-bold text-slate-700 dark:text-slate-200 mb-1 flex justify-between items-center">
-                                        <span class="cursor-pointer hover:underline" onclick="window.togglePortStatus('${dev.id}', ${p.id})" title="Click to toggle Up/Down">Fa0/${p.id} <span class="text-[9px] font-normal px-1 rounded ${p.adminState==='up'?'bg-emerald-100 text-emerald-700':'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}">${p.adminState.toUpperCase()}</span></span>
+                                        <span class="cursor-pointer hover:underline" onclick="window.togglePortStatus('${dev.id}', ${p.id})" title="Click to toggle Up/Down">${swPortName(p)}${p.media==='fiber'?' <span class=\'text-[8px] font-normal px-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300\'>FIBRE</span>':''} <span class="text-[9px] font-normal px-1 rounded ${p.adminState==='up'?'bg-emerald-100 text-emerald-700':'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}">${p.adminState.toUpperCase()}</span></span>
                                         <span class="text-[9px] font-mono ${p.connectedLink ? 'text-green-500' : 'text-slate-400'}">${p.connectedLink ? 'LINK UP' : 'NO LINK'}</span>
                                     </div>
                                     <div class="flex space-x-2">
