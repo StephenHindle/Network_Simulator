@@ -6823,12 +6823,15 @@
                 }
             }, { passive: false });
             function endTouch() {
-                if (!ts) return;
+                if (!ts) return false; // nothing we handled -> let the native tap/click through (port picker, inputs, buttons)
                 if (ts.kind === 'drag') { synth('mouseup', document, ts.x, ts.y); if (!ts.moved) doTap(ts.target, ts.x, ts.y); }
                 else if (ts.kind === 'pan') { if (!ts.moved) doTap(ts.target, ts.x, ts.y); }
                 ts = null;
+                return true;
             }
-            WORKSPACE.addEventListener('touchend', (e) => { endTouch(); if (e.cancelable) e.preventDefault(); }, { passive: false });
+            // Only cancel the touch when we actually drove a gesture; otherwise the browser's
+            // synthetic click must fire so taps on the port selector, panel inputs and buttons work.
+            WORKSPACE.addEventListener('touchend', (e) => { if (endTouch() && e.cancelable) e.preventDefault(); }, { passive: false });
             WORKSPACE.addEventListener('touchcancel', () => { if (ts && ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y); ts = null; });
         })();
 
