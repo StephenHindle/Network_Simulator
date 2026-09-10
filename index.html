@@ -2024,6 +2024,7 @@
             if (cmd === 'end' && dev.cli.mode && dev.cli.mode.startsWith('conf')) {
                 dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`;
                 dev.cli.currentInterface = null; dev.cli.currentVlan = null; dev.cli.routerProto = null; dev.cli.aclName = null;
+                dev.cli.rangePorts = null;
                 return;
             }
             if (cmd === 'exit') {
@@ -2031,7 +2032,7 @@
                 if (dev.cli.mode === 'conf-router') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.routerProto = null; return; }
                 if (dev.cli.mode === 'conf-line') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; return; }
                 if (dev.cli.mode === 'conf-acl') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.aclName = null; return; }
-                if (dev.cli.mode === 'conf-if') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentInterface = null; return; }
+                if (dev.cli.mode === 'conf-if') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentInterface = null; dev.cli.rangePorts = null; return; }
                 if (dev.cli.mode === 'conf') { dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`; return; }
                 if (dev.cli.mode === 'priv') { dev.cli.mode = 'user'; dev.cli.prompt = `${dev.name}>`; return; }
                 return;
@@ -2453,6 +2454,16 @@
             if ((dev.cli.mode === 'conf' || dev.cli.mode === 'conf-if') && (cmd === 'int' || cmd === 'interface')) {
                 let ifaceName = args[1];
                 if (!ifaceName) { print('% Incomplete command.'); return; }
+                if (dev.type === 'Switch' && (ifaceName === 'range' || ifaceName === 'ran')) {
+                    const spec = args.slice(2).join(' ');
+                    let ids = [];
+                    const fm = spec.match(/^(?:f|fa|fast\w*)\s*0\/(\d+)\s*-\s*(\d+)$/i);
+                    const gm = spec.match(/^(?:g|gi|gig\w*)\s*0\/(\d+)\s*-\s*(\d+)$/i);
+                    if (fm) { const a = parseInt(fm[1], 10), b = parseInt(fm[2], 10); for (let i = Math.min(a, b); i <= Math.max(a, b); i++) { const p = dev.ports.find(pt => pt.id === i && pt.media !== 'fiber'); if (p) ids.push(i); } }
+                    else if (gm) { const a = parseInt(gm[1], 10), b = parseInt(gm[2], 10); for (let i = Math.min(a, b); i <= Math.max(a, b); i++) { const p = dev.ports.find(pt => pt.media === 'fiber' && pt.gi === i); if (p) ids.push(p.id); } }
+                    if (ids.length) { dev.cli.mode = 'conf-if'; dev.cli.prompt = `${dev.name}(config-if-range)#`; dev.cli.currentInterface = ids[0]; dev.cli.rangePorts = ids; return; }
+                    print('% Invalid interface range'); return;
+                }
                 let resolvedIface = null;
                 if (dev.type === 'Router') {
                     const fm = ifaceName.match(/^(?:f|fa|fast\w*)\s*0\/(\d+)(\.\d+)?$/i);
@@ -2489,6 +2500,7 @@
                     dev.cli.mode = 'conf-if';
                     dev.cli.prompt = `${dev.name}(config-if)#`;
                     dev.cli.currentInterface = resolvedIface;
+                    dev.cli.rangePorts = null;
                     return;
                 }
                 print('% Invalid interface type and number');
@@ -2763,6 +2775,15 @@
 
             // Interface Config Mode
             if (dev.cli.mode === 'conf-if') {
+                // interface range: replay the command against every member port
+                if (dev.cli.rangePorts && dev.cli.rangePorts.length > 1 && !dev.cli._rangeReplay
+                    && cmd !== 'exit' && cmd !== 'end' && cmd !== 'interface' && cmd !== 'int') {
+                    const range = dev.cli.rangePorts.slice();
+                    dev.cli._rangeReplay = true;
+                    try { for (const pid of range) { dev.cli.currentInterface = pid; processCLICommand(dev, input); } }
+                    finally { dev.cli._rangeReplay = false; dev.cli.currentInterface = range[0]; }
+                    return;
+                }
                 let iface = null;
                 if (dev.type === 'Router') iface = dev.interfaces[dev.cli.currentInterface];
                 if (dev.type === 'Switch') {
