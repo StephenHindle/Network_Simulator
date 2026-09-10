@@ -2053,6 +2053,16 @@
                     }
                 }
                 if (cmd === 'sh' || cmd === 'show') {
+                    if (args[1] === 'ip' && args[2] === 'ssh') {
+                        if (dev.rsaKey && dev.domainName) {
+                            print('SSH Enabled - version 2.0');
+                            print('Authentication timeout: 120 secs; Authentication retries: 3');
+                        } else {
+                            print('SSH Disabled - version 1.99');
+                            print('%Please create RSA keys to enable SSH (of at least 768 bits).');
+                        }
+                        return;
+                    }
                     // Extended context-aware help for show command
                     if (args[1] === '?') {
                         if (dev.type === 'Router') {
@@ -2364,6 +2374,31 @@
                         });
                         return;
                     }
+                    if (dev.type === 'Switch' && (args[1] === 'interfaces' || args[1] === 'int' || args[1] === 'interface') && (args[2] === 'status' || args[2] === 'stat')) {
+                        print('Port      Name               Status       Vlan       Duplex  Speed Type');
+                        dev.ports.forEach(p => {
+                            let status = p.adminState === 'down' ? 'disabled' : (p.connectedLink ? 'connected' : 'notconnect');
+                            let vlanCol = isTrunkPort(dev, p) ? 'trunk' : String(p.vlan || 1);
+                            const speed = p.media === 'fiber' ? 'a-1000' : 'a-100';
+                            const type = p.media === 'fiber' ? '1000BaseSX' : '10/100BaseTX';
+                            print(`${swPortName(p).padEnd(9)} ${''.padEnd(18)} ${status.padEnd(12)} ${vlanCol.padEnd(10)} a-full  ${speed.padEnd(5)} ${type}`);
+                        });
+                        return;
+                    }
+                    if (dev.type === 'Switch' && (args[1] === 'interfaces' || args[1] === 'int' || args[1] === 'interface') && (args[2] === 'trunk' || args[2] === 'tru')) {
+                        const trunks = dev.ports.filter(p => p.connectedLink && isTrunkPort(dev, p));
+                        if (trunks.length === 0) { return; }
+                        print('Port        Mode         Encapsulation  Status        Native vlan');
+                        trunks.forEach(p => print(`${swPortName(p).padEnd(11)} ${(p.mode==='trunk'?'on':'auto').padEnd(12)} 802.1q         trunking      ${p.nativeVlan || 1}`));
+                        print('');
+                        print('Port        Vlans allowed on trunk');
+                        trunks.forEach(p => print(`${swPortName(p).padEnd(11)} 1-4094`));
+                        print('');
+                        print('Port        Vlans allowed and active in management domain');
+                        const activeVlans = Object.keys(dev.vlanDb || { 1: 'default' }).sort((a, b) => a - b).join(',');
+                        trunks.forEach(p => print(`${swPortName(p).padEnd(11)} ${activeVlans}`));
+                        return;
+                    }
                     if (dev.type === 'Switch' && args[1] === 'ip' && (args[2] === 'ro' || args[2] === 'route')) {
                         print('Codes: C - connected, S - static');
                         if (!dev.ipRouting) { print('% IP routing is not enabled'); return; }
@@ -2466,10 +2501,10 @@
                 }
                 let resolvedIface = null;
                 if (dev.type === 'Router') {
-                    const fm = ifaceName.match(/^(?:f|fa|fast\w*)\s*0\/(\d+)(\.\d+)?$/i);
+                    const fm = ifaceName.match(/^(?:f|fa|fast\w*|g|gi|gig\w*)\s*0\/(\d+)(\.\d+)?$/i);
                     const sm = ifaceName.match(/^(?:s|se|ser\w*)\s*0\/0\/(\d+)$/i);
                     if (fm) {
-                        const base = `Fa0/${fm[1]}`;
+                        const base = `Gig0/${fm[1]}`;
                         if (dev.interfaces[base]) {
                             if (fm[2]) {
                                 resolvedIface = `${base}${fm[2]}`;
@@ -2515,13 +2550,13 @@
                     
                     let resolvedIface = null;
                     if (dev.type === 'Router') {
-                        let m = ifaceName.match(/fa.*0\/0(\.\d+)?/i);
+                        let m = ifaceName.match(/(?:fa|g|gi|gig)\w*\s*0\/0(\.\d+)?/i);
                         if (m) {
-                            resolvedIface = m[1] ? `Fa0/0${m[1]}` : 'Fa0/0';
+                            resolvedIface = m[1] ? `Gig0/0${m[1]}` : 'Gig0/0';
                             if (m[1] && !dev.interfaces[resolvedIface]) {
                                 // Dynamically create sub-interface
                                 dev.interfaces[resolvedIface] = { 
-                                    id: resolvedIface, type: 'subinterface', parent: 'Fa0/0', vlan: null,
+                                    id: resolvedIface, type: 'subinterface', parent: 'Gig0/0', vlan: null,
                                     ip: '0.0.0.0', subnet: '0.0.0.0', adminState: 'up' 
                                 };
                                 if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
@@ -2717,6 +2752,18 @@
                     computeEigrp();
                     return;
                 }
+                if (cmd === 'router' && args[1] === 'rip' && dev.type === 'Router') {
+                    dev.ripEnabled = true;
+                    dev.cli.mode = 'conf-router'; dev.cli.prompt = `${dev.name}(config-router)#`; dev.cli.routerProto = 'rip';
+                    if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
+                    return;
+                }
+                if (cmd === 'no' && args[1] === 'router' && args[2] === 'rip' && dev.type === 'Router') {
+                    dev.ripEnabled = false;
+                    dev.routingTable = dev.routingTable.filter(x => x.type !== 'R');
+                    if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
+                    return;
+                }
                 if (cmd === 'router' && args[1] === 'bgp' && dev.type === 'Router') {
                     dev.bgp = dev.bgp || { enabled: false, asn: null, neighbors: [], networks: [] };
                     dev.bgp.enabled = true; dev.bgp.asn = parseInt(args[2], 10) || 1;
@@ -2795,6 +2842,8 @@
                 }
 
                 if (!iface) { print('% Interface not found'); return; }
+                if (cmd === 'clock' && args[1] === 'rate' && dev.type === 'Router') { iface.clockRate = parseInt(args[2], 10) || 64000; return; }
+                if (cmd === 'bandwidth' && dev.type === 'Router') { iface.bandwidth = parseInt(args[1], 10) || null; return; }
 
                 if (dev.type === 'Router' && cmd === 'encapsulation') {
                     if (args[1] === 'dot1q' && args[2]) {
@@ -2886,6 +2935,16 @@
                         if (args[2] === 'mac-address' && args[3] === 'sticky') { iface.psSticky = true; return; }
                         if (args[2] === 'mac-address' && args[3]) { iface.psSecureMacs = iface.psSecureMacs || []; const mac = args[3].toUpperCase(); iface.psStatic = iface.psStatic || []; if (!iface.psSecureMacs.includes(mac)) iface.psSecureMacs.push(mac); if (!iface.psStatic.includes(mac)) iface.psStatic.push(mac); return; }
                         print('% Incomplete port-security command.'); return;
+                    }
+                    if (args[1] === 'trunk' && args[2] === 'native' && args[3] === 'vlan' && args[4]) {
+                        const nv = parseInt(args[4], 10);
+                        if (!isNaN(nv) && nv >= 1 && nv <= 4094) { iface.nativeVlan = nv; if (propertiesDeviceId === dev.id) updatePropertiesPanel(true); }
+                        else print('% Invalid native VLAN (1-4094).');
+                        return;
+                    }
+                    if (args[1] === 'trunk' && args[2] === 'allowed' && args[3] === 'vlan' && args[4]) {
+                        iface.allowedVlans = args.slice(4).join(' ');
+                        return;
                     }
                     print('% Incomplete or invalid switchport command.');
                     return;
@@ -3028,6 +3087,12 @@
                         computeEigrp();
                         return;
                     }
+                }
+                if (dev.cli.routerProto === 'rip') {
+                    if (cmd === 'version' && args[1]) { dev.ripVersion = parseInt(args[1], 10) || 2; return; }
+                    if (cmd === 'network' && args[1]) { dev.ripNetworks = dev.ripNetworks || []; if (!dev.ripNetworks.includes(args[1])) dev.ripNetworks.push(args[1]); return; }
+                    if (cmd === 'no' && args[1] === 'network' && args[2]) { dev.ripNetworks = (dev.ripNetworks || []).filter(n => n !== args[2]); return; }
+                    if (cmd === 'passive-interface' || cmd === 'auto-summary' || (cmd === 'no' && (args[1] === 'auto-summary' || args[1] === 'passive-interface'))) { return; }
                 }
                 if (dev.cli.routerProto === 'bgp' && dev.bgp) {
                     if (cmd === 'neighbor' && args[1] && args[2] === 'remote-as' && args[3]) {
@@ -3947,7 +4012,7 @@
         class Switch extends Device {
             constructor(x, y) {
                 super('Switch', x, y);
-                this.ports = Array.from({length: 8}, (_, i) => ({
+                this.ports = Array.from({length: 24}, (_, i) => ({
                     id: i + 1,
                     media: 'copper',  // FastEthernet copper (RJ45)
                     connectedLink: null,
@@ -3958,8 +4023,8 @@
                 }));
                 // Two GigabitEthernet SFP fibre uplink ports (Gi0/1, Gi0/2)
                 this.ports.push(
-                    { id: 9,  gi: 1, media: 'fiber', connectedLink: null, stpState: 'forwarding', adminState: 'up', vlan: 1, mode: 'access' },
-                    { id: 10, gi: 2, media: 'fiber', connectedLink: null, stpState: 'forwarding', adminState: 'up', vlan: 1, mode: 'access' }
+                    { id: 25, gi: 1, media: 'fiber', connectedLink: null, stpState: 'forwarding', adminState: 'up', vlan: 1, mode: 'access' },
+                    { id: 26, gi: 2, media: 'fiber', connectedLink: null, stpState: 'forwarding', adminState: 'up', vlan: 1, mode: 'access' }
                 );
                 this.macTable = {}; // Key: "vlan-mac" -> { portId, time, mac, vlan }
                 this.stp = { costToRoot: 0, rootBridge: this.id, rootPort: null, nextHopMac: null, nextHopPort: null };
@@ -4144,8 +4209,8 @@
             constructor(x, y) {
                 super('Router', x, y);
                 this.interfaces = {
-                    'Fa0/0': { id: 'Fa0/0', type: 'ethernet', ip: '0.0.0.0', subnet: '0.0.0.0', mac: generateMac(), connectedLink: null, adminState: 'down' },
-                    'Fa0/1': { id: 'Fa0/1', type: 'ethernet', ip: '0.0.0.0', subnet: '0.0.0.0', mac: generateMac(), connectedLink: null, adminState: 'down' },
+                    'Gig0/0': { id: 'Gig0/0', type: 'ethernet', ip: '0.0.0.0', subnet: '0.0.0.0', mac: generateMac(), connectedLink: null, adminState: 'down' },
+                    'Gig0/1': { id: 'Gig0/1', type: 'ethernet', ip: '0.0.0.0', subnet: '0.0.0.0', mac: generateMac(), connectedLink: null, adminState: 'down' },
                     'Se0/0/0': { id: 'Se0/0/0', type: 'serial', ip: '0.0.0.0', subnet: '0.0.0.0', mac: generateMac(), connectedLink: null, adminState: 'down' },
                     'Se0/0/1': { id: 'Se0/0/1', type: 'serial', ip: '0.0.0.0', subnet: '0.0.0.0', mac: generateMac(), connectedLink: null, adminState: 'down' }
                 };
@@ -7350,7 +7415,7 @@
                             `).join('')}
                         </div>
                         <div class="mt-2 flex space-x-1 border-t pt-2 border-slate-200 dark:border-slate-700">
-                            <input type="text" id="new-subif-id" placeholder="e.g. Fa0/0.10" class="w-2/5 px-2 py-1 border rounded text-[10px] focus:outline-none focus:border-blue-500 bg-white dark:bg-slate-800">
+                            <input type="text" id="new-subif-id" placeholder="e.g. Gig0/0.10" class="w-2/5 px-2 py-1 border rounded text-[10px] focus:outline-none focus:border-blue-500 bg-white dark:bg-slate-800">
                             <input type="number" min="1" max="4094" id="new-subif-vlan" placeholder="VLAN (1-4094)" class="w-2/5 px-2 py-1 border rounded text-[10px] focus:outline-none focus:border-blue-500 bg-white dark:bg-slate-800">
                             <button onclick="window.addSubInterface('${dev.id}')" class="w-1/5 bg-slate-700 text-white rounded text-[10px] font-bold hover:bg-slate-600 transition">Add Sub-If</button>
                         </div>
@@ -7950,15 +8015,15 @@
             const subId = document.getElementById('new-subif-id').value.trim();
             const vlan = parseInt(document.getElementById('new-subif-vlan').value.trim(), 10);
             
-            const subm = subId.match(/^Fa0\/([01])\.(\d+)$/i); if (!subm) { log('Invalid format. Use Fa0/0.X or Fa0/1.X', 'error'); return; }
+            const subm = subId.match(/^(?:fa|gig?|g)\w*0\/([01])\.(\d+)$/i); if (!subm) { log('Invalid format. Use Gig0/0.X or Gig0/1.X', 'error'); return; }
             if (isNaN(vlan) || vlan < 1 || vlan > 4094) { log('Invalid VLAN ID. Must be 1-4094', 'error'); return; }
             
             // Normalize case
-            const normalizedSubId = `Fa0/${subm[1]}.${subm[2]}`;
+            const normalizedSubId = `Gig0/${subm[1]}.${subm[2]}`;
             if (dev.interfaces[normalizedSubId]) { log('Sub-interface already exists.', 'warning'); return; }
             
             dev.interfaces[normalizedSubId] = {
-                id: normalizedSubId, type: 'subinterface', parent: `Fa0/${subm[1]}`, vlan: vlan,
+                id: normalizedSubId, type: 'subinterface', parent: `Gig0/${subm[1]}`, vlan: vlan,
                 ip: '0.0.0.0', subnet: '0.0.0.0', adminState: 'up'
             };
             log(`[${dev.name}] Added sub-interface ${normalizedSubId} for VLAN ${vlan}`, 'success');
