@@ -192,31 +192,8 @@
              regardless of viewport zoom. Populated and repositioned by showDeviceTooltip(). -->
         <div id="device-tooltip" class="hidden absolute pointer-events-none z-40 bg-slate-900/95 dark:bg-slate-800/95 text-slate-100 text-[11px] rounded-md shadow-xl border border-slate-700 px-3 py-2 whitespace-nowrap backdrop-blur-sm" style="max-width: 260px;"></div>
 
-        <!-- Floating Network Console -->
-        <div id="floating-console" class="absolute top-4 left-[116px] w-80 bg-slate-900 rounded-lg shadow-2xl z-30 flex flex-col border border-slate-700 overflow-hidden">
-            <div id="console-header" class="px-3 py-2 bg-slate-800 flex justify-between items-center cursor-move select-none hover:bg-slate-700 transition-colors" onclick="toggleConsole()">
-                <span class="text-xs font-semibold text-slate-300 tracking-wider">NETWORK CONSOLE</span>
-                <div class="flex items-center space-x-1.5" onclick="event.stopPropagation()">
-                    <select id="console-filter" onchange="setConsoleFilter(this.value)" class="bg-slate-700 text-slate-300 text-[10px] rounded px-1 py-0.5 border border-slate-600 focus:outline-none cursor-pointer" title="Filter console messages">
-                        <option value="all">All</option>
-                        <option value="info">Info</option>
-                        <option value="success">Success</option>
-                        <option value="warning">Warnings</option>
-                        <option value="error">Errors</option>
-                    </select>
-                    <button onclick="copyConsole()" class="text-slate-400 hover:text-white p-0.5 rounded transition-colors" title="Copy console to clipboard">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                    </button>
-                </div>
-                <svg id="console-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 -rotate-90"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-            <div id="console-output" class="h-36 overflow-y-auto p-3 text-xs font-mono text-green-400 space-y-1 select-text hidden">
-                <div>> System initialised.</div>
-            </div>
-        </div>
-
         <!-- Bottom Left Toolbar (Text, Save, Load) -->
-        <div id="bottom-toolbar" class="absolute bottom-4 left-4 z-30 flex items-stretch space-x-1 bg-slate-900 p-2 rounded-xl shadow-2xl border border-slate-700">
+        <div id="bottom-toolbar" class="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-stretch space-x-1 bg-slate-900 p-2 rounded-xl shadow-2xl border border-slate-700">
             <div id="toolbar-grip" class="flex items-center text-slate-500 hover:text-slate-300 pr-1" style="cursor:move" title="Drag to move"><svg width="8" height="18" viewBox="0 0 8 18" fill="currentColor"><circle cx="2" cy="3" r="1"/><circle cx="6" cy="3" r="1"/><circle cx="2" cy="9" r="1"/><circle cx="6" cy="9" r="1"/><circle cx="2" cy="15" r="1"/><circle cx="6" cy="15" r="1"/></svg></div>
             <button onclick="toggleSniffer()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Packet Sniffer">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h10l2-9 4 18 2-9h4"/></svg>
@@ -299,21 +276,7 @@
         </div>
 
         <!-- Floating CLI Window -->
-        <div id="floating-cli" class="hidden absolute top-20 left-1/4 w-[600px] h-[400px] bg-slate-900 rounded-lg shadow-2xl z-50 flex flex-col border border-slate-600 overflow-hidden resize">
-            <div id="cli-header" class="px-4 py-2 bg-slate-800 flex justify-between items-center border-b border-slate-700 cursor-move select-none">
-                <span id="cli-title" class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Router - CLI</span>
-                <button onclick="closeCLI()" class="text-slate-400 hover:text-white transition-colors" title="Close Terminal">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
-            </div>
-            <div class="flex-1 bg-black p-3 overflow-y-auto font-mono text-[12px] text-green-400 flex flex-col cursor-text" id="cli-scroll-area" onclick="document.getElementById('cli-command-input').focus()">
-                <div id="cli-output" class="whitespace-pre-wrap leading-relaxed pb-1"></div>
-                <div class="flex items-center mt-1" id="cli-input-wrapper">
-                    <span id="cli-prompt" class="mr-2 select-none"></span>
-                    <input type="text" id="cli-command-input" class="flex-1 bg-transparent border-none outline-none text-green-400 font-mono text-[12px]" autocomplete="off" spellcheck="false">
-                </div>
-            </div>
-        </div>
+        <!-- CLI terminal windows are created dynamically, one per device (see createCliWindow) -->
 
         <!-- Floating Web Browser Window -->
         <div id="floating-browser" class="hidden absolute top-24 left-1/3 w-[600px] h-[450px] bg-slate-200 dark:bg-slate-700 rounded-lg shadow-2xl z-50 flex flex-col border border-slate-400 dark:border-slate-500 overflow-hidden resize">
@@ -458,6 +421,9 @@
         <!-- Port Selector Menu -->
         <div id="port-selector" class="hidden absolute bg-slate-900 text-white rounded-lg shadow-xl border border-slate-700 z-50 py-1 text-xs font-mono min-w-[100px] overflow-hidden">
         </div>
+
+        <!-- Device right-click context menu -->
+        <div id="device-context-menu" class="hidden absolute z-[60] min-w-[190px] bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs text-slate-200 select-none overflow-hidden"></div>
     </div>
 
     <script>
@@ -479,7 +445,6 @@
         let currentMouseY = 0;
         let stpEnabled = true;
         let activeAnimations = 0;
-        let activeCliDeviceId = null;
         let activeBrowserDeviceId = null;
         let browserIsRunning = false;
         let snifferPacketCount = 0;
@@ -548,7 +513,7 @@
         const VIEWPORT = document.getElementById('viewport');
         const NODES_CONTAINER = document.getElementById('nodes');
         const CABLES_CONTAINER = document.getElementById('cables');
-        const CONSOLE = document.getElementById('console-output');
+        const CONSOLE = document.createElement('div'); // on-screen console removed; detached buffer keeps logging calls harmless
         const PROP_PANEL = document.getElementById('properties-panel');
 
         // Address fields (IP, subnet, gateway, DNS, DHCP pool addresses and router interface
@@ -1397,8 +1362,8 @@
         // --- Mock Cisco CLI Engine ---
         
         window.openCLI = (id) => {
-            activeCliDeviceId = id;
             const dev = devices[id];
+            if (!dev) return;
             
             // Ensure devices loaded from older save files have the CLI object initialized
             if (!dev.cli) {
@@ -1410,35 +1375,90 @@
                  }
             }
             
-            document.getElementById('cli-title').textContent = `${dev.name} - Command Line Interface`;
-            document.getElementById('floating-cli').classList.remove('hidden');
-            renderCLI();
+            let win = openClis[id];
+            if (!win) { win = createCliWindow(id); openClis[id] = win; }
+            win.classList.remove('hidden');
+            bringCliToFront(win);
+            renderCLI(id);
+            const inp = win.querySelector('.cli-command-input');
+            if (inp && !dev.cli.isRunning) setTimeout(() => inp.focus(), 0);
         };
 
-        window.closeCLI = () => {
-            activeCliDeviceId = null;
-            document.getElementById('floating-cli').classList.add('hidden');
+        window.closeCLI = (id) => {
+            if (id == null) { Object.keys(openClis).forEach(k => { openClis[k].remove(); delete openClis[k]; }); return; }
+            const win = openClis[id];
+            if (win) { win.remove(); delete openClis[id]; }
         };
 
-        function renderCLI() {
-            if (!activeCliDeviceId) return;
-            const dev = devices[activeCliDeviceId];
-            if (!dev) { closeCLI(); return; }
-            
-            document.getElementById('cli-output').textContent = dev.cli.history.join('\n');
-            document.getElementById('cli-prompt').textContent = dev.cli.prompt;
-            
-            const inputWrap = document.getElementById('cli-input-wrapper');
-            const inputEl = document.getElementById('cli-command-input');
+        // --- Multiple terminal windows: one per device ---
+        const openClis = {};   // deviceId -> window element
+        let cliZ = 60;
+        function bringCliToFront(win) { if (win) win.style.zIndex = ++cliZ; }
 
-            if (dev.cli.isRunning) {
-                inputWrap.classList.add('hidden');
-            } else {
-                inputWrap.classList.remove('hidden');
-                inputEl.focus();
-            }
-            
-            const scrollArea = document.getElementById('cli-scroll-area');
+        function makeCliDraggable(win, header) {
+            if (!win || !header) return;
+            header.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                if (e.target.closest('button')) return;
+                e.stopPropagation();
+                const rect = win.getBoundingClientRect();
+                const parent = win.offsetParent || document.body;
+                const pr = parent.getBoundingClientRect();
+                const offX = e.clientX - rect.left, offY = e.clientY - rect.top;
+                bringCliToFront(win);
+                const move = (ev) => {
+                    win.style.left = Math.max(0, ev.clientX - offX - pr.left) + 'px';
+                    win.style.top = Math.max(0, ev.clientY - offY - pr.top) + 'px';
+                };
+                const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+                document.addEventListener('mousemove', move);
+                document.addEventListener('mouseup', up);
+            });
+        }
+
+        function createCliWindow(id) {
+            const dev = devices[id];
+            const win = document.createElement('div');
+            win.className = 'cli-window hidden absolute w-[600px] h-[400px] bg-slate-900 rounded-lg shadow-2xl flex flex-col border border-slate-600 overflow-hidden resize';
+            win.dataset.cliId = id;
+            win.innerHTML =
+                '<div class="cli-window-header px-4 py-2 bg-slate-800 flex justify-between items-center border-b border-slate-700 cursor-move select-none">' +
+                    '<span class="cli-title text-xs font-bold text-slate-300 uppercase tracking-wider font-mono pointer-events-none"></span>' +
+                    '<button class="cli-close text-slate-400 hover:text-white transition-colors" title="Close Terminal"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>' +
+                '</div>' +
+                '<div class="cli-scroll-area flex-1 bg-black p-3 overflow-y-auto font-mono text-[12px] text-green-400 flex flex-col cursor-text">' +
+                    '<div class="cli-output whitespace-pre-wrap leading-relaxed pb-1"></div>' +
+                    '<div class="cli-input-wrapper flex items-center mt-1">' +
+                        '<span class="cli-prompt mr-2 select-none"></span>' +
+                        '<input type="text" class="cli-command-input flex-1 bg-transparent border-none outline-none text-green-400 font-mono text-[12px]" autocomplete="off" spellcheck="false">' +
+                    '</div>' +
+                '</div>';
+            const n = Object.keys(openClis).length;
+            win.style.left = (40 + (n % 8) * 30) + 'px';
+            win.style.top = (70 + (n % 8) * 30) + 'px';
+            (WORKSPACE || document.body).appendChild(win);
+            const scroll = win.querySelector('.cli-scroll-area');
+            const input = win.querySelector('.cli-command-input');
+            scroll.addEventListener('click', (e) => { if (e.target.closest('button')) return; if (!dev.cli || !dev.cli.isRunning) input.focus(); });
+            win.querySelector('.cli-close').addEventListener('click', () => window.closeCLI(id));
+            input.addEventListener('keydown', (e) => handleCliKeydown(e, id));
+            win.addEventListener('mousedown', () => bringCliToFront(win));
+            makeCliDraggable(win, win.querySelector('.cli-window-header'));
+            return win;
+        }
+
+        function renderCLI(id) {
+            const win = openClis[id];
+            if (!win) return;
+            const dev = devices[id];
+            if (!dev || !dev.cli) { window.closeCLI(id); return; }
+            win.querySelector('.cli-output').textContent = dev.cli.history.join('\n');
+            win.querySelector('.cli-prompt').textContent = dev.cli.prompt;
+            win.querySelector('.cli-title').textContent = `${dev.name} - Command Line Interface`;
+            const inputWrap = win.querySelector('.cli-input-wrapper');
+            if (dev.cli.isRunning) inputWrap.classList.add('hidden');
+            else inputWrap.classList.remove('hidden');
+            const scrollArea = win.querySelector('.cli-scroll-area');
             scrollArea.scrollTop = scrollArea.scrollHeight;
         }
 
@@ -1507,7 +1527,8 @@
                 }
                 else if ((prev1 === 'cdp' || prev1 === 'lldp') && prevArgs.length === 1) options = ['run'];
                 else if (prev1 === 'ip' && prevArgs.length === 1 && dev.type === 'Switch') options = ['routing'];
-                else if (prev1 === 'ip' && prevArgs.length === 1 && dev.type === 'Router') options = ['route'];
+                else if (prev1 === 'ip' && prevArgs.length === 1 && dev.type === 'Router') options = ['route', 'dhcp'];
+                else if (prev1 === 'ip' && prev2 === 'dhcp' && prevArgs.length === 2 && dev.type === 'Router') options = ['pool', 'excluded-address'];
                 else if (prev1 === 'vtp' && prevArgs.length === 1 && dev.type === 'Switch') options = ['domain', 'mode', 'version'];
                 else if (prev1 === 'vtp' && prev2 === 'mode' && prevArgs.length === 2) options = ['server', 'client', 'transparent'];
                 else if (prev1 === 'no' && prevArgs.length === 1) { options = ['cdp', 'lldp', 'ip']; if (dev.type === 'Switch') options.push('vlan'); }
@@ -1516,6 +1537,10 @@
             }
             else if (dev.cli.mode === 'conf-vlan') {
                 if (prevArgs.length === 0) options = ['name', 'exit'];
+            }
+            else if (dev.cli.mode === 'conf-dhcp') {
+                if (prevArgs.length === 0) options = ['network', 'default-router', 'dns-server', 'domain-name', 'lease', 'no', 'exit'];
+                else if (prev1 === 'lease' && prevArgs.length === 1) options = ['infinite', '<days>'];
             }
             else if (dev.cli.mode === 'conf-router') {
                 if (prevArgs.length === 0) options = ['network', 'router-id', 'no', 'exit'];
@@ -1540,7 +1565,7 @@
                 else if (prev1 === 'encapsulation' && prev2 === 'dot1q' && prevArgs.length === 2) options = ['<1-4094>'];
                 else if (prev1 === 'standby' && dev.type === 'Router' && prevArgs.length === 2) options = ['ip', 'priority', 'preempt'];
                 else if (prev1 === 'ip' && (dev.type === 'Router' || dev.type === 'Switch')) {
-                    if (prevArgs.length === 1) options = ['address'];
+                    if (prevArgs.length === 1) options = dev.type === 'Router' ? ['address', 'helper-address'] : ['address'];
                     else if (prev2 === 'address' && prevArgs.length === 2) options = ['<A.B.C.D> (IP Address)'];
                     else if (prev2 === 'address' && prevArgs.length === 3) options = ['<A.B.C.D> (Subnet Mask)'];
                 }
@@ -1559,10 +1584,10 @@
             return options.filter(opt => opt.startsWith(lastArg) || opt.startsWith('<'));
         }
 
-        document.getElementById('cli-command-input').addEventListener('keydown', (e) => {
-            if (!activeCliDeviceId) return;
-            const dev = devices[activeCliDeviceId];
-            
+        function handleCliKeydown(e, cliDeviceId) {
+            const dev = devices[cliDeviceId];
+            if (!dev || !dev.cli) return;
+
             if (dev.cli.isRunning) { e.preventDefault(); return; } // Block input while commands like ping are running
 
             // Initialize history arrays if missing (for backwards compatibility with existing state)
@@ -1617,7 +1642,7 @@
                         // Display options if tab cannot progress further (just like a real terminal)
                         dev.cli.history.push(`${dev.cli.prompt} ${fullInput}`);
                         dev.cli.history.push('  ' + matches.join('    '));
-                        renderCLI();
+                        renderCLI(cliDeviceId);
                     }
                 }
                 return;
@@ -1638,7 +1663,7 @@
                 } else {
                     dev.cli.history.push('  <cr>'); // Indicate command is complete (Carriage Return)
                 }
-                renderCLI();
+                renderCLI(cliDeviceId);
                 return; 
             }
 
@@ -1661,7 +1686,7 @@
                 // Limit history buffer to prevent memory issues
                 if (dev.cli.history.length > 200) dev.cli.history = dev.cli.history.slice(-200);
                 
-                renderCLI();
+                renderCLI(cliDeviceId);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 if (dev.cli.cmdHistory.length > 0 && dev.cli.cmdIndex > 0) {
@@ -1678,7 +1703,7 @@
                     e.target.value = '';
                 }
             }
-        });
+        }
 
         // --- Command abbreviation: expand shortened keywords when they are unambiguous ---
         const CLI_KEYWORD_LIST = [
@@ -1696,6 +1721,7 @@
             'password','login','local','transport','input','secret','name','running-config','startup-config','brief',
             'summary','associations','status','statistics','translations','detail','database','pvc','lmi','community',
             'clock','interfaces','protocols','master','server','host','trap','traps','location','contact','ro','rw','mac',
+            'dhcp','excluded-address','default-router','dns-server','helper-address','lease','infinite',
             'permit','deny','tcp','udp','icmp','eq','any','established','primary','secondary','cdp','lldp','nvram:',
             'startup-config','root','sessions'
         ];
@@ -1704,7 +1730,7 @@
             int:'interface', sh:'show', shut:'shutdown', no:'no', run:'running-config', start:'startup-config',
             ex:'exit', wr:'write', nei:'neighbor', br:'brief', do:'do' };
         const CLI_FREETEXT = new Set(['hostname','username','description','banner','motd','name','password','secret',
-            'domain-name','location','contact','ssid']);
+            'domain-name','location','contact','ssid','pool']);
         function expandCliAbbrev(input) {
             const raw = (input || '').trim();
             if (!raw) return input;
@@ -1878,7 +1904,7 @@
                     runTerminalPing(dev, target).finally(() => {
                         if (devices[dev.id]) { // Check if device still exists
                             dev.cli.isRunning = false;
-                            if (activeCliDeviceId === dev.id) renderCLI();
+                            renderCLI(dev.id);
                         }
                     });
                     return;
@@ -1890,7 +1916,7 @@
                     runTerminalCurl(dev, target).finally(() => {
                         if (devices[dev.id]) { 
                             dev.cli.isRunning = false;
-                            if (activeCliDeviceId === dev.id) renderCLI();
+                            renderCLI(dev.id);
                         }
                     });
                     return;
@@ -1914,7 +1940,7 @@
                         if (server && server.mailEnabled) { server.mailboxes = server.mailboxes || {}; (server.mailboxes[to] = server.mailboxes[to] || []).push({ from, to, subject, time: Date.now() }); print('250 Message accepted for delivery'); }
                         else print('550 No such mailbox / mail service disabled');
                         send('QUIT'); try { await tcpClose(dev, ip, 25, res.srcPort, res.mac); } catch (e) {} print('221 Bye');
-                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; if (activeCliDeviceId === dev.id) renderCLI(); } });
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'pop3' || cmd === 'getmail') {
@@ -1937,7 +1963,7 @@
                         send('LIST'); print(`+OK ${box.length} message(s)`);
                         box.forEach((m, i) => { send('RETR', i + 1); print(`  ${i + 1}. From: ${m.from}  Subject: ${m.subject}`); });
                         send('QUIT'); try { await tcpClose(dev, ip, 110, res.srcPort, res.mac); } catch (e) {} print('+OK Bye');
-                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; if (activeCliDeviceId === dev.id) renderCLI(); } });
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'ftp') {
@@ -1956,14 +1982,14 @@
                         const ok = server && server.ftpEnabled && server.ftpUsers && server.ftpUsers[user] === pass;
                         if (ok) { print('230 User ' + user + ' logged in.'); dev.cli.ftpSession = { ip, mac: res.mac, srcPort: res.srcPort, user }; }
                         else { print('530 Login incorrect.'); try { await tcpClose(dev, ip, 21, res.srcPort, res.mac); } catch (e) {} }
-                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; if (activeCliDeviceId === dev.id) renderCLI(); } });
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'snmpget' || cmd === 'snmp-get') {
                     const ip = args[1]; const toks = input.trim().split(/\s+/); const community = toks[2]; const oid = toks[3] || 'sysName';
                     if (!ip || !community) { print('Usage: snmpget <agent-ip> <community> <oid>'); return; }
                     dev.cli.isRunning = true;
-                    snmpGet(dev, ip, community, oid, print).finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; if (activeCliDeviceId === dev.id) renderCLI(); } });
+                    snmpGet(dev, ip, community, oid, print).finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'telnet') {
@@ -1979,7 +2005,7 @@
                         dev.cli._savedPrompt = dev.cli.prompt;
                         dev.cli.pendingAuth = { targetId: target.id, protocol: 'telnet', targetIp: ip, mac: res.mac, srcPort: res.srcPort, destPort: 23 };
                         dev.cli.prompt = 'Password:';
-                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; if (activeCliDeviceId === dev.id) renderCLI(); } });
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'ssh') {
@@ -1996,7 +2022,7 @@
                         dev.cli._savedPrompt = dev.cli.prompt;
                         dev.cli.pendingAuth = { targetId: target.id, protocol: 'ssh', user, targetIp: ip, mac: res.mac, srcPort: res.srcPort, destPort: 22 };
                         dev.cli.prompt = 'Password:';
-                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; if (activeCliDeviceId === dev.id) renderCLI(); } });
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'tcp') {
@@ -2007,7 +2033,7 @@
                         print(`Connecting to ${ip}:${port} (TCP)...`);
                         const res = await tcpConnect(dev, ip, port, { print });
                         if (res.established) { print(`  SYN sent, SYN-ACK received, ACK sent.`); print(`Connection to ${ip}:${port} succeeded.`); await tcpClose(dev, ip, port, res.srcPort, res.mac); print(`Connection closed.`); showSuccessTick(dev.id); }
-                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; if (activeCliDeviceId === dev.id) renderCLI(); } });
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 print(`'${cmd}' is not recognized as an internal or external command,\noperable program or batch file.`);
@@ -2024,12 +2050,13 @@
             if (cmd === 'end' && dev.cli.mode && dev.cli.mode.startsWith('conf')) {
                 dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`;
                 dev.cli.currentInterface = null; dev.cli.currentVlan = null; dev.cli.routerProto = null; dev.cli.aclName = null;
-                dev.cli.rangePorts = null;
+                dev.cli.rangePorts = null; dev.cli.dhcpPool = null;
                 return;
             }
             if (cmd === 'exit') {
                 if (dev.cli.mode === 'conf-vlan') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentVlan = null; return; }
                 if (dev.cli.mode === 'conf-router') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.routerProto = null; return; }
+                if (dev.cli.mode === 'conf-dhcp') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.dhcpPool = null; return; }
                 if (dev.cli.mode === 'conf-line') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; return; }
                 if (dev.cli.mode === 'conf-acl') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.aclName = null; return; }
                 if (dev.cli.mode === 'conf-if') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentInterface = null; dev.cli.rangePorts = null; return; }
@@ -2287,6 +2314,30 @@
                         print('Neighbor ID     Pri   State           Dead Time   Address         Interface');
                         (dev.ospfNeighbors || []).forEach(n => {
                             print(`${(n.routerId || '0.0.0.0').padEnd(15)} ${String(1).padEnd(3)}   FULL/BDR        00:00:38    ${(n.ip || '').padEnd(15)} ${n.iface}`);
+                        });
+                        return;
+                    }
+                    if (dev.type === 'Router' && args[1] === 'ip' && args[2] === 'dhcp' && (args[3] === 'binding' || args[3] === 'bind')) {
+                        print('Bindings from all pools not associated with VRF:');
+                        print('IP address          Client-ID/              Lease expiration        Type');
+                        print('                    Hardware address/');
+                        let any = false;
+                        Object.values(dev.dhcpPools || {}).forEach(p => Object.entries(p.leases || {}).forEach(([ip, l]) => { any = true; print(`${ip.padEnd(20)}${(l.mac || '').padEnd(24)}${'Infinite'.padEnd(24)}Automatic`); }));
+                        if (!any) print('');
+                        return;
+                    }
+                    if (dev.type === 'Router' && args[1] === 'ip' && args[2] === 'dhcp' && args[3] === 'pool') {
+                        const names = Object.keys(dev.dhcpPools || {});
+                        if (!names.length) { print('(no DHCP pools configured)'); return; }
+                        names.forEach(nm => { const p = dev.dhcpPools[nm]; const leased = Object.keys(p.leases || {}).length;
+                            print(`Pool ${nm} :`);
+                            print(` Utilization mark (high/low)    : 100 / 0`);
+                            print(` Subnet size (first/next)       : 0 / 0`);
+                            print(` Total addresses                : ${dhcpPoolSize(p)}`);
+                            print(` Leased addresses               : ${leased}`);
+                            print(` Pending event                  : none`);
+                            if (p.network) print(` ${p.network}          ${p.mask}         ${leased}          ${Math.max(0, dhcpPoolSize(p) - leased)}`);
+                            print('');
                         });
                         return;
                     }
@@ -2696,6 +2747,28 @@
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel();
                     return;
                 }
+                if (cmd === 'ip' && args[1] === 'dhcp' && args[2] === 'pool' && args[3] && dev.type === 'Router') {
+                    const poolName = (input.trim().match(/^\S+\s+\S+\s+\S+\s+(\S+)/) || [])[1] || args[3];
+                    dev.dhcpPools = dev.dhcpPools || {};
+                    if (!dev.dhcpPools[poolName]) dev.dhcpPools[poolName] = { name: poolName, network: null, mask: null, gateway: null, dns: null, domain: null, leaseSecs: 86400, leases: {} };
+                    dev.cli.mode = 'conf-dhcp'; dev.cli.prompt = `${dev.name}(dhcp-config)#`; dev.cli.dhcpPool = poolName;
+                    return;
+                }
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'dhcp' && args[3] === 'pool' && args[4] && dev.type === 'Router') {
+                    const poolName = (input.trim().match(/^\S+\s+\S+\s+\S+\s+\S+\s+(\S+)/) || [])[1] || args[4];
+                    if (dev.dhcpPools) { delete dev.dhcpPools[poolName]; delete dev.dhcpPools[args[4]]; }
+                    return;
+                }
+                if (cmd === 'ip' && args[1] === 'dhcp' && args[2] === 'excluded-address' && args[3] && dev.type === 'Router') {
+                    dev.dhcpExcluded = dev.dhcpExcluded || [];
+                    dev.dhcpExcluded.push({ start: args[3], end: args[4] || args[3] });
+                    return;
+                }
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'dhcp' && args[3] === 'excluded-address' && args[4] && dev.type === 'Router') {
+                    const s = args[4], e = args[5] || args[4];
+                    dev.dhcpExcluded = (dev.dhcpExcluded || []).filter(x => !(x.start === s && (x.end || x.start) === e));
+                    return;
+                }
                 if (dev.type === 'Switch' && cmd === 'spanning-tree') {
                     ensureStp(dev);
                     if (args[1] === 'mode' && (args[2] === 'pvst' || args[2] === 'rapid-pvst')) { dev.stpMode = args[2]; if (stpEnabled) calculateSTP(); return; }
@@ -2978,6 +3051,15 @@
                     return;
                 }
                 if (cmd === 'no' && args[1] === 'ip' && args[2] === 'access-group') { iface.aclIn = null; iface.aclOut = null; return; }
+                if (cmd === 'ip' && args[1] === 'helper-address' && args[2] && dev.type === 'Router' && iface) {
+                    iface.helperAddresses = iface.helperAddresses || [];
+                    if (!iface.helperAddresses.includes(args[2])) iface.helperAddresses.push(args[2]);
+                    return;
+                }
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'helper-address' && args[3] && dev.type === 'Router' && iface) {
+                    iface.helperAddresses = (iface.helperAddresses || []).filter(h => h !== args[3]);
+                    return;
+                }
                 if (cmd === 'ip' && args[1] === 'address' && (dev.type === 'Router' || (dev.type === 'Switch' && iface && String(iface.id || '').startsWith('Vlan')))) {
                     if (args[2] && args[3]) {
                         iface.ip = args[2];
@@ -3120,6 +3202,24 @@
                 return;
             }
 
+            // DHCP pool configuration mode
+            if (dev.cli.mode === 'conf-dhcp') {
+                const pool = dev.dhcpPools ? dev.dhcpPools[dev.cli.dhcpPool] : null;
+                if (pool) {
+                    if (cmd === 'network' && args[1] && args[2]) { pool.network = getNetwork(args[1], args[2]); pool.mask = args[2]; return; }
+                    if (cmd === 'default-router' && args[1]) { pool.gateway = args[1]; return; }
+                    if (cmd === 'dns-server' && args[1]) { pool.dns = args[1]; return; }
+                    if (cmd === 'domain-name' && args[1]) { pool.domain = input.trim().split(/\s+/).slice(1).join(' '); return; }
+                    if (cmd === 'lease' && args[1] === 'infinite') { pool.leaseSecs = null; return; }
+                    if (cmd === 'lease' && args[1] != null) { const d = parseInt(args[1], 10) || 0, h = parseInt(args[2], 10) || 0, m = parseInt(args[3], 10) || 0; pool.leaseSecs = d * 86400 + h * 3600 + m * 60; return; }
+                    if (cmd === 'no' && args[1] === 'default-router') { pool.gateway = null; return; }
+                    if (cmd === 'no' && args[1] === 'dns-server') { pool.dns = null; return; }
+                    if (cmd === 'no' && args[1] === 'network') { pool.network = null; pool.mask = null; return; }
+                }
+                print('% Invalid input detected.');
+                return;
+            }
+
             // Named ACL configuration mode
             if (dev.cli.mode === 'conf-acl') {
                 if (cmd === 'permit' || cmd === 'deny') {
@@ -3163,7 +3263,7 @@
         async function runTerminalPing(dev, target) {
             const print = (msg) => { 
                 dev.cli.history.push(msg); 
-                if (activeCliDeviceId === dev.id) renderCLI(); 
+                renderCLI(dev.id); 
             };
 
             if (dev.ip === '0.0.0.0') {
@@ -3394,6 +3494,7 @@
                     if (i.type === 'subinterface' && i.vlan) L.push(` encapsulation dot1Q ${i.vlan}`);
                     if (i.encapsulation && i.encapsulation !== 'hdlc' && String(i.id).startsWith('Se')) L.push(` encapsulation ${i.encapsulation}`);
                     if (i.ip && i.ip !== '0.0.0.0') L.push(` ip address ${i.ip} ${i.subnet}`);
+                    if (i.helperAddresses) i.helperAddresses.forEach(h => L.push(` ip helper-address ${h}`));
                     if (i.natInside) L.push(' ip nat inside');
                     if (i.natOutside) L.push(' ip nat outside');
                     if (i.aclIn) L.push(` ip access-group ${i.aclIn} in`);
@@ -3414,6 +3515,8 @@
                 if (dev.bgp && dev.bgp.enabled) { L.push('!', `router bgp ${dev.bgp.asn}`); (dev.bgp.neighbors || []).forEach(nb => L.push(` neighbor ${nb.ip} remote-as ${nb.remoteAs}`)); (dev.bgp.networks || []).forEach(n => L.push(` network ${n.network}${n.mask ? ' mask ' + n.mask : ''}`)); }
                 if (dev.ripEnabled) { L.push('!', 'router rip', ' version 2'); const nets = new Set(); Object.values(dev.interfaces).forEach(i => { if (i.ip && i.ip !== '0.0.0.0') nets.add(classful(i.ip)); }); nets.forEach(n => L.push(` network ${n}`)); }
                 (dev.staticRoutes || []).forEach(sr => L.push('!', `ip route ${sr.network} ${sr.mask} ${sr.nextHop !== '0.0.0.0' ? sr.nextHop : sr.interface}`));
+                (dev.dhcpExcluded || []).forEach(ex => L.push(`ip dhcp excluded-address ${ex.start}${ex.end && ex.end !== ex.start ? ' ' + ex.end : ''}`));
+                Object.keys(dev.dhcpPools || {}).forEach(nm => { const p = dev.dhcpPools[nm]; L.push('!', `ip dhcp pool ${nm}`); if (p.network) L.push(` network ${p.network} ${p.mask}`); if (p.gateway) L.push(` default-router ${p.gateway}`); if (p.dns) L.push(` dns-server ${p.dns}`); if (p.domain) L.push(` domain-name ${p.domain}`); if (p.leaseSecs === null) L.push(' lease infinite'); else if (p.leaseSecs != null && p.leaseSecs !== 86400) { const d = Math.floor(p.leaseSecs / 86400), h = Math.floor((p.leaseSecs % 86400) / 3600), m = Math.floor((p.leaseSecs % 3600) / 60); L.push(` lease ${d} ${h} ${m}`); } });
                 if (dev.natPools) Object.keys(dev.natPools).forEach(pn => { const p = dev.natPools[pn]; L.push('!', `ip nat pool ${pn} ${p.start} ${p.end}${p.mask ? ' netmask ' + p.mask : ''}`); });
                 (dev.natStatic || []).forEach(s => L.push('!', `ip nat inside source static ${s.local} ${s.global}`));
                 if (dev.natOverload) { const outIf = dev.natOverload.interface || ((Object.values(dev.interfaces).find(x => x.natOutside) || {}).id) || ''; L.push('!', `ip nat inside source list ${dev.natOverload.aclId} interface ${outIf} overload`); }
@@ -3473,7 +3576,7 @@
         async function runTerminalCurl(dev, target) {
             const print = (msg) => { 
                 dev.cli.history.push(...msg.split('\n')); 
-                if (activeCliDeviceId === dev.id) renderCLI(); 
+                renderCLI(dev.id); 
             };
 
             if (dev.ip === '0.0.0.0') {
@@ -3899,6 +4002,7 @@
 
                 // DHCP Server Logic
                 if (!this.dhcpEnabled) return;
+                if (payload.giaddr) return; // relayed DHCP is served by a router pool, not this appliance
 
                 if (payload.type === 'DHCP_DISCOVER') {
                     let offeredIp = this.findFreeIp(payload.sourceMac);
@@ -4205,6 +4309,89 @@
             }
         }
 
+        // ---- Router IOS DHCP server + relay engine ----
+        function dhcpPoolSize(p) {
+            if (!p.network || !p.mask) return 0;
+            const hostBits = 32 - getPrefixLength(p.mask);
+            return hostBits >= 31 ? 0 : Math.max(0, Math.pow(2, hostBits) - 2);
+        }
+        function dhcpIsExcluded(dev, ipInt) {
+            return (dev.dhcpExcluded || []).some(ex => { const s = ipToInt(ex.start), e = ipToInt(ex.end || ex.start); return ipInt >= s && ipInt <= e; });
+        }
+        function dhcpFindFreeIp(dev, pool) {
+            const netInt = ipToInt(pool.network);
+            const bcast = (netInt | (~ipToInt(pool.mask) >>> 0)) >>> 0;
+            const ifaceIps = Object.values(dev.interfaces).map(i => i.ip).filter(x => x && x !== '0.0.0.0');
+            for (let i = netInt + 1; i < bcast; i++) {
+                const ip = intToIp(i >>> 0);
+                if (pool.leases && pool.leases[ip]) continue;
+                if (dhcpIsExcluded(dev, i)) continue;
+                if (pool.gateway === ip) continue;
+                if (ifaceIps.includes(ip)) continue;
+                return ip;
+            }
+            return null;
+        }
+        function dhcpMatchPool(dev, scopeIp) {
+            return Object.values(dev.dhcpPools || {}).find(p => p.network && p.mask && isSameSubnet(scopeIp, p.network, p.mask)) || null;
+        }
+        async function routerHandleDhcp(dev, frame, inIface, payload) {
+            const relayed = !!payload.giaddr;
+            const scopeIp = payload.giaddr || inIface.ip;
+            const pool = dhcpMatchPool(dev, scopeIp);
+            if (pool) {
+                const srcIp = (Object.values(dev.interfaces).find(i => i.ip && i.ip !== '0.0.0.0') || {}).ip || scopeIp;
+                const gw = pool.gateway || (relayed ? scopeIp : inIface.ip);
+                if (payload.type === 'DHCP_DISCOVER') {
+                    pool.leases = pool.leases || {};
+                    let offeredIp = null;
+                    for (const [ip, l] of Object.entries(pool.leases)) if (l.mac === payload.sourceMac) offeredIp = ip;
+                    if (!offeredIp) offeredIp = dhcpFindFreeIp(dev, pool);
+                    if (!offeredIp) { log(`[${dev.name}] DHCP pool ${pool.name} exhausted for ${payload.sourceMac}.`, 'warning'); return; }
+                    await sleep(35);
+                    const opt = { type: 'DHCP_OFFER', targetMac: payload.sourceMac, offeredIp, mask: pool.mask, gw, dns: pool.dns };
+                    log(`[${dev.name}] DHCP: offering ${offeredIp} to ${payload.sourceMac}${relayed ? ' (relayed)' : ''}.`, 'info');
+                    if (relayed) await dev.routePacket({ payload: Object.assign({}, opt, { sourceIp: srcIp, targetIp: payload.giaddr, giaddr: payload.giaddr, relay: payload.relay }) });
+                    else transmit({ sourceMac: inIface.mac, destMac: frame.sourceMac, payload: opt, vlan: inIface.vlan }, dev.id, inIface.id);
+                    return;
+                }
+                if (payload.type === 'DHCP_REQUEST' && payload.requestedIp) {
+                    pool.leases = pool.leases || {};
+                    pool.leases[payload.requestedIp] = { mac: payload.sourceMac, expires: pool.leaseSecs == null ? Infinity : Date.now() + pool.leaseSecs * 1000 };
+                    await sleep(35);
+                    const opt = { type: 'DHCP_ACK', targetMac: payload.sourceMac, offeredIp: payload.requestedIp, mask: pool.mask, gw, dns: pool.dns };
+                    log(`[${dev.name}] DHCP: leased ${payload.requestedIp} to ${payload.sourceMac}.`, 'success');
+                    if (relayed) await dev.routePacket({ payload: Object.assign({}, opt, { sourceIp: srcIp, targetIp: payload.giaddr, giaddr: payload.giaddr, relay: payload.relay }) });
+                    else transmit({ sourceMac: inIface.mac, destMac: frame.sourceMac, payload: opt, vlan: inIface.vlan }, dev.id, inIface.id);
+                    if (propertiesDeviceId === dev.id) updatePropertiesPanel();
+                    return;
+                }
+                return;
+            }
+            // No local pool: relay to helper-address(es) if this is a fresh client broadcast
+            if (!relayed && inIface.helperAddresses && inIface.helperAddresses.length && inIface.ip && inIface.ip !== '0.0.0.0') {
+                for (const helper of inIface.helperAddresses) {
+                    log(`[${dev.name}] DHCP relay: forwarding ${payload.type} from ${payload.sourceMac} to ${helper}.`, 'info');
+                    await dev.routePacket({ payload: {
+                        type: payload.type, sourceMac: payload.sourceMac, requestedIp: payload.requestedIp,
+                        sourceIp: inIface.ip, targetIp: helper, giaddr: inIface.ip,
+                        relay: { routerId: dev.id, ifaceId: inIface.id, clientMac: payload.sourceMac }
+                    } });
+                }
+            }
+        }
+        async function routerRelayDhcpReply(dev, payload) {
+            const r = payload.relay;
+            if (!r || r.routerId !== dev.id) return;
+            const iface = dev.interfaces[r.ifaceId];
+            if (!iface) return;
+            await sleep(20);
+            transmit({ sourceMac: iface.mac, destMac: r.clientMac,
+                payload: { type: payload.type, targetMac: r.clientMac, offeredIp: payload.offeredIp, mask: payload.mask, gw: payload.gw, dns: payload.dns },
+                vlan: iface.vlan }, dev.id, iface.id);
+            log(`[${dev.name}] DHCP relay: delivering ${payload.type} (${payload.offeredIp || ''}) to ${r.clientMac}.`, 'info');
+        }
+
         class Router extends Device {
             constructor(x, y) {
                 super('Router', x, y);
@@ -4216,6 +4403,8 @@
                 };
                 this.routingTable = []; // { network, mask, nextHop, interface, metric, type, ad }
                 this.staticRoutes = []; // user-configured static routes
+                this.dhcpPools = {};    // name -> { name, network, mask, gateway, dns, domain, leaseSecs, leases:{ip:{mac,expires}} }
+                this.dhcpExcluded = []; // [{ start, end }]
                 this.ospf = { enabled: false, processId: null, routerId: null, networks: [] };
                 this.ospfNeighbors = [];
                 this.eigrp = { enabled: false, asn: null, networks: [] };
@@ -4343,6 +4532,15 @@
                             if (tbody) tbody.innerHTML = this.routingTable.map(r => `<tr><td class="px-2 py-1 border-t font-bold ${r.type==='C'?'text-blue-600':r.type==='S'?'text-green-600':'text-orange-500'}">${r.type}</td><td class="px-2 py-1 border-t">${r.network}/${getPrefixLength(r.mask)}</td><td class="px-2 py-1 border-t">${r.nextHop}</td><td class="px-2 py-1 border-t">${r.interface}</td><td class="px-2 py-1 border-t">${r.metric}</td></tr>`).join('');
                         }
                     }
+                    return;
+                }
+
+                if (payload.type === 'DHCP_DISCOVER' || payload.type === 'DHCP_REQUEST') {
+                    await routerHandleDhcp(this, frame, inIface, payload);
+                    return;
+                }
+                if ((payload.type === 'DHCP_OFFER' || payload.type === 'DHCP_ACK') && payload.relay) {
+                    await routerRelayDhcpReply(this, payload);
                     return;
                 }
 
@@ -5668,7 +5866,7 @@
             if (e.target.closest('#floating-console')) return; // ignore clicks on the floating console
             if (e.target.closest('#floating-ping')) return; // ignore clicks on ping tool
             if (e.target.closest('#floating-properties')) return; // ignore clicks on the floating properties
-            if (e.target.closest('#floating-cli')) return; // ignore clicks on the floating CLI
+            if (e.target.closest('.cli-window')) return; // ignore clicks on any CLI window
             if (e.target.closest('#floating-browser')) return; // ignore clicks on the floating browser
             if (e.target.closest('#floating-sniffer')) return; // ignore clicks on the floating sniffer
             if (e.target.closest('#bottom-toolbar')) return; // ignore clicks on bottom toolbar
@@ -6001,19 +6199,6 @@
         let dragInfo = null;
 
         // CLI Drag Logic
-        const cliHeader = document.getElementById('cli-header');
-        const cliWindow = document.getElementById('floating-cli');
-        let isDraggingCLI = false;
-        let cliDragOffsetX = 0;
-        let cliDragOffsetY = 0;
-
-        cliHeader.addEventListener('mousedown', (e) => {
-            isDraggingCLI = true;
-            const rect = cliWindow.getBoundingClientRect();
-            cliDragOffsetX = e.clientX - rect.left;
-            cliDragOffsetY = e.clientY - rect.top;
-        });
-
         // Browser Drag Logic
         const browserHeader = document.getElementById('browser-header');
         const browserWindow = document.getElementById('floating-browser');
@@ -6095,7 +6280,6 @@
             });
         }
         const _g = (id) => document.getElementById(id);
-        makeDraggable(_g('floating-console'), _g('console-header'));
         makeDraggable(_g('floating-ping'), _g('ping-header'));
         makeDraggable(_g('playback-bar'), _g('pb-handle'));
         makeDraggable(_g('bottom-toolbar'), _g('toolbar-grip'));
@@ -6637,6 +6821,77 @@
             }
         });
 
+        // --- Device right-click context menu ---
+        const ICON_TERMINAL = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>';
+        const ICON_SETTINGS = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+
+        function terminalLabelFor(dev) {
+            if (isEndDevice(dev)) return 'Open Command Prompt';
+            if (dev.type === 'Router' || dev.type === 'Switch') return 'Open Terminal (CLI)';
+            return null; // devices without a usable shell (e.g. Access Point)
+        }
+
+        window.hideDeviceContextMenu = () => {
+            const m = document.getElementById('device-context-menu');
+            if (m && !m.classList.contains('hidden')) m.classList.add('hidden');
+        };
+
+        function showDeviceContextMenu(clientX, clientY, id) {
+            const dev = devices[id];
+            const menu = document.getElementById('device-context-menu');
+            if (!dev || !menu) return;
+            // Select the device so the action clearly targets it
+            selectedDeviceId = id; selectedLabelId = null; selectedLinkId = null;
+            refreshNodeSelection(); refreshLinkStyles();
+
+            const items = [];
+            const termLabel = terminalLabelFor(dev);
+            if (termLabel) items.push({ icon: ICON_TERMINAL, label: termLabel, action: () => window.openCLI(id) });
+            items.push({ icon: ICON_SETTINGS, label: 'Open Settings', action: () => {
+                selectedDeviceId = id; propertiesDeviceId = id; selectedLabelId = null; selectedLinkId = null;
+                positionPropertiesPanel(devices[id]); updatePropertiesPanel(true);
+                refreshNodeSelection(); refreshLinkStyles();
+            }});
+
+            menu.innerHTML = items.map((it, i) =>
+                `<button type="button" data-idx="${i}" class="w-full text-left px-3 py-1.5 flex items-center gap-2.5 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors">${it.icon}<span>${it.label}</span></button>`
+            ).join('');
+            menu.querySelectorAll('button').forEach(b => {
+                b.addEventListener('click', (ev) => { ev.stopPropagation(); const it = items[+b.dataset.idx]; hideDeviceContextMenu(); it.action(); });
+            });
+
+            // Position relative to the workspace (outside the zoom transform), clamped to view
+            const rect = WORKSPACE.getBoundingClientRect();
+            menu.classList.remove('hidden');
+            const mw = menu.offsetWidth, mh = menu.offsetHeight;
+            let x = clientX - rect.left, y = clientY - rect.top;
+            if (x + mw > rect.width - 8) x = Math.max(4, rect.width - mw - 8);
+            if (y + mh > rect.height - 8) y = Math.max(4, rect.height - mh - 8);
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+        }
+
+        NODES_CONTAINER.addEventListener('contextmenu', (e) => {
+            const nodeEl = e.target.closest('.device-node');
+            if (!nodeEl) return; // let the browser handle right-clicks off a device
+            const id = nodeEl.getAttribute('data-id');
+            if (!devices[id]) return;
+            e.preventDefault();
+            e.stopPropagation();
+            showDeviceContextMenu(e.clientX, e.clientY, id);
+        });
+
+        // Dismiss the context menu on any outside interaction
+        document.addEventListener('mousedown', (e) => {
+            const menu = document.getElementById('device-context-menu');
+            if (!menu || menu.classList.contains('hidden')) return;
+            if (e.target instanceof Element && e.target.closest('#device-context-menu')) return;
+            hideDeviceContextMenu();
+        }, true);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideDeviceContextMenu(); });
+        window.addEventListener('resize', () => hideDeviceContextMenu());
+        WORKSPACE.addEventListener('wheel', () => hideDeviceContextMenu(), { passive: true });
+
         // focusout bubbles, unlike blur
         NODES_CONTAINER.addEventListener('focusout', (e) => {
             const labelEl = e.target.closest('.text-label-node');
@@ -6685,12 +6940,6 @@
         });
 
         window.addEventListener('mousemove', (e) => {
-            if (isDraggingCLI) {
-                cliWindow.style.left = `${e.clientX - cliDragOffsetX}px`;
-                cliWindow.style.top = `${e.clientY - cliDragOffsetY}px`;
-                return; // Stop processing background workspace dragging if moving the CLI
-            }
-            
             if (isDraggingBrowser) {
                 browserWindow.style.left = `${e.clientX - browserDragOffsetX}px`;
                 browserWindow.style.top = `${e.clientY - browserDragOffsetY}px`;
@@ -6792,7 +7041,6 @@
                 scheduleAutosave();
             }
             dragInfo = null;
-            isDraggingCLI = false;
             isDraggingBrowser = false;
             isDraggingSniffer = false;
             isDraggingProperties = false;
@@ -6805,7 +7053,7 @@
         // --- Wheel zoom ---
         WORKSPACE.addEventListener('wheel', (e) => {
             if (e.target.closest('#floating-console') || e.target.closest('#floating-ping') ||
-                e.target.closest('#floating-properties') || e.target.closest('#floating-cli') ||
+                e.target.closest('#floating-properties') || e.target.closest('.cli-window') ||
                 e.target.closest('#floating-browser') || e.target.closest('#floating-sniffer') ||
                 e.target.closest('#bottom-toolbar') || e.target.closest('#zoom-controls') ||
                 e.target.closest('#protocol-legend') || e.target.closest('#help-modal') ||
@@ -6817,7 +7065,7 @@
         // --- Pan: middle mouse anywhere, or Space + left drag ---
         WORKSPACE.addEventListener('mousedown', (e) => {
             if (e.target.closest('#floating-console') || e.target.closest('#floating-ping') ||
-                e.target.closest('#floating-properties') || e.target.closest('#floating-cli') ||
+                e.target.closest('#floating-properties') || e.target.closest('.cli-window') ||
                 e.target.closest('#floating-browser') || e.target.closest('#floating-sniffer') ||
                 e.target.closest('#bottom-toolbar') || e.target.closest('#zoom-controls') ||
                 e.target.closest('#protocol-legend') || e.target.closest('#help-modal') ||
@@ -6851,9 +7099,9 @@
         };
 
         (function () {
-            const HANDLES = '#console-header, #ping-header, #pb-handle, #toolbar-grip, #legend-header, #zoom-grip, #cli-header, #browser-header, #sniffer-header, #prop-header';
+            const HANDLES = '#console-header, #ping-header, #pb-handle, #toolbar-grip, #legend-header, #zoom-grip, .cli-window-header, #browser-header, #sniffer-header, #prop-header';
             const INTERACTIVE = 'button, select, input, textarea, a, option, [contenteditable="true"]';
-            const PANELS = '#floating-console, #floating-ping, #floating-properties, #floating-cli, #floating-browser, #floating-sniffer, #bottom-toolbar, #zoom-controls, #protocol-legend, #help-modal, #playback-bar, #port-selector, #packet-inspector';
+            const PANELS = '#floating-console, #floating-ping, #floating-properties, .cli-window, #floating-browser, #floating-sniffer, #bottom-toolbar, #zoom-controls, #protocol-legend, #help-modal, #playback-bar, #port-selector, #packet-inspector';
             let ts = null, lastTap = null;
             const synth = (type, target, x, y) => target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 }));
             const distance = (a, b) => Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
