@@ -153,6 +153,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">Switch</span>
                     </div>
+                    <div draggable="true" ondragstart="handleDragStart(event, 'L3Switch')" ontouchend="palTapItem(event, 'L3Switch')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Layer 3 Switch">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="2" y="9" width="20" height="10" rx="2"/><path d="M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/><path d="M8 6 6 4 4 6"/><path d="M6 4v3"/><path d="m16 6 2-2 2 2"/><path d="M18 4v3"/></svg>
+                        <span class="text-[10px] font-bold uppercase tracking-wide">L3 SW</span>
+                    </div>
                     <div draggable="true" ondragstart="handleDragStart(event, 'Router')" ontouchend="palTapItem(event, 'Router')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Router">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4h8l-4-4Z"/><path d="m12 16 4-4H8l4 4Z"/><path d="m8 12 4-4v8l-4-4Z"/><path d="m16 12-4 4V8l4 4Z"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">Router</span>
@@ -440,7 +444,7 @@
         let selectedLabelId = null;
         let pendingCableSource = null;
         let pendingCableSourcePort = null;
-        let deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1 };
+        let deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1 };
         let currentMouseX = 0;
         let currentMouseY = 0;
         let stpEnabled = true;
@@ -485,7 +489,8 @@
             'WebServer': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
             'Router': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4h8l-4-4Z"/><path d="m12 16 4-4H8l4 4Z"/><path d="m8 12 4-4v8l-4-4Z"/><path d="m16 12-4 4V8l4 4Z"/></svg>`,
             'AP': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>`,
-            'Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>`
+            'Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>`,
+            'L3Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="10" rx="2"/><path d="M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/><path d="M8 6 6 4 4 6"/><path d="M6 4v3"/><path d="m16 6 2-2 2 2"/><path d="M18 4v3"/></svg>`
         };
 
         // Single lookup for protocol colours used by packet dots, labels, the sniffer and the legend
@@ -762,6 +767,7 @@
         };
 
         const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const l3capable = (d) => !!d && (d.type === 'Router' || d.l3);
 
         // --- View: Pan, Zoom, Snap, Theme, Minimap ---
         const toWorld = (clientX, clientY) => {
@@ -952,7 +958,7 @@
             devices = {};
             for (const id in (data.devices || {})) {
                 const d = data.devices[id];
-                const Cls = deviceClassFor(d.type);
+                const Cls = (d.l3 && d.type === 'Switch') ? L3Switch : deviceClassFor(d.type);
                 if (!Cls) { log(`Skipped unknown device type "${d.type}" while loading.`, 'warning'); continue; }
                 const instance = new Cls(d.x, d.y);
                 Object.assign(instance, d);
@@ -968,7 +974,7 @@
             });
             labels = data.labels || {};
             // Merge counters AFTER instantiation, since constructors increment them
-            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, ...(data.deviceCounter || {}) };
+            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ...(data.deviceCounter || {}) };
             if (typeof data.stpEnabled === 'boolean') stpEnabled = data.stpEnabled;
             selectedDeviceId = null;
             selectedLabelId = null;
@@ -1721,7 +1727,7 @@
             'password','login','local','transport','input','secret','name','running-config','startup-config','brief',
             'summary','associations','status','statistics','translations','detail','database','pvc','lmi','community',
             'clock','interfaces','protocols','master','server','host','trap','traps','location','contact','ro','rw','mac',
-            'dhcp','excluded-address','default-router','dns-server','helper-address','lease','infinite',
+            'dhcp','excluded-address','default-router','dns-server','helper-address','lease','infinite','do',
             'permit','deny','tcp','udp','icmp','eq','any','established','primary','secondary','cdp','lldp','nvram:',
             'startup-config','root','sessions'
         ];
@@ -1797,6 +1803,18 @@
                     dev.cli.history.push('% Authentication failed.');
                     dev.cli.prompt = dev.cli._savedPrompt || 'C:\\>';
                 }
+                return;
+            }
+
+            // 'do' — run a privileged EXEC command (show, ping, write, copy, clear, ...) from within any configuration mode
+            if (cmd === 'do' && dev.cli.mode && dev.cli.mode.startsWith('conf')) {
+                if (args.length < 2) { print('% Incomplete command.'); return; }
+                const sub = input.trim().replace(/^\s*do\s+/i, '');
+                if (!sub) { print('% Incomplete command.'); return; }
+                const savedMode = dev.cli.mode, savedPrompt = dev.cli.prompt;
+                dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`;
+                try { processCLICommand(dev, sub); }
+                finally { dev.cli.mode = savedMode; dev.cli.prompt = savedPrompt; }
                 return;
             }
 
@@ -2265,7 +2283,7 @@
                         if (dev.ntpServerIp) print(`${dev.ntpSynced ? '*~' : ' ~'}${dev.ntpServerIp.padEnd(15)} .INIT.          ${dev.ntpStratum || 16}     18     64  ${dev.ntpSynced ? '377' : '  0'}   1.00    0.50   0.20`);
                         return;
                     }
-                    if (dev.type === 'Router' && args[1] === 'standby') {
+                    if (l3capable(dev) && args[1] === 'standby') {
                         print('Interface   Grp  Pri P State    Active          Standby         Virtual IP');
                         let any = false;
                         Object.values(dev.interfaces).forEach(i => {
@@ -2451,6 +2469,21 @@
                         return;
                     }
                     if (dev.type === 'Switch' && args[1] === 'ip' && (args[2] === 'ro' || args[2] === 'route')) {
+                        if (dev.l3) {
+                            print('Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP');
+                            if (!dev.ipRouting) { print('% IP routing is not enabled'); return; }
+                            dev.updateConnectedRoutes();
+                            if (!dev.routingTable.length) { print('Gateway of last resort is not set\n'); return; }
+                            dev.routingTable.forEach(r => {
+                                const pfx = getPrefixLength(r.mask);
+                                if (r.type === 'C') print(`C    ${r.network}/${pfx} is directly connected, ${r.interface}`);
+                                else if (r.type === 'S') print(`S    ${r.network}/${pfx} ${r.nextHop === '0.0.0.0' ? 'is directly connected, ' + r.interface : '[' + (r.ad != null ? r.ad : 1) + '/0] via ' + r.nextHop}`);
+                                else if (r.type === 'O') print(`O    ${r.network}/${pfx} [110/${r.metric}] via ${r.nextHop}, ${r.interface}`);
+                                else if (r.type === 'D') print(`D    ${r.network}/${pfx} [90/${r.metric}] via ${r.nextHop}, ${r.interface}`);
+                                else print(`R    ${r.network}/${pfx} [120/${r.metric}] via ${r.nextHop}, ${r.interface}`);
+                            });
+                            return;
+                        }
                         print('Codes: C - connected, S - static');
                         if (!dev.ipRouting) { print('% IP routing is not enabled'); return; }
                         const svis = Object.values(dev.svis || {}).filter(s => s.ip && s.ip !== '0.0.0.0' && s.adminState !== 'down');
@@ -2721,7 +2754,7 @@
                 }
                 if (cmd === 'ip' && args[1] === 'routing' && dev.type === 'Switch') { dev.ipRouting = true; return; }
                 if (cmd === 'no' && args[1] === 'ip' && args[2] === 'routing' && dev.type === 'Switch') { dev.ipRouting = false; return; }
-                if (cmd === 'ip' && args[1] === 'route' && dev.type === 'Router' && args[2] && args[3] && args[4]) {
+                if (cmd === 'ip' && args[1] === 'route' && l3capable(dev) && args[2] && args[3] && args[4]) {
                     const isIp = s => /^\d{1,3}(\.\d{1,3}){3}$/.test(s);
                     if (!isIp(args[2]) || !isIp(args[3])) { print('% Invalid network or mask.'); return; }
                     const net = getNetwork(args[2], args[3]);
@@ -2740,31 +2773,31 @@
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel();
                     return;
                 }
-                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'route' && dev.type === 'Router' && args[3] && args[4]) {
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'route' && l3capable(dev) && args[3] && args[4]) {
                     const net = getNetwork(args[3], args[4]);
                     dev.staticRoutes = (dev.staticRoutes || []).filter(sr => !(sr.network === net && sr.mask === args[4]));
                     dev.updateConnectedRoutes();
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel();
                     return;
                 }
-                if (cmd === 'ip' && args[1] === 'dhcp' && args[2] === 'pool' && args[3] && dev.type === 'Router') {
+                if (cmd === 'ip' && args[1] === 'dhcp' && args[2] === 'pool' && args[3] && l3capable(dev)) {
                     const poolName = (input.trim().match(/^\S+\s+\S+\s+\S+\s+(\S+)/) || [])[1] || args[3];
                     dev.dhcpPools = dev.dhcpPools || {};
                     if (!dev.dhcpPools[poolName]) dev.dhcpPools[poolName] = { name: poolName, network: null, mask: null, gateway: null, dns: null, domain: null, leaseSecs: 86400, leases: {} };
                     dev.cli.mode = 'conf-dhcp'; dev.cli.prompt = `${dev.name}(dhcp-config)#`; dev.cli.dhcpPool = poolName;
                     return;
                 }
-                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'dhcp' && args[3] === 'pool' && args[4] && dev.type === 'Router') {
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'dhcp' && args[3] === 'pool' && args[4] && l3capable(dev)) {
                     const poolName = (input.trim().match(/^\S+\s+\S+\s+\S+\s+\S+\s+(\S+)/) || [])[1] || args[4];
                     if (dev.dhcpPools) { delete dev.dhcpPools[poolName]; delete dev.dhcpPools[args[4]]; }
                     return;
                 }
-                if (cmd === 'ip' && args[1] === 'dhcp' && args[2] === 'excluded-address' && args[3] && dev.type === 'Router') {
+                if (cmd === 'ip' && args[1] === 'dhcp' && args[2] === 'excluded-address' && args[3] && l3capable(dev)) {
                     dev.dhcpExcluded = dev.dhcpExcluded || [];
                     dev.dhcpExcluded.push({ start: args[3], end: args[4] || args[3] });
                     return;
                 }
-                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'dhcp' && args[3] === 'excluded-address' && args[4] && dev.type === 'Router') {
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'dhcp' && args[3] === 'excluded-address' && args[4] && l3capable(dev)) {
                     const s = args[4], e = args[5] || args[4];
                     dev.dhcpExcluded = (dev.dhcpExcluded || []).filter(x => !(x.start === s && (x.end || x.start) === e));
                     return;
@@ -2797,41 +2830,41 @@
                     if (stpEnabled) calculateSTP();
                     return;
                 }
-                if (cmd === 'router' && args[1] === 'ospf' && dev.type === 'Router') {
+                if (cmd === 'router' && args[1] === 'ospf' && l3capable(dev)) {
                     dev.ospf = dev.ospf || { enabled: false, processId: null, routerId: null, networks: [] };
                     dev.ospf.enabled = true; dev.ospf.processId = parseInt(args[2], 10) || 1;
                     dev.cli.mode = 'conf-router'; dev.cli.prompt = `${dev.name}(config-router)#`; dev.cli.routerProto = 'ospf';
                     computeOspf();
                     return;
                 }
-                if (cmd === 'no' && args[1] === 'router' && args[2] === 'ospf' && dev.type === 'Router') {
+                if (cmd === 'no' && args[1] === 'router' && args[2] === 'ospf' && l3capable(dev)) {
                     if (dev.ospf) dev.ospf.enabled = false;
                     dev.routingTable = dev.routingTable.filter(x => x.type !== 'O');
                     dev.ospfNeighbors = [];
                     computeOspf();
                     return;
                 }
-                if (cmd === 'router' && args[1] === 'eigrp' && dev.type === 'Router') {
+                if (cmd === 'router' && args[1] === 'eigrp' && l3capable(dev)) {
                     dev.eigrp = dev.eigrp || { enabled: false, asn: null, networks: [] };
                     dev.eigrp.enabled = true; dev.eigrp.asn = parseInt(args[2], 10) || 1;
                     dev.cli.mode = 'conf-router'; dev.cli.prompt = `${dev.name}(config-router)#`; dev.cli.routerProto = 'eigrp';
                     computeEigrp();
                     return;
                 }
-                if (cmd === 'no' && args[1] === 'router' && args[2] === 'eigrp' && dev.type === 'Router') {
+                if (cmd === 'no' && args[1] === 'router' && args[2] === 'eigrp' && l3capable(dev)) {
                     if (dev.eigrp) dev.eigrp.enabled = false;
                     dev.routingTable = dev.routingTable.filter(x => x.type !== 'D');
                     dev.eigrpNeighbors = [];
                     computeEigrp();
                     return;
                 }
-                if (cmd === 'router' && args[1] === 'rip' && dev.type === 'Router') {
+                if (cmd === 'router' && args[1] === 'rip' && l3capable(dev)) {
                     dev.ripEnabled = true;
                     dev.cli.mode = 'conf-router'; dev.cli.prompt = `${dev.name}(config-router)#`; dev.cli.routerProto = 'rip';
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
                     return;
                 }
-                if (cmd === 'no' && args[1] === 'router' && args[2] === 'rip' && dev.type === 'Router') {
+                if (cmd === 'no' && args[1] === 'router' && args[2] === 'rip' && l3capable(dev)) {
                     dev.ripEnabled = false;
                     dev.routingTable = dev.routingTable.filter(x => x.type !== 'R');
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
@@ -2956,6 +2989,18 @@
                 if (dev.type === 'Router' && cmd === 'frame-relay' && args[1] === 'lmi-type' && args[2] && iface) { iface.frLmi = args[2]; return; }
                 if (dev.type === 'Router' && cmd === 'no' && args[1] === 'frame-relay' && args[2] === 'map' && iface) { iface.frMaps = []; return; }
 
+                if (dev.l3 && cmd === 'no' && args[1] === 'switchport' && !args[2] && iface && iface.media) {
+                    iface.routed = true; iface.mode = 'access'; iface.vlan = 1;
+                    dev.updateConnectedRoutes();
+                    if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
+                    return;
+                }
+                if (dev.l3 && cmd === 'switchport' && !args[1] && iface && iface.media) {
+                    iface.routed = false; iface.ip = '0.0.0.0'; iface.subnet = '0.0.0.0';
+                    dev.updateConnectedRoutes();
+                    if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
+                    return;
+                }
                 if (dev.type === 'Switch' && cmd === 'switchport') {
                     if (args[1] === 'mode' && args[2] === 'access') {
                         iface.mode = 'access';
@@ -3023,7 +3068,7 @@
                     return;
                 }
 
-                if (cmd === 'standby' && dev.type === 'Router' && args[1] && iface) {
+                if (cmd === 'standby' && l3capable(dev) && args[1] && iface) {
                     const g = parseInt(args[1], 10);
                     if (isNaN(g)) { print('% Invalid group number.'); return; }
                     if (args[2] === 'ip' && args[3]) {
@@ -3036,7 +3081,7 @@
                     if (args[2] === 'preempt') { iface.hsrp = iface.hsrp || { group: g, priority: 100 }; iface.hsrp.preempt = true; return; }
                     print('% Incomplete standby command.'); return;
                 }
-                if (cmd === 'no' && args[1] === 'standby' && dev.type === 'Router' && args[2] && iface) {
+                if (cmd === 'no' && args[1] === 'standby' && l3capable(dev) && args[2] && iface) {
                     if (iface.hsrp && iface.hsrp.group === parseInt(args[2], 10)) iface.hsrp = null;
                     return;
                 }
@@ -3046,25 +3091,26 @@
                 }
                 if (cmd === 'no' && args[1] === 'ip' && args[2] === 'nat') { iface.natInside = false; iface.natOutside = false; return; }
                 if (cmd === 'ip' && args[1] === 'access-group' && args[2] && (args[3] === 'in' || args[3] === 'out')) {
-                    const id = /^\d+$/.test(args[2]) ? parseInt(args[2], 10) : args[2];
+                    const rawName = input.trim().split(/\s+/)[2] || args[2];
+                    const id = /^\d+$/.test(args[2]) ? parseInt(args[2], 10) : rawName;
                     if (args[3] === 'in') iface.aclIn = id; else iface.aclOut = id;
                     return;
                 }
                 if (cmd === 'no' && args[1] === 'ip' && args[2] === 'access-group') { iface.aclIn = null; iface.aclOut = null; return; }
-                if (cmd === 'ip' && args[1] === 'helper-address' && args[2] && dev.type === 'Router' && iface) {
+                if (cmd === 'ip' && args[1] === 'helper-address' && args[2] && l3capable(dev) && iface) {
                     iface.helperAddresses = iface.helperAddresses || [];
                     if (!iface.helperAddresses.includes(args[2])) iface.helperAddresses.push(args[2]);
                     return;
                 }
-                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'helper-address' && args[3] && dev.type === 'Router' && iface) {
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'helper-address' && args[3] && l3capable(dev) && iface) {
                     iface.helperAddresses = (iface.helperAddresses || []).filter(h => h !== args[3]);
                     return;
                 }
-                if (cmd === 'ip' && args[1] === 'address' && (dev.type === 'Router' || (dev.type === 'Switch' && iface && String(iface.id || '').startsWith('Vlan')))) {
+                if (cmd === 'ip' && args[1] === 'address' && (dev.type === 'Router' || (dev.type === 'Switch' && iface && (String(iface.id || '').startsWith('Vlan') || (dev.l3 && iface.routed))))) {
                     if (args[2] && args[3]) {
                         iface.ip = args[2];
                         iface.subnet = args[3];
-                        if (dev.type === 'Router') { dev.updateConnectedRoutes(); try { computeOspf(); } catch (e) {} try { computeEigrp(); } catch (e) {} try { computeBgp(); } catch (e) {} }
+                        if (l3capable(dev)) { dev.updateConnectedRoutes(); try { computeOspf(); } catch (e) {} try { computeEigrp(); } catch (e) {} try { computeBgp(); } catch (e) {} }
                         if (propertiesDeviceId === dev.id) updatePropertiesPanel(); // Sync GUI
                         return;
                     } else {
@@ -3522,16 +3568,32 @@
                 if (dev.natOverload) { const outIf = dev.natOverload.interface || ((Object.values(dev.interfaces).find(x => x.natOutside) || {}).id) || ''; L.push('!', `ip nat inside source list ${dev.natOverload.aclId} interface ${outIf} overload`); }
                 if (dev.natDynamic) L.push('!', `ip nat inside source list ${dev.natDynamic.aclId} pool ${dev.natDynamic.pool}${dev.natDynamic.overload ? ' overload' : ''}`);
             } else if (dev.type === 'Switch') {
+                if (dev.l3 && dev.ipRouting) L.push('!', 'ip routing');
                 if (dev.vlanDb) Object.keys(dev.vlanDb).forEach(v => { if (parseInt(v, 10) !== 1) { L.push('!', `vlan ${v}`); if (dev.vlanDb[v]) L.push(` name ${dev.vlanDb[v]}`); } });
                 if (dev.stpPriority) Object.keys(dev.stpPriority).forEach(v => L.push('!', `spanning-tree vlan ${v} priority ${dev.stpPriority[v]}`));
                 (dev.ports || []).forEach(p => {
                     L.push('!', `interface ${swPortLongName(p)}`);
+                    if (p.routed) {
+                        L.push(' no switchport');
+                        if (p.ip && p.ip !== '0.0.0.0') L.push(` ip address ${p.ip} ${p.subnet}`);
+                        if (p.helperAddresses) p.helperAddresses.forEach(h => L.push(` ip helper-address ${h}`));
+                        L.push(p.adminState === 'up' ? ' no shutdown' : ' shutdown');
+                        return;
+                    }
                     if (isTrunkPort(dev, p)) L.push(' switchport mode trunk');
                     else if (p.vlan && p.vlan !== 1) L.push(` switchport access vlan ${p.vlan}`);
                     if (p.channelGroup) L.push(` channel-group ${p.channelGroup} mode ${p.channelMode}`);
                     if (p.portSecurity) { L.push(' switchport port-security'); if (p.psMax) L.push(` switchport port-security maximum ${p.psMax}`); if (p.psViolation) L.push(` switchport port-security violation ${p.psViolation}`); }
                 });
-                if (dev.svis) Object.values(dev.svis).forEach(svi => { L.push('!', `interface Vlan${svi.vlan}`); if (svi.ip && svi.ip !== '0.0.0.0') L.push(` ip address ${svi.ip} ${svi.subnet}`); L.push(' no shutdown'); });
+                if (dev.svis) Object.values(dev.svis).forEach(svi => { L.push('!', `interface Vlan${svi.vlan}`); if (svi.ip && svi.ip !== '0.0.0.0') L.push(` ip address ${svi.ip} ${svi.subnet}`); if (svi.helperAddresses) svi.helperAddresses.forEach(h => L.push(` ip helper-address ${h}`)); if (svi.hsrp && svi.hsrp.virtualIp) { L.push(` standby ${svi.hsrp.group} ip ${svi.hsrp.virtualIp}`); if (svi.hsrp.priority != null && svi.hsrp.priority !== 100) L.push(` standby ${svi.hsrp.group} priority ${svi.hsrp.priority}`); if (svi.hsrp.preempt) L.push(` standby ${svi.hsrp.group} preempt`); } L.push(' no shutdown'); });
+                if (dev.l3) {
+                    (dev.staticRoutes || []).forEach(sr => L.push('!', `ip route ${sr.network} ${sr.mask} ${sr.nextHop !== '0.0.0.0' ? sr.nextHop : sr.interface}`));
+                    if (dev.ospf && dev.ospf.enabled) { L.push('!', `router ospf ${dev.ospf.processId}`); (dev.ospf.networks || []).forEach(n => L.push(` network ${n.network} ${n.wildcard} area ${n.area}`)); }
+                    if (dev.eigrp && dev.eigrp.enabled) { L.push('!', `router eigrp ${dev.eigrp.asn}`); (dev.eigrp.networks || []).forEach(n => L.push(` network ${n.network}${n.wildcard ? ' ' + n.wildcard : ''}`)); }
+                    if (dev.ripEnabled) { L.push('!', 'router rip', ' version 2'); const nets = new Set(); (dev.l3Interfaces ? dev.l3Interfaces() : []).forEach(i => { if (i.ip && i.ip !== '0.0.0.0') nets.add(classful(i.ip)); }); nets.forEach(n => L.push(` network ${n}`)); }
+                    (dev.dhcpExcluded || []).forEach(ex => L.push(`ip dhcp excluded-address ${ex.start}${ex.end && ex.end !== ex.start ? ' ' + ex.end : ''}`));
+                    Object.keys(dev.dhcpPools || {}).forEach(nm => { const p = dev.dhcpPools[nm]; L.push('!', `ip dhcp pool ${nm}`); if (p.network) L.push(` network ${p.network} ${p.mask}`); if (p.gateway) L.push(` default-router ${p.gateway}`); if (p.dns) L.push(` dns-server ${p.dns}`); if (p.domain) L.push(` domain-name ${p.domain}`); });
+                }
             }
             if (dev.acls) {
                 Object.keys(dev.acls).forEach(key => {
@@ -4190,11 +4252,42 @@
                 const p = frame.payload;
                 const svi = (this.svis && this.svis[frameVlan] && this.svis[frameVlan].adminState !== 'down' && this.svis[frameVlan].ip && this.svis[frameVlan].ip !== '0.0.0.0') ? this.svis[frameVlan] : null;
 
+                // Layer 3 switch: learn RIP routes arriving in a VLAN that has an SVI
+                if (this.ripEnabled && p && p.type === 'RIP_UPDATE' && this.svis && this.svis[frameVlan]) { if (ripLearn(this, p, `Vlan${frameVlan}`)) this.ripBroadcastCount = 0; return; }
+
+                // Layer 3 switch: act as DHCP server / relay for a VLAN that has an SVI
+                if (this.l3 && svi && p && (p.type === 'DHCP_DISCOVER' || p.type === 'DHCP_REQUEST') && ((this.dhcpPools && Object.keys(this.dhcpPools).length) || (svi.helperAddresses && svi.helperAddresses.length))) {
+                    await routerHandleDhcp(this, frame, { ip: svi.ip, mac: this.mac, id: `Vlan${frameVlan}`, vlan: frameVlan, kind: 'svi', helperAddresses: svi.helperAddresses }, p);
+                    return;
+                }
+
                 // Gateway ARP request (broadcast): answer as the SVI, then still flood normally below
                 if (svi && p && p.type === 'ARP_REQ' && p.targetIp === svi.ip) {
                     const rep = { sourceMac: this.mac, destMac: frame.sourceMac, payload: { type: 'ARP_REP', sourceIp: svi.ip, targetIp: p.sourceIp, targetMac: frame.sourceMac } };
                     if (isTrunkPort(this, inPort)) rep.vlan = frameVlan;
                     transmit(rep, this.id, inPortId);
+                }
+
+                // HSRP: the Active switch answers ARP for the virtual IP with the virtual MAC
+                if (svi && svi.hsrp && svi.hsrp.virtualIp && p && p.type === 'ARP_REQ' && p.targetIp === svi.hsrp.virtualIp && isHsrpActive(this, svi)) {
+                    const vmac = hsrpVirtualMac(svi.hsrp.group);
+                    const rep = { sourceMac: vmac, destMac: frame.sourceMac, payload: { type: 'ARP_REP', sourceIp: svi.hsrp.virtualIp, targetIp: p.sourceIp, targetMac: frame.sourceMac } };
+                    if (isTrunkPort(this, inPort)) rep.vlan = frameVlan;
+                    transmit(rep, this.id, inPortId);
+                    return;
+                }
+
+                // HSRP: the Active switch owns the virtual MAC (answers ICMP for the VIP and routes for it)
+                const hsrpVmacActive = (svi && svi.hsrp && svi.hsrp.virtualIp && isHsrpActive(this, svi)) ? hsrpVirtualMac(svi.hsrp.group) : null;
+                if (hsrpVmacActive && frame.destMac === hsrpVmacActive && p) {
+                    if (p.type === 'ICMP_REQ' && p.targetIp === svi.hsrp.virtualIp) {
+                        const rep = { sourceMac: hsrpVmacActive, destMac: frame.sourceMac, payload: { type: 'ICMP_REP', sourceIp: svi.hsrp.virtualIp, targetIp: p.sourceIp, natId: p.natId } };
+                        if (isTrunkPort(this, inPort)) rep.vlan = frameVlan;
+                        transmit(rep, this.id, inPortId);
+                        return;
+                    }
+                    if (this.ipRouting && p.targetIp && p.type !== 'ARP_REQ' && p.type !== 'ARP_REP') { await this.routeSviPacket(frame); return; }
+                    return;
                 }
 
                 // Frames addressed to the switch's own MAC are handled at layer 3
@@ -4228,6 +4321,7 @@
 
                 const flood = () => {
                     this.ports.forEach(p => {
+                        if (p.routed) return; // routed (L3) ports carry no VLAN traffic
                         if (isNonRepMember(this, p)) return; // one bundle member carries the traffic
                         if (p.id != inPortId && p.connectedLink && portStpState(this, p, frameVlan) === 'forwarding' && p.adminState !== 'down') {
                             if (isTrunkPort(this, p)) forwardTo(p.id, frameVlan); // Carry tag across trunk
@@ -4259,6 +4353,7 @@
             floodIntoVlan(frame, vlan, exceptPortId = null) {
                 this.ports.forEach(p => {
                     if (p.id === exceptPortId) return;
+                    if (p.routed) return;
                     if (isNonRepMember(this, p)) return;
                     if (p.connectedLink && portStpState(this, p, vlan) === 'forwarding' && p.adminState !== 'down') {
                         if (isTrunkPort(this, p)) transmit({ ...frame, vlan }, this.id, p.id);
@@ -4309,6 +4404,101 @@
             }
         }
 
+        // ---- Layer 3 (multilayer) switch: Switch + routed ports + routing table ----
+        class L3Switch extends Switch {
+            constructor(x, y) {
+                super(x, y);
+                deviceCounter.Switch--;            // don't consume a plain-Switch number
+                this.l3 = true;                    // multilayer switch (type stays 'Switch' so all L2 handlers apply)
+                this.name = `L3 Switch ${deviceCounter.L3Switch++}`;
+                this.ipRouting = true;             // routes between VLANs/ports by default
+                this.routingTable = [];
+                this.staticRoutes = [];
+                this.ospf = { enabled: false, processId: null, routerId: null, networks: [] };
+                this.eigrp = { enabled: false, asn: null, networks: [] };
+                this.ripEnabled = false; this.ripVersion = 2; this.ripNetworks = [];
+                this.ospfNeighbors = []; this.eigrpNeighbors = [];
+                this.dhcpPools = {}; this.dhcpExcluded = [];
+                this.arpCache = {};
+            }
+            // Layer 3 interfaces: up SVIs (with IP) and up routed physical ports (with IP)
+            l3Interfaces() {
+                const out = [];
+                if (this.svis) Object.values(this.svis).forEach(s => { if (s.ip && s.ip !== '0.0.0.0' && s.adminState !== 'down') out.push({ kind: 'svi', id: `Vlan${s.vlan}`, ip: s.ip, subnet: s.subnet, mac: this.mac, vlan: s.vlan, connectedLink: 'svi', adminState: 'up', hsrp: s.hsrp, helperAddresses: s.helperAddresses }); });
+                (this.ports || []).forEach(p => { if (p.routed && p.ip && p.ip !== '0.0.0.0' && p.adminState !== 'down' && p.connectedLink) out.push({ kind: 'routed', id: swPortName(p), ip: p.ip, subnet: p.subnet, mac: this.mac, port: p, portId: p.id, connectedLink: p.connectedLink, adminState: p.adminState || 'up' }); });
+                return out;
+            }
+            // Router-style interface view (for reused engines that read dev.interfaces)
+            get interfaces() {
+                const map = {};
+                this.l3Interfaces().forEach(i => { map[i.kind === 'routed' ? i.portId : i.id] = i; });
+                return map;
+            }
+            updateConnectedRoutes() {
+                this.routingTable = (this.routingTable || []).filter(r => r.type === 'R' || r.type === 'O' || r.type === 'D');
+                this.l3Interfaces().forEach(i => this.routingTable.push({ network: getNetwork(i.ip, i.subnet), mask: i.subnet, nextHop: '0.0.0.0', interface: i.id, egress: i, metric: 0, type: 'C', ad: 0 }));
+                (this.staticRoutes || []).forEach(sr => this.routingTable.push({ network: sr.network, mask: sr.mask, nextHop: sr.nextHop, interface: sr.interface, metric: 0, type: 'S', ad: sr.ad != null ? sr.ad : 1 }));
+            }
+            l3IfaceForIp(ip) { return this.l3Interfaces().find(i => isSameSubnet(ip, getNetwork(i.ip, i.subnet), i.subnet)) || null; }
+            async resolveArpRouted(port, srcIp, targetIp) {
+                if (this.arpCache[targetIp]) return this.arpCache[targetIp];
+                transmit({ sourceMac: this.mac, destMac: 'FF:FF:FF:FF:FF:FF', payload: { type: 'ARP_REQ', sourceIp: srcIp, targetIp } }, this.id, port.id);
+                await waitForEvent(`switch_arp_${this.id}`, 6000, (e) => e.detail.ip === targetIp);
+                return this.arpCache[targetIp];
+            }
+            // Full routing-table forwarding across SVIs and routed ports (overrides connected-SVI-only version)
+            async routeSviPacket(frame) {
+                const targetIp = frame.payload.targetIp;
+                if (!targetIp) return;
+                let best = null, bestPrefix = -1, bestAd = Infinity;
+                (this.routingTable || []).forEach(route => {
+                    if (!isSameSubnet(targetIp, route.network, route.mask)) return;
+                    const prefix = getPrefixLength(route.mask);
+                    const ad = route.ad != null ? route.ad : (route.type === 'C' ? 0 : route.type === 'S' ? 1 : 120);
+                    if (prefix > bestPrefix || (prefix === bestPrefix && ad < bestAd)) { bestPrefix = prefix; bestAd = ad; best = route; }
+                });
+                if (!best) { log(`[${this.name}] Dropped packet to ${targetIp}: no route.`, 'warning'); return; }
+                let nextHopIp, egress;
+                if (best.type === 'C') { nextHopIp = targetIp; egress = best.egress || this.l3IfaceForIp(targetIp); }
+                else { nextHopIp = (best.nextHop && best.nextHop !== '0.0.0.0') ? best.nextHop : targetIp; egress = this.l3IfaceForIp(nextHopIp); }
+                if (!egress) { log(`[${this.name}] Dropped packet to ${targetIp}: egress unavailable.`, 'warning'); return; }
+                const outFrame = { ...frame, sourceMac: this.mac }; delete outFrame.vlan;
+                if (egress.kind === 'svi') {
+                    let destMac = this.arpCache[nextHopIp];
+                    if (!destMac) { this.sendArpIntoVlan(egress.ip, nextHopIp, egress.vlan); await waitForEvent(`switch_arp_${this.id}`, 6000, (e) => e.detail.ip === nextHopIp); destMac = this.arpCache[nextHopIp]; }
+                    if (!destMac) { log(`[${this.name}] Dropped packet to ${targetIp}: ARP failed in VLAN ${egress.vlan}.`, 'error'); return; }
+                    outFrame.destMac = destMac;
+                    this.forwardUnicastIntoVlan(outFrame, egress.vlan, destMac);
+                } else {
+                    const destMac = await this.resolveArpRouted(egress.port, egress.ip, nextHopIp);
+                    if (!destMac) { log(`[${this.name}] Dropped packet to ${targetIp}: ARP failed on ${egress.id}.`, 'error'); return; }
+                    outFrame.destMac = destMac;
+                    transmit(outFrame, this.id, egress.port.id);
+                }
+            }
+            routePacket(frame) { return this.routeSviPacket(frame); }
+            // Frames on a routed port are handled at Layer 3; switchports fall through to the L2 engine
+            async receive(frame, inPortId) {
+                const port = (this.ports || []).find(p => p.id == inPortId);
+                if (port && port.routed) {
+                    if (port.adminState === 'down') return;
+                    this.arpCache = this.arpCache || {};
+                    const p = frame.payload;
+                    await sleep(35);
+                    if (p && p.type === 'ARP_REQ' && p.targetIp === port.ip) { transmit({ sourceMac: this.mac, destMac: frame.sourceMac, payload: { type: 'ARP_REP', sourceIp: port.ip, targetIp: p.sourceIp, targetMac: frame.sourceMac } }, this.id, port.id); return; }
+                    if (p && p.type === 'ARP_REP' && p.targetIp === port.ip) { this.arpCache[p.sourceIp] = frame.sourceMac; document.dispatchEvent(new CustomEvent(`switch_arp_${this.id}`, { detail: { ip: p.sourceIp, mac: frame.sourceMac } })); return; }
+                    if (frame.destMac !== this.mac && frame.destMac !== 'FF:FF:FF:FF:FF:FF') return;
+                    if (p && p.type === 'ICMP_REQ' && p.targetIp === port.ip) { transmit({ sourceMac: this.mac, destMac: frame.sourceMac, payload: { type: 'ICMP_REP', sourceIp: port.ip, targetIp: p.sourceIp, natId: p.natId } }, this.id, port.id); return; }
+                    if (p && (p.type === 'DHCP_DISCOVER' || p.type === 'DHCP_REQUEST') && this.dhcpPools) { await routerHandleDhcp(this, frame, { ip: port.ip, mac: this.mac, id: port.id, vlan: null, helperAddresses: port.helperAddresses }, p); return; }
+                    if ((p && (p.type === 'DHCP_OFFER' || p.type === 'DHCP_ACK')) && p.relay) { await routerRelayDhcpReply(this, p); return; }
+                    if (p && p.type === 'RIP_UPDATE' && this.ripEnabled) { if (ripLearn(this, p, swPortName(port))) this.ripBroadcastCount = 0; return; }
+                    if (this.ipRouting && p && p.targetIp) { await this.routeSviPacket(frame); return; }
+                    return;
+                }
+                return super.receive(frame, inPortId);
+            }
+        }
+
         // ---- Router IOS DHCP server + relay engine ----
         function dhcpPoolSize(p) {
             if (!p.network || !p.mask) return 0;
@@ -4335,6 +4525,13 @@
         function dhcpMatchPool(dev, scopeIp) {
             return Object.values(dev.dhcpPools || {}).find(p => p.network && p.mask && isSameSubnet(scopeIp, p.network, p.mask)) || null;
         }
+        function dhcpEgress(dev, inIface, clientMac, opt) {
+            if (dev.l3 && inIface && inIface.vlan != null && (inIface.kind === 'svi' || (typeof inIface.id === 'string' && inIface.id.startsWith('Vlan')))) {
+                dev.forwardUnicastIntoVlan({ sourceMac: inIface.mac, destMac: clientMac, payload: opt, vlan: inIface.vlan }, inIface.vlan, clientMac);
+            } else {
+                transmit({ sourceMac: inIface.mac, destMac: clientMac, payload: opt, vlan: inIface.vlan }, dev.id, inIface.id);
+            }
+        }
         async function routerHandleDhcp(dev, frame, inIface, payload) {
             const relayed = !!payload.giaddr;
             const scopeIp = payload.giaddr || inIface.ip;
@@ -4352,7 +4549,7 @@
                     const opt = { type: 'DHCP_OFFER', targetMac: payload.sourceMac, offeredIp, mask: pool.mask, gw, dns: pool.dns };
                     log(`[${dev.name}] DHCP: offering ${offeredIp} to ${payload.sourceMac}${relayed ? ' (relayed)' : ''}.`, 'info');
                     if (relayed) await dev.routePacket({ payload: Object.assign({}, opt, { sourceIp: srcIp, targetIp: payload.giaddr, giaddr: payload.giaddr, relay: payload.relay }) });
-                    else transmit({ sourceMac: inIface.mac, destMac: frame.sourceMac, payload: opt, vlan: inIface.vlan }, dev.id, inIface.id);
+                    else dhcpEgress(dev, inIface, frame.sourceMac, opt);
                     return;
                 }
                 if (payload.type === 'DHCP_REQUEST' && payload.requestedIp) {
@@ -4362,7 +4559,7 @@
                     const opt = { type: 'DHCP_ACK', targetMac: payload.sourceMac, offeredIp: payload.requestedIp, mask: pool.mask, gw, dns: pool.dns };
                     log(`[${dev.name}] DHCP: leased ${payload.requestedIp} to ${payload.sourceMac}.`, 'success');
                     if (relayed) await dev.routePacket({ payload: Object.assign({}, opt, { sourceIp: srcIp, targetIp: payload.giaddr, giaddr: payload.giaddr, relay: payload.relay }) });
-                    else transmit({ sourceMac: inIface.mac, destMac: frame.sourceMac, payload: opt, vlan: inIface.vlan }, dev.id, inIface.id);
+                    else dhcpEgress(dev, inIface, frame.sourceMac, opt);
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel();
                     return;
                 }
@@ -4380,15 +4577,28 @@
                 }
             }
         }
+        function ripLearn(dev, payload, inIfaceId) {
+            if (!payload || !Array.isArray(payload.routes)) return false;
+            let updated = false;
+            payload.routes.forEach(route => {
+                const newMetric = (route.metric || 0) + 1;
+                if (newMetric >= 16) return;
+                const existing = dev.routingTable.find(r => r.network === route.network && r.mask === route.mask);
+                if (!existing) { dev.routingTable.push({ network: route.network, mask: route.mask, nextHop: payload.sourceIp, interface: inIfaceId, metric: newMetric, type: 'R', ad: 120 }); updated = true; }
+                else if (existing.type === 'R') {
+                    if (existing.nextHop === payload.sourceIp) { if (existing.metric !== newMetric) { existing.metric = newMetric; updated = true; } }
+                    else if (newMetric < existing.metric) { existing.metric = newMetric; existing.nextHop = payload.sourceIp; existing.interface = inIfaceId; updated = true; }
+                }
+            });
+            return updated;
+        }
         async function routerRelayDhcpReply(dev, payload) {
             const r = payload.relay;
             if (!r || r.routerId !== dev.id) return;
             const iface = dev.interfaces[r.ifaceId];
             if (!iface) return;
             await sleep(20);
-            transmit({ sourceMac: iface.mac, destMac: r.clientMac,
-                payload: { type: payload.type, targetMac: r.clientMac, offeredIp: payload.offeredIp, mask: payload.mask, gw: payload.gw, dns: payload.dns },
-                vlan: iface.vlan }, dev.id, iface.id);
+            dhcpEgress(dev, iface, r.clientMac, { type: payload.type, targetMac: r.clientMac, offeredIp: payload.offeredIp, mask: payload.mask, gw: payload.gw, dns: payload.dns });
             log(`[${dev.name}] DHCP relay: delivering ${payload.type} (${payload.offeredIp || ''}) to ${r.clientMac}.`, 'info');
         }
 
@@ -5181,7 +5391,7 @@
             return out;
         }
         function computeOspf() {
-            const routers = Object.values(devices).filter(d => d.type === 'Router' && d.ospf && d.ospf.enabled);
+            const routers = Object.values(devices).filter(d => (d.type === 'Router' || d.l3) && d.ospf && d.ospf.enabled);
             routers.forEach(r => { r.routingTable = r.routingTable.filter(x => x.type !== 'O'); r.ospfNeighbors = []; });
             if (routers.length === 0) return;
             const adj = {}; routers.forEach(r => adj[r.id] = []);
@@ -5192,7 +5402,7 @@
                     const remoteId = l.source === r.id ? l.target : l.source;
                     const remotePort = l.source === r.id ? l.targetPort : l.sourcePort;
                     const remote = devices[remoteId];
-                    if (!remote || remote.type !== 'Router' || !remote.ospf || !remote.ospf.enabled) return;
+                    if (!remote || !(remote.type === 'Router' || remote.l3) || !remote.ospf || !remote.ospf.enabled) return;
                     const ri = remote.interfaces[remotePort];
                     if (!ri || !ri.ip || ri.ip === '0.0.0.0') return;
                     const rns = (remote.ospf.networks || []).find(n => ospfWildMatch(ri.ip, n.network, n.wildcard));
@@ -5231,7 +5441,7 @@
                     });
                 });
             });
-            if (propertiesDeviceId && devices[propertiesDeviceId] && devices[propertiesDeviceId].type === 'Router') updatePropertiesPanel();
+            if (propertiesDeviceId && devices[propertiesDeviceId] && l3capable(devices[propertiesDeviceId])) updatePropertiesPanel();
         }
 
         // --- EIGRP (advanced distance-vector, DUAL) ---
@@ -5257,7 +5467,7 @@
             return out;
         }
         function computeEigrp() {
-            const routers = Object.values(devices).filter(d => d.type === 'Router' && d.eigrp && d.eigrp.enabled);
+            const routers = Object.values(devices).filter(d => (d.type === 'Router' || d.l3) && d.eigrp && d.eigrp.enabled);
             routers.forEach(r => { r.routingTable = r.routingTable.filter(x => x.type !== 'D'); r.eigrpNeighbors = []; });
             if (routers.length === 0) return;
             const adj = {}; routers.forEach(r => adj[r.id] = []);
@@ -5268,7 +5478,7 @@
                     const remoteId = l.source === r.id ? l.target : l.source;
                     const remotePort = l.source === r.id ? l.targetPort : l.sourcePort;
                     const remote = devices[remoteId];
-                    if (!remote || remote.type !== 'Router' || !remote.eigrp || !remote.eigrp.enabled || remote.eigrp.asn !== r.eigrp.asn) return;
+                    if (!remote || !(remote.type === 'Router' || remote.l3) || !remote.eigrp || !remote.eigrp.enabled || remote.eigrp.asn !== r.eigrp.asn) return;
                     const ri = remote.interfaces[remotePort];
                     if (!ri || !ri.ip || ri.ip === '0.0.0.0') return;
                     if (!(remote.eigrp.networks || []).some(n => eigrpNetMatch(ri.ip, n))) return;
@@ -5312,7 +5522,7 @@
                     });
                 });
             });
-            if (propertiesDeviceId && devices[propertiesDeviceId] && devices[propertiesDeviceId].type === 'Router') updatePropertiesPanel();
+            if (propertiesDeviceId && devices[propertiesDeviceId] && l3capable(devices[propertiesDeviceId])) updatePropertiesPanel();
         }
 
         // --- BGP (path-vector, eBGP focus) ---
@@ -5371,7 +5581,7 @@
                     R.routingTable.push({ network: P.network, mask: P.mask, nextHop: bp.nextHop, interface: null, metric: bp.asPath.length, type: 'B', ad });
                 });
             });
-            if (propertiesDeviceId && devices[propertiesDeviceId] && devices[propertiesDeviceId].type === 'Router') updatePropertiesPanel();
+            if (propertiesDeviceId && devices[propertiesDeviceId] && l3capable(devices[propertiesDeviceId])) updatePropertiesPanel();
         }
 
         // --- HSRP (first-hop redundancy) ---
@@ -5382,13 +5592,20 @@
         function hsrpPeers(virtualIp) {
             const peers = [];
             Object.values(devices).forEach(d => {
-                if (d.type !== 'Router') return;
-                Object.values(d.interfaces).forEach(i => {
-                    const phys = i.parent ? d.interfaces[i.parent] : i;
-                    if (i.hsrp && i.hsrp.virtualIp === virtualIp && i.ip && i.ip !== '0.0.0.0' && i.adminState !== 'down' && phys && phys.connectedLink) {
-                        peers.push({ router: d, iface: i, priority: (i.hsrp.priority != null ? i.hsrp.priority : 100), ip: i.ip });
-                    }
-                });
+                if (d.type === 'Router') {
+                    Object.values(d.interfaces).forEach(i => {
+                        const phys = i.parent ? d.interfaces[i.parent] : i;
+                        if (i.hsrp && i.hsrp.virtualIp === virtualIp && i.ip && i.ip !== '0.0.0.0' && i.adminState !== 'down' && phys && phys.connectedLink) {
+                            peers.push({ router: d, iface: i, priority: (i.hsrp.priority != null ? i.hsrp.priority : 100), ip: i.ip });
+                        }
+                    });
+                } else if (d.l3 && d.svis) {
+                    Object.values(d.svis).forEach(s => {
+                        if (s.hsrp && s.hsrp.virtualIp === virtualIp && s.ip && s.ip !== '0.0.0.0' && s.adminState !== 'down') {
+                            peers.push({ router: d, iface: s, priority: (s.hsrp.priority != null ? s.hsrp.priority : 100), ip: s.ip });
+                        }
+                    });
+                }
             });
             peers.sort((a, b) => b.priority - a.priority || (ipToInt(b.ip) - ipToInt(a.ip)));
             return peers;
@@ -5602,6 +5819,10 @@
                 log(`Added ${dns.name} (${dns.mac})`);
             } else if (type === 'Switch') {
                 const sw = new Switch(x, y);
+                devices[sw.id] = sw;
+                log(`Added ${sw.name} (${sw.mac})`);
+            } else if (type === 'L3Switch') {
+                const sw = new L3Switch(x, y);
                 devices[sw.id] = sw;
                 log(`Added ${sw.name} (${sw.mac})`);
             } else if (type === 'Router') {
@@ -6017,9 +6238,9 @@
             log(`Connected ${devA.name} (${portAName}) to ${devB.name} (${portBName})`);
             
             flushMacTables();
-            if (devA.type === 'Router') { devA.updateConnectedRoutes(); devA.ripBroadcastCount = 0; }
-            if (devB.type === 'Router') { devB.updateConnectedRoutes(); devB.ripBroadcastCount = 0; }
-            if (devA.type === 'Router' || devB.type === 'Router') { try { computeOspf(); } catch (e) {} try { computeEigrp(); } catch (e) {} try { computeBgp(); } catch (e) {} }
+            if (l3capable(devA)) { devA.updateConnectedRoutes(); devA.ripBroadcastCount = 0; }
+            if (l3capable(devB)) { devB.updateConnectedRoutes(); devB.ripBroadcastCount = 0; }
+            if (l3capable(devA) || l3capable(devB)) { try { computeOspf(); } catch (e) {} try { computeEigrp(); } catch (e) {} try { computeBgp(); } catch (e) {} }
 
             if (stpEnabled) {
                 calculateSTP();
@@ -6689,7 +6910,7 @@
                 iconDiv.className = `node-icon w-16 h-16 rounded-xl flex items-center justify-center shadow-md border ${isEndDevice(dev) ? 'bg-white dark:bg-slate-100 border-slate-300 dark:border-slate-400 text-slate-600 dark:text-slate-700' : 'bg-slate-800 border-slate-900 text-white'}`;
                 
                 // Inject SVG dynamically from our dictionary
-                iconDiv.innerHTML = DEVICE_ICONS[dev.type] || DEVICE_ICONS['PC'];
+                iconDiv.innerHTML = (dev.l3 ? DEVICE_ICONS['L3Switch'] : DEVICE_ICONS[dev.type]) || DEVICE_ICONS['PC'];
 
                 const labelDiv = document.createElement('div');
                 labelDiv.className = 'text-[10px] font-bold mt-1 text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-800/80 px-2 py-0.5 rounded text-center shadow-sm whitespace-nowrap';
@@ -8314,6 +8535,21 @@
                     }
                 });
             });
+            // Layer 3 switches originate RIP too (routed ports + SVIs)
+            try {
+                Object.values(devices).filter(d => d.l3 && d.ripEnabled).forEach(sw => {
+                    sw.updateConnectedRoutes();
+                    if (!sw.routingTable.length) return;
+                    sw.ripBroadcastCount = (sw.ripBroadcastCount || 0) + 1;
+                    const isSilent = sw.ripBroadcastCount > 3;
+                    (sw.ports || []).forEach(p => { if (p.routed && p.ip && p.ip !== '0.0.0.0' && p.adminState !== 'down' && p.connectedLink) {
+                        transmit({ sourceMac: sw.mac, destMac: '01:00:5E:00:00:09', payload: { type: 'RIP_UPDATE', sourceIp: p.ip, routes: sw.routingTable }, ttl: 1, silent: isSilent }, sw.id, p.id);
+                    } });
+                    if (sw.svis) Object.values(sw.svis).forEach(s => { if (s.ip && s.ip !== '0.0.0.0' && s.adminState !== 'down') {
+                        sw.floodIntoVlan({ sourceMac: sw.mac, destMac: '01:00:5E:00:00:09', payload: { type: 'RIP_UPDATE', sourceIp: s.ip, routes: sw.routingTable }, ttl: 1, silent: isSilent }, s.vlan);
+                    } });
+                });
+            } catch (e) {}
         }, 10000);
 
         // --- Ping Command Execution ---
@@ -8426,7 +8662,7 @@
             }
             devices = {}; links = {}; labels = {};
             selectedDeviceId = null; selectedLabelId = null; selectedLinkId = null; propertiesDeviceId = null; pendingCableSource = null; pendingCableSourcePort = null;
-            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1 };
+            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1 };
             CONSOLE.innerHTML = '<div>> Network cleared.</div>';
             hidePortSelector();
             closeCLI();
