@@ -161,7 +161,15 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4h8l-4-4Z"/><path d="m12 16 4-4H8l4 4Z"/><path d="m8 12 4-4v8l-4-4Z"/><path d="m16 12-4 4V8l4 4Z"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">Router</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'AP')" ontouchend="palTapItem(event, 'AP')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Access Point">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'ISPRouter')" ontouchend="palTapItem(event, 'ISPRouter')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add ISP Router">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                        <span class="text-[10px] font-bold uppercase tracking-wide">ISP</span>
+                    </div>
+                    <div draggable="true" ondragstart="handleDragStart(event, 'WLC')" ontouchend="palTapItem(event, 'WLC')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Wireless LAN Controller">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 17h.01"/><path d="M11 17h6"/><path d="M12 9a5 5 0 0 1 5 5"/><path d="M12 5a9 9 0 0 1 9 9"/></svg>
+                        <span class="text-[10px] font-bold uppercase tracking-wide">WLC</span>
+                    </div>
+                    <div draggable="true" ondragstart="handleDragStart(event, 'AP')" ontouchend="palTapItem(event, 'AP')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Access Point (lightweight)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">AP</span>
                     </div>
@@ -444,7 +452,7 @@
         let selectedLabelId = null;
         let pendingCableSource = null;
         let pendingCableSourcePort = null;
-        let deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1 };
+        let deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1 };
         let currentMouseX = 0;
         let currentMouseY = 0;
         let stpEnabled = true;
@@ -489,8 +497,10 @@
             'WebServer': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
             'Router': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4h8l-4-4Z"/><path d="m12 16 4-4H8l4 4Z"/><path d="m8 12 4-4v8l-4-4Z"/><path d="m16 12-4 4V8l4 4Z"/></svg>`,
             'AP': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>`,
+            'WLC': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 17h.01"/><path d="M11 17h6"/><path d="M12 9a5 5 0 0 1 5 5"/><path d="M12 5a9 9 0 0 1 9 9"/></svg>`,
             'Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>`,
-            'L3Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="10" rx="2"/><path d="M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/><path d="M8 6 6 4 4 6"/><path d="M6 4v3"/><path d="m16 6 2-2 2 2"/><path d="M18 4v3"/></svg>`
+            'L3Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="10" rx="2"/><path d="M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/><path d="M8 6 6 4 4 6"/><path d="M6 4v3"/><path d="m16 6 2-2 2 2"/><path d="M18 4v3"/></svg>`,
+            'ISPRouter': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`
         };
 
         // Single lookup for protocol colours used by packet dots, labels, the sniffer and the legend
@@ -950,15 +960,15 @@
 
         // --- State snapshots: Undo, Redo, Autosave, Hydration ---
         const deviceClassFor = (type) => ({
-            'PC': PC, 'Laptop': Laptop, 'Switch': Switch, 'Router': Router,
-            'AP': AccessPoint, 'Server': Server, 'WebServer': WebServer, 'DNSServer': DNSServer
+            'PC': PC, 'Laptop': Laptop, 'Switch': Switch, 'Router': Router, 'ISPRouter': ISPRouter,
+            'AP': AccessPoint, 'Server': Server, 'WebServer': WebServer, 'DNSServer': DNSServer, 'WLC': WirelessController
         })[type];
 
         function hydrateState(data) {
             devices = {};
             for (const id in (data.devices || {})) {
                 const d = data.devices[id];
-                const Cls = (d.l3 && d.type === 'Switch') ? L3Switch : deviceClassFor(d.type);
+                const Cls = (d.l3 && d.type === 'Switch') ? L3Switch : (d.isISP && d.type === 'Router') ? ISPRouter : (d.isWlc && d.type === 'WebServer') ? WirelessController : deviceClassFor(d.type);
                 if (!Cls) { log(`Skipped unknown device type "${d.type}" while loading.`, 'warning'); continue; }
                 const instance = new Cls(d.x, d.y);
                 Object.assign(instance, d);
@@ -974,7 +984,7 @@
             });
             labels = data.labels || {};
             // Merge counters AFTER instantiation, since constructors increment them
-            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ...(data.deviceCounter || {}) };
+            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1, ...(data.deviceCounter || {}) };
             if (typeof data.stpEnabled === 'boolean') stpEnabled = data.stpEnabled;
             selectedDeviceId = null;
             selectedLabelId = null;
@@ -1121,7 +1131,7 @@
             if (!srcId) return;
             const src = devices[srcId];
             if (!src) return;
-            const Cls = deviceClassFor(src.type);
+            const Cls = (src.l3 && src.type === 'Switch') ? L3Switch : (src.isISP && src.type === 'Router') ? ISPRouter : (src.isWlc && src.type === 'WebServer') ? WirelessController : deviceClassFor(src.type);
             if (!Cls) return;
             pushUndo();
 
@@ -1305,6 +1315,29 @@
         };
 
         // Evaluates all Laptops to auto-connect to the best matching AP in range
+        // Which WLC (if any) a lightweight AP has joined. An explicit controller IP is matched to
+        // a WLC's management IP; with no IP set and exactly one WLC present, the AP auto-joins it.
+        function apController(ap) {
+            if (!ap || ap.type !== 'AP') return null;
+            if (ap.controllerIp) return Object.values(devices).find(d => d.isWlc && d.ip === ap.controllerIp) || null;
+            const wlcs = Object.values(devices).filter(d => d.isWlc);
+            return wlcs.length === 1 ? wlcs[0] : null;
+        }
+        // The WLANs an AP is currently broadcasting: the controller's WLANs (with VLAN mapping) when
+        // joined, otherwise the AP's own autonomous SSID.
+        function apBroadcastWlans(ap) {
+            const wlc = apController(ap);
+            if (wlc) {
+                return (wlc.wlans || []).filter(w => w.broadcast).map(w => {
+                    const di = (wlc.dynamicInterfaces || []).find(x => x.name === w.iface);
+                    const vlan = di && di.vlan != null && di.vlan !== '' ? parseInt(di.vlan, 10) : null;
+                    return { ssid: w.ssid, security: w.security, psk: w.psk, vlan };
+                });
+            }
+            if (ap.ssid) return [{ ssid: ap.ssid, security: (ap.security || 'WPA2').toLowerCase() === 'open' ? 'open' : 'wpa2', psk: ap.password, vlan: null }];
+            return [];
+        }
+        window.apController = apController; window.apBroadcastWlans = apBroadcastWlans;
         window.evaluateWifiConnections = () => {
             let changed = false;
             Object.values(devices).filter(d => d.type === 'Laptop').forEach(laptop => {
@@ -1319,37 +1352,44 @@
                     return;
                 }
 
-                // Find valid APs matching SSID and Password
-                const aps = Object.values(devices).filter(d => d.type === 'AP' && d.ssid === laptop.ssid && d.password === laptop.password);
-                let bestAp = null;
-                let bestDist = Infinity;
-
-                aps.forEach(ap => {
-                    const maxDist = ap.band === '2.4' ? 350 : 200;
-                    const dist = Math.hypot(ap.x - laptop.x, ap.y - laptop.y);
-                    if (dist <= maxDist && dist < bestDist) {
-                        bestDist = dist;
-                        bestAp = ap;
-                    }
+                // Candidate radios: access points broadcasting a matching WLAN. A lightweight AP joined
+                // to a WLC broadcasts the controller's WLANs (with their VLAN mapping); an AP with no
+                // controller falls back to its own autonomous SSID.
+                const candidates = [];
+                Object.values(devices).filter(d => d.type === 'AP').forEach(ap => {
+                    apBroadcastWlans(ap).forEach(w => {
+                        if (w.ssid === laptop.ssid && (w.security === 'open' || w.psk === laptop.password)) {
+                            candidates.push({ dev: ap, band: ap.band, vlan: w.vlan, ssid: w.ssid });
+                        }
+                    });
                 });
 
-                if (bestAp) {
-                    // Connect or Roam to a better AP
-                    if (laptop.connectedApId !== bestAp.id) {
+                let best = null, bestDist = Infinity;
+                candidates.forEach(c => {
+                    const maxDist = c.band === '2.4' ? 350 : 200;
+                    const dist = Math.hypot(c.dev.x - laptop.x, c.dev.y - laptop.y);
+                    if (dist <= maxDist && dist < bestDist) { bestDist = dist; best = c; }
+                });
+
+                if (best) {
+                    if (laptop.connectedApId !== best.dev.id) {
                         if (laptop.wirelessLink) window.deleteLink(laptop.wirelessLink, true);
                         const linkId = generateId();
-                        links[linkId] = { id: linkId, source: laptop.id, target: bestAp.id, sourcePort: 'wlan0', targetPort: linkId, isWireless: true };
+                        links[linkId] = { id: linkId, source: laptop.id, target: best.dev.id, sourcePort: 'wlan0', targetPort: linkId, isWireless: true };
                         laptop.wirelessLink = linkId;
-                        laptop.connectedApId = bestAp.id;
-                        log(`[${laptop.name}] Associated with AP '${bestAp.ssid}' (${bestDist.toFixed(0)}px).`, 'success');
+                        laptop.connectedApId = best.dev.id;
+                        laptop.wlanVlan = best.vlan;
+                        log(`[${laptop.name}] Associated with '${best.ssid}' on ${best.dev.name} (${bestDist.toFixed(0)}px).`, 'success');
                         changed = true;
+                    } else {
+                        laptop.wlanVlan = best.vlan;
                     }
                 } else {
-                    // Drop connection if no valid APs are in range
                     if (laptop.connectedApId) {
                         window.deleteLink(laptop.wirelessLink, true);
                         laptop.wirelessLink = null;
                         laptop.connectedApId = null;
+                        laptop.wlanVlan = null;
                         log(`[${laptop.name}] Lost Wi-Fi connection (out of range).`, 'warning');
                         changed = true;
                     }
@@ -2059,7 +2099,7 @@
             }
             
             // Navigation commands (Cisco IOS)
-            if (cmd === 'en' || cmd === 'enable') {
+            if ((cmd === 'en' || cmd === 'enable') && !((dev.cli.mode || '').startsWith('conf') && (args[1] === 'secret' || args[1] === 'password'))) {
                 dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`; return;
             }
             if (cmd === 'disable') {
@@ -2361,13 +2401,13 @@
                     }
                     if (dev.type === 'Router' && args[1] === 'ip' && (args[2] === 'ro' || args[2] === 'route')) {
                         print('Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP, B - BGP');
-                        if (dev.routingTable.length === 0) {
-                            print('Gateway of last resort is not set\n');
-                            return;
-                        }
+                        print('       O*E2 - OSPF external default\n');
+                        const gwlr = dev.routingTable.find(r => r.network === '0.0.0.0' && r.mask === '0.0.0.0');
+                        print(gwlr ? `Gateway of last resort is ${gwlr.nextHop} to network 0.0.0.0\n` : 'Gateway of last resort is not set\n');
                         dev.routingTable.forEach(r => {
                             const pfx = getPrefixLength(r.mask);
-                            if (r.type === 'C') print(`C    ${r.network}/${pfx} is directly connected, ${r.interface}`);
+                            if (r.network === '0.0.0.0' && r.mask === '0.0.0.0') print(`${r.type === 'O' ? 'O*E2' : r.type === 'S' ? 'S*  ' : r.type + '   '} 0.0.0.0/0 [${r.type === 'O' ? 110 : (r.ad != null ? r.ad : 1)}/${r.metric || 0}] via ${r.nextHop}`);
+                            else if (r.type === 'C') print(`C    ${r.network}/${pfx} is directly connected, ${r.interface}`);
                             else if (r.type === 'S') print(`S    ${r.network}/${pfx} ${r.nextHop === '0.0.0.0' ? 'is directly connected, ' + r.interface : '[' + (r.ad != null ? r.ad : 1) + '/0] via ' + r.nextHop}`);
                             else if (r.type === 'O') print(`O    ${r.network}/${pfx} [110/${r.metric}] via ${r.nextHop}, ${r.interface}`);
                             else if (r.type === 'D') print(`D    ${r.network}/${pfx} [90/${r.metric}] via ${r.nextHop}, ${r.interface}`);
@@ -2473,10 +2513,12 @@
                             print('Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP');
                             if (!dev.ipRouting) { print('% IP routing is not enabled'); return; }
                             dev.updateConnectedRoutes();
-                            if (!dev.routingTable.length) { print('Gateway of last resort is not set\n'); return; }
+                            const gwlr = dev.routingTable.find(r => r.network === '0.0.0.0' && r.mask === '0.0.0.0');
+                            print(gwlr ? `Gateway of last resort is ${gwlr.nextHop} to network 0.0.0.0\n` : 'Gateway of last resort is not set\n');
                             dev.routingTable.forEach(r => {
                                 const pfx = getPrefixLength(r.mask);
-                                if (r.type === 'C') print(`C    ${r.network}/${pfx} is directly connected, ${r.interface}`);
+                                if (r.network === '0.0.0.0' && r.mask === '0.0.0.0') print(`${r.type === 'O' ? 'O*E2' : r.type === 'S' ? 'S*  ' : r.type + '   '} 0.0.0.0/0 [${r.type === 'O' ? 110 : (r.ad != null ? r.ad : 1)}/${r.metric || 0}] via ${r.nextHop}`);
+                                else if (r.type === 'C') print(`C    ${r.network}/${pfx} is directly connected, ${r.interface}`);
                                 else if (r.type === 'S') print(`S    ${r.network}/${pfx} ${r.nextHop === '0.0.0.0' ? 'is directly connected, ' + r.interface : '[' + (r.ad != null ? r.ad : 1) + '/0] via ' + r.nextHop}`);
                                 else if (r.type === 'O') print(`O    ${r.network}/${pfx} [110/${r.metric}] via ${r.nextHop}, ${r.interface}`);
                                 else if (r.type === 'D') print(`D    ${r.network}/${pfx} [90/${r.metric}] via ${r.nextHop}, ${r.interface}`);
@@ -2682,6 +2724,13 @@
                     return;
                 }
                 if (cmd === 'enable' && (args[1] === 'secret' || args[1] === 'password') && args[2]) { dev.enablePassword = input.trim().split(/\s+/).slice(2).join(' '); return; }
+                if (cmd === 'username' && args[1] && args[2] === 'privilege' && (args[4] === 'password' || args[4] === 'secret') && args[5]) {
+                    dev.users = dev.users || {}; dev.userPriv = dev.userPriv || {};
+                    const toks = input.trim().split(/\s+/);
+                    dev.users[toks[1]] = toks.slice(5).join(' ');
+                    dev.userPriv[toks[1]] = parseInt(toks[3], 10) || 1;
+                    return;
+                }
                 if (cmd === 'username' && args[1] && (args[2] === 'password' || args[2] === 'secret') && args[3]) {
                     dev.users = dev.users || {};
                     const toks = input.trim().split(/\s+/);
@@ -2703,6 +2752,8 @@
                 if (cmd === 'logging' && args[1] === 'trap' && args[2]) { const m = { emergencies: 0, alerts: 1, critical: 2, errors: 3, warnings: 4, notifications: 5, informational: 6, debugging: 7 }; dev.loggingTrap = (m[args[2]] != null ? m[args[2]] : (parseInt(args[2], 10) || 6)); return; }
                 if (cmd === 'no' && args[1] === 'logging' && (args[2] === 'host' || /^(\d{1,3}\.){3}\d{1,3}$/.test(args[2] || ''))) { dev.loggingHost = null; return; }
                 if (cmd === 'service' && args[1] === 'timestamps') { dev.serviceTimestamps = true; return; }
+                if (cmd === 'service' && args[1] === 'password-encryption') { dev.servicePwEnc = true; return; }
+                if (cmd === 'no' && args[1] === 'service' && args[2] === 'password-encryption') { dev.servicePwEnc = false; return; }
                 if (cmd === 'ntp' && args[1] === 'master') { dev.ntpMaster = true; dev.ntpStratum = parseInt(args[2], 10) || 8; dev.ntpSynced = true; if (dev.clockEpoch == null) { dev.clockEpoch = Date.UTC(2024, 0, 1, 12, 0, 0); dev.clockBase = Date.now(); } dev.ntpRef = '127.127.1.1'; return; }
                 if (cmd === 'ntp' && args[1] === 'server' && args[2]) { dev.ntpServerIp = args[2]; ntpSync(dev, args[2]); return; }
                 if (cmd === 'snmp-server' && args[1] === 'community' && args[2]) { dev.snmpCommunities = dev.snmpCommunities || {}; const toks = input.trim().split(/\s+/); dev.snmpCommunities[toks[2]] = (args[3] === 'rw' ? 'rw' : 'ro'); return; }
@@ -3200,6 +3251,12 @@
                         return;
                     }
                     if (cmd === 'router-id' && args[1]) { dev.ospf.routerId = args[1]; computeOspf(); return; }
+                    if (cmd === 'passive-interface' && args[1]) { dev.ospf.passive = dev.ospf.passive || []; const pi = args.slice(1).join(' '); if (!dev.ospf.passive.includes(pi)) dev.ospf.passive.push(pi); return; }
+                    if (cmd === 'no' && args[1] === 'passive-interface' && args[2]) { dev.ospf.passive = (dev.ospf.passive || []).filter(x => x !== args.slice(2).join(' ')); return; }
+                    if (cmd === 'default-information' && args[1] === 'originate') { dev.ospf.defaultOriginate = (args[2] === 'always') ? 'always' : true; computeOspf(); return; }
+                    if (cmd === 'no' && args[1] === 'default-information') { dev.ospf.defaultOriginate = false; computeOspf(); return; }
+                    if (cmd === 'redistribute' && (args[1] === 'static' || args[1] === 'connected')) { dev.ospf.redistribute = dev.ospf.redistribute || {}; dev.ospf.redistribute[args[1]] = true; computeOspf(); return; }
+                    if (cmd === 'no' && args[1] === 'redistribute' && args[2]) { if (dev.ospf.redistribute) dev.ospf.redistribute[args[2]] = false; computeOspf(); return; }
                 }
                 if (dev.cli.routerProto === 'eigrp' && dev.eigrp) {
                     if (cmd === 'network' && args[1]) {
@@ -3523,10 +3580,23 @@
         }
         function snmpAuthorized(dev, community) { return !!(dev.snmpCommunities && dev.snmpCommunities[community]); }
         // --- FTP (TCP 21) / TFTP (UDP 69) file transfer ---
+        // Cisco "service password-encryption" type-7 (Vigenere) encoder. Weak by design and
+        // fully reversible, matching real IOS so students can practise decoding it.
+        const CISCO7_XLAT = 'dsfd;kfoA,.iyewrkldJKDHSUBsgvca69834ncxv9873254k;fg87';
+        function cisco7(pw) {
+            pw = String(pw == null ? '' : pw);
+            const salt = ((pw.length * 7) + 3) % 16;              // deterministic so show run is stable
+            let out = String(salt).padStart(2, '0');
+            for (let i = 0; i < pw.length; i++) out += (pw.charCodeAt(i) ^ CISCO7_XLAT.charCodeAt((salt + i) % CISCO7_XLAT.length)).toString(16).toUpperCase().padStart(2, '0');
+            return out;
+        }
+        function pwDisplay(dev, pw) { return dev.servicePwEnc ? `7 ${cisco7(pw)}` : pw; }
         function generateRunningConfig(dev) {
-            const L = ['Building configuration...', '', 'Current configuration:', '!', `hostname ${dev.name}`, '!'];
+            const L = ['Building configuration...', '', 'Current configuration:', '!'];
+            if (dev.servicePwEnc) L.push('service password-encryption', '!');
+            L.push(`hostname ${dev.name}`, '!');
             if (dev.enablePassword) L.push(`enable secret ${dev.enablePassword}`, '!');
-            if (dev.users) Object.keys(dev.users).forEach(u => L.push(`username ${u} password ${dev.users[u]}`));
+            if (dev.users) Object.keys(dev.users).forEach(u => L.push(`username ${u}${(dev.userPriv && dev.userPriv[u]) ? ' privilege ' + dev.userPriv[u] : ''} password ${pwDisplay(dev, dev.users[u])}`));
             if (dev.domainName) L.push(`ip domain-name ${dev.domainName}`);
             const aclAddr = (a, w) => (a === 'any' || a == null) ? 'any' : ((w === '0.0.0.0' || w == null) ? `host ${a}` : `${a} ${w}`);
             const aclLine = (r, t) => t === 'standard'
@@ -3556,7 +3626,7 @@
                     }
                     if (i.type !== 'subinterface') L.push(i.adminState === 'up' ? ' no shutdown' : ' shutdown');
                 });
-                if (dev.ospf && dev.ospf.enabled) { L.push('!', `router ospf ${dev.ospf.processId}`); (dev.ospf.networks || []).forEach(n => L.push(` network ${n.network} ${n.wildcard} area ${n.area}`)); }
+                if (dev.ospf && dev.ospf.enabled) { L.push('!', `router ospf ${dev.ospf.processId}`); (dev.ospf.networks || []).forEach(n => L.push(` network ${n.network} ${n.wildcard} area ${n.area}`)); (dev.ospf.passive || []).forEach(pi => L.push(` passive-interface ${pi}`)); if (dev.ospf.redistribute) { if (dev.ospf.redistribute.connected) L.push(' redistribute connected subnets'); if (dev.ospf.redistribute.static) L.push(' redistribute static subnets'); } if (dev.ospf.defaultOriginate) L.push(` default-information originate${dev.ospf.defaultOriginate === 'always' ? ' always' : ''}`); }
                 if (dev.eigrp && dev.eigrp.enabled) { L.push('!', `router eigrp ${dev.eigrp.asn}`); (dev.eigrp.networks || []).forEach(n => L.push(` network ${n.network}${n.wildcard ? ' ' + n.wildcard : ''}`)); }
                 if (dev.bgp && dev.bgp.enabled) { L.push('!', `router bgp ${dev.bgp.asn}`); (dev.bgp.neighbors || []).forEach(nb => L.push(` neighbor ${nb.ip} remote-as ${nb.remoteAs}`)); (dev.bgp.networks || []).forEach(n => L.push(` network ${n.network}${n.mask ? ' mask ' + n.mask : ''}`)); }
                 if (dev.ripEnabled) { L.push('!', 'router rip', ' version 2'); const nets = new Set(); Object.values(dev.interfaces).forEach(i => { if (i.ip && i.ip !== '0.0.0.0') nets.add(classful(i.ip)); }); nets.forEach(n => L.push(` network ${n}`)); }
@@ -3588,7 +3658,7 @@
                 if (dev.svis) Object.values(dev.svis).forEach(svi => { L.push('!', `interface Vlan${svi.vlan}`); if (svi.ip && svi.ip !== '0.0.0.0') L.push(` ip address ${svi.ip} ${svi.subnet}`); if (svi.helperAddresses) svi.helperAddresses.forEach(h => L.push(` ip helper-address ${h}`)); if (svi.hsrp && svi.hsrp.virtualIp) { L.push(` standby ${svi.hsrp.group} ip ${svi.hsrp.virtualIp}`); if (svi.hsrp.priority != null && svi.hsrp.priority !== 100) L.push(` standby ${svi.hsrp.group} priority ${svi.hsrp.priority}`); if (svi.hsrp.preempt) L.push(` standby ${svi.hsrp.group} preempt`); } L.push(' no shutdown'); });
                 if (dev.l3) {
                     (dev.staticRoutes || []).forEach(sr => L.push('!', `ip route ${sr.network} ${sr.mask} ${sr.nextHop !== '0.0.0.0' ? sr.nextHop : sr.interface}`));
-                    if (dev.ospf && dev.ospf.enabled) { L.push('!', `router ospf ${dev.ospf.processId}`); (dev.ospf.networks || []).forEach(n => L.push(` network ${n.network} ${n.wildcard} area ${n.area}`)); }
+                    if (dev.ospf && dev.ospf.enabled) { L.push('!', `router ospf ${dev.ospf.processId}`); (dev.ospf.networks || []).forEach(n => L.push(` network ${n.network} ${n.wildcard} area ${n.area}`)); (dev.ospf.passive || []).forEach(pi => L.push(` passive-interface ${pi}`)); if (dev.ospf.redistribute) { if (dev.ospf.redistribute.connected) L.push(' redistribute connected subnets'); if (dev.ospf.redistribute.static) L.push(' redistribute static subnets'); } if (dev.ospf.defaultOriginate) L.push(` default-information originate${dev.ospf.defaultOriginate === 'always' ? ' always' : ''}`); }
                     if (dev.eigrp && dev.eigrp.enabled) { L.push('!', `router eigrp ${dev.eigrp.asn}`); (dev.eigrp.networks || []).forEach(n => L.push(` network ${n.network}${n.wildcard ? ' ' + n.wildcard : ''}`)); }
                     if (dev.ripEnabled) { L.push('!', 'router rip', ' version 2'); const nets = new Set(); (dev.l3Interfaces ? dev.l3Interfaces() : []).forEach(i => { if (i.ip && i.ip !== '0.0.0.0') nets.add(classful(i.ip)); }); nets.forEach(n => L.push(` network ${n}`)); }
                     (dev.dhcpExcluded || []).forEach(ex => L.push(`ip dhcp excluded-address ${ex.start}${ex.end && ex.end !== ex.start ? ' ' + ex.end : ''}`));
@@ -3603,7 +3673,7 @@
                     else { L.push('!', `ip access-list ${acl.type} ${key}`); acl.rules.forEach(r => L.push(` ${aclLine(r, acl.type)}`)); }
                 });
             }
-            if (dev.vty) { L.push('!', 'line vty 0 4'); if (dev.vty.password) L.push(` password ${dev.vty.password}`); if (dev.vty.login === 'local') L.push(' login local'); else if (dev.vty.login) L.push(' login'); if (dev.vty.transport) L.push(` transport input ${dev.vty.transport}`); }
+            if (dev.vty) { L.push('!', 'line vty 0 4'); if (dev.vty.password) L.push(` password ${pwDisplay(dev, dev.vty.password)}`); if (dev.vty.login === 'local') L.push(' login local'); else if (dev.vty.login) L.push(' login'); if (dev.vty.transport) L.push(` transport input ${dev.vty.transport}`); }
             L.push('!', 'end');
             return L.join('\n');
         }
@@ -3870,7 +3940,7 @@
             isTcpListening(port) { return (port === 21 && this.ftpEnabled) || (this.mailEnabled && (port === 25 || port === 110)) || (this.openTcpPorts && this.openTcpPorts.has(port)); }
 
             async requestDHCP() {
-                if (!this.port) { log(`[${this.name}] Network interface disconnected. Cannot reach DHCP.`, 'error'); return; }
+                if (!this.port && !this.wirelessLink) { log(`[${this.name}] Network interface disconnected. Cannot reach DHCP.`, 'error'); return; }
                 log(`[${this.name}] Broadcasting DHCP Discover...`, 'info');
                 
                 this.ip = '0.0.0.0';
@@ -4885,42 +4955,282 @@
             }
         }
 
+        // ISP Router: a clone of Router (type stays 'Router', so all router features apply).
+        // Distinguished only by name and icon, representing the provider/internet edge.
+        class ISPRouter extends Router {
+            constructor(x, y) {
+                super(x, y);
+                deviceCounter.Router--;            // don't consume a plain-Router number
+                this.isISP = true;
+                this.name = `ISP Router ${deviceCounter.ISPRouter++}`;
+                this.cli.prompt = `${this.name}>`;
+            }
+        }
+
+        // ===================== Wireless LAN Controller (WLC) =====================
+        // A WLC is modelled as an HTTP-reachable end device (type stays 'WebServer' so all
+        // end-device + HTTP machinery applies) with a management IP and a browser-served
+        // admin GUI. isWlc distinguishes it for the icon, palette and properties panel.
+        class WirelessController extends WebServer {
+            constructor(x, y) {
+                super(x, y);
+                deviceCounter.WebServer--;              // don't consume a Web Server number
+                this.isWlc = true;
+                this.name = `WLC ${deviceCounter.WLC++}`;
+                this.httpEnabled = true;               // serves its management GUI over HTTP
+                this.mgmtVlan = 99;
+                this.dynamicInterfaces = [];           // [{ name, vlan, ip }]
+                this.wlans = [];                       // [{ ssid, security, psk, broadcast, iface }]
+                // htmlContent is generated on demand from live config (non-enumerable so it is
+                // not serialised; a no-op setter lets hydration's Object.assign run harmlessly).
+                delete this.htmlContent;
+                Object.defineProperty(this, 'htmlContent', {
+                    configurable: true, enumerable: false,
+                    get() { return generateWlcGui(this); },
+                    set() { /* generated, ignore restored value */ }
+                });
+                this.cli.history = [`% This is a Wireless LAN Controller. Configure it from a web browser at its management IP.`];
+            }
+
+            // Bridge associated wireless clients to the wired trunk uplink, tagging each client's
+            // frames with its WLAN VLAN, while still answering management traffic on the mgmt IP.
+            async receive(frame, inPortId) {
+                this.macTable = this.macTable || {};
+                const p = frame.payload;
+                const wl = Object.values(links).filter(l => l.isWireless && (l.source === this.id || l.target === this.id));
+                const fromWireless = wl.some(l => l.id === inPortId);
+                const clientOf = (l) => devices[l.source === this.id ? l.target : l.source];
+                if (frame.sourceMac) this.macTable[frame.sourceMac] = { portId: inPortId, time: Date.now() };
+                await sleep(35);
+
+                if (fromWireless) {
+                    // Uplink: client traffic tagged with its WLAN's VLAN, sent to the wired trunk
+                    const lap = clientOf(links[inPortId]);
+                    const vlan = (lap && lap.wlanVlan != null) ? lap.wlanVlan : frame.vlan;
+                    if (this.port && links[this.port]) transmit(Object.assign({}, frame, { vlan }), this.id, this.port);
+                    return;
+                }
+
+                // Wired side. Management traffic addressed to the controller's management IP:
+                if (p && p.type === 'ARP_REQ' && p.targetIp === this.ip) {
+                    transmit({ sourceMac: this.mac, destMac: frame.sourceMac, vlan: frame.vlan, payload: { type: 'ARP_REP', sourceIp: this.ip, targetIp: p.sourceIp, targetMac: frame.sourceMac } }, this.id, this.port);
+                    return;
+                }
+                if (p && p.type === 'ARP_REP' && frame.destMac === this.mac) { this.arpCache = this.arpCache || {}; this.arpCache[p.sourceIp] = frame.sourceMac; return; }
+                if (frame.destMac === this.mac && p && p.targetIp === this.ip) {
+                    if (p.type === 'ICMP_REQ') { transmit({ sourceMac: this.mac, destMac: frame.sourceMac, vlan: frame.vlan, payload: { type: 'ICMP_REP', sourceIp: this.ip, targetIp: p.sourceIp, natId: p.natId } }, this.id, this.port); return; }
+                    if (p.type === 'HTTP_GET') { transmit({ sourceMac: this.mac, destMac: frame.sourceMac, vlan: frame.vlan, payload: { type: 'HTTP_REP', sourceIp: this.ip, targetIp: p.sourceIp, content: this.htmlContent, sourcePort: 80, destPort: p.sourcePort } }, this.id, this.port); return; }
+                    return;
+                }
+
+                // Downlink: known wireless client -> deliver on its Wi-Fi link (untagged to the client)
+                const dest = this.macTable[frame.destMac];
+                if (dest && wl.some(l => l.id === dest.portId)) {
+                    const out = Object.assign({}, frame); delete out.vlan;
+                    transmit(out, this.id, dest.portId);
+                    return;
+                }
+                // Broadcast / unknown-unicast: flood to wireless clients whose WLAN VLAN matches
+                if (frame.destMac === 'FF:FF:FF:FF:FF:FF' || !dest) {
+                    wl.forEach(l => {
+                        if (l.id === inPortId) return;
+                        const lap = clientOf(l);
+                        if (!lap) return;
+                        if (frame.vlan == null || lap.wlanVlan == null || lap.wlanVlan == frame.vlan) {
+                            const out = Object.assign({}, frame); delete out.vlan;
+                            transmit(out, this.id, l.id);
+                        }
+                    });
+                    return;
+                }
+            }
+        }
+
+        // Persist a configuration posted from the browser-served GUI back onto the WLC device.
+        function wlcApplyConfig(ip, config) {
+            const wlc = Object.values(devices).find(d => d.isWlc && d.ip === ip);
+            if (!wlc || !config) return false;
+            if (Array.isArray(config.dynamicInterfaces)) wlc.dynamicInterfaces = config.dynamicInterfaces;
+            if (Array.isArray(config.wlans)) wlc.wlans = config.wlans;
+            if (typeof log === 'function') log(`[${wlc.name}] Configuration updated from web GUI.`, 'success');
+            if (typeof window.evaluateWifiConnections === 'function') window.evaluateWifiConnections();
+            if (typeof propertiesDeviceId !== 'undefined' && propertiesDeviceId === wlc.id) updatePropertiesPanel();
+            return true;
+        }
+        window.__wlcApply = wlcApplyConfig;
+
+        // Build the interactive WLC admin page served to a browser. The forms talk back to the
+        // simulator via window.parent.postMessage; the parent listener calls wlcApplyConfig.
+        function generateWlcGui(wlc) {
+            const cfg = { dynamicInterfaces: wlc.dynamicInterfaces || [], wlans: wlc.wlans || [] };
+            const head = ''
+                + '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + wlc.name + ' - WLC</title><style>'
+                + '*{box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif;}'
+                + 'body{margin:0;background:#eef2f6;color:#1e293b;font-size:13px;}'
+                + '.top{background:#0b3d62;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;}'
+                + '.top b{font-size:15px;} .top .sub{opacity:.8;font-size:11px;margin-left:auto;}'
+                + '.wrap{padding:16px;max-width:760px;margin:0 auto;}'
+                + '.card{background:#fff;border:1px solid #d5dde5;border-radius:8px;margin-bottom:16px;overflow:hidden;}'
+                + '.card h2{margin:0;padding:10px 14px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0b3d62;}'
+                + '.card .body{padding:14px;}'
+                + 'table{width:100%;border-collapse:collapse;margin-bottom:10px;} th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eef2f6;font-size:12px;}'
+                + 'th{color:#64748b;font-weight:600;} td.empty{color:#94a3b8;text-align:center;font-style:italic;}'
+                + '.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end;} .fld{display:flex;flex-direction:column;gap:3px;} .fld label{font-size:10px;color:#64748b;font-weight:600;}'
+                + 'input,select{padding:6px 8px;border:1px solid #cbd5e1;border-radius:5px;font-size:12px;background:#fff;} input[type=checkbox]{width:16px;height:16px;}'
+                + 'button{background:#0b6bcb;color:#fff;border:0;padding:7px 12px;border-radius:5px;font-weight:600;cursor:pointer;font-size:12px;} button:hover{background:#0959a8;}'
+                + 'button.del{background:#e2e8f0;color:#334155;padding:3px 8px;} button.del:hover{background:#cbd5e1;}'
+                + '.mgmt{display:flex;gap:20px;font-size:12px;} .mgmt div span{color:#64748b;}'
+                + '</style></head><body>';
+            const bar = '<div class="top"><b>Cisco Wireless LAN Controller</b><span>' + wlc.name + '</span><span class="sub">MANAGEMENT ' + (wlc.ip || 'unset') + '</span></div>';
+            const mgmt = '<div class="wrap"><div class="card"><h2>Management Summary</h2><div class="body mgmt">'
+                + '<div><span>IP Address:</span><br>' + (wlc.ip || 'unset') + '</div>'
+                + '<div><span>Subnet:</span><br>' + (wlc.subnet || 'unset') + '</div>'
+                + '<div><span>Gateway:</span><br>' + (wlc.gateway || 'unset') + '</div>'
+                + '<div><span>Mgmt VLAN:</span><br>' + (wlc.mgmtVlan || 99) + '</div></div></div>';
+            const ifaces = '<div class="card"><h2>Dynamic Interfaces</h2><div class="body">'
+                + '<table><thead><tr><th>Interface Name</th><th>VLAN</th><th>IP Address</th><th></th></tr></thead><tbody id="ifTable"></tbody></table>'
+                + '<div class="row">'
+                + '<div class="fld"><label>Interface Name</label><input id="ifName" placeholder="guest"></div>'
+                + '<div class="fld"><label>VLAN ID</label><input id="ifVlan" type="number" placeholder="20" style="width:90px"></div>'
+                + '<div class="fld"><label>IP Address (optional)</label><input id="ifIp" placeholder="192.168.20.2"></div>'
+                + '<button id="addIf">Add Interface</button></div></div></div>';
+            const wlans = '<div class="card"><h2>WLANs</h2><div class="body">'
+                + '<table><thead><tr><th>SSID</th><th>Security</th><th>Broadcast</th><th>Interface</th><th></th></tr></thead><tbody id="wlanTable"></tbody></table>'
+                + '<div class="row">'
+                + '<div class="fld"><label>WLAN SSID</label><input id="wSsid" placeholder="Guest_Wifi"></div>'
+                + '<div class="fld"><label>Security</label><select id="wSec"><option value="wpa2">WPA2-PSK</option><option value="open">Open</option></select></div>'
+                + '<div class="fld"><label>Passphrase</label><input id="wPsk" placeholder="min 8 chars"></div>'
+                + '<div class="fld"><label>Interface</label><select id="wIf"></select></div>'
+                + '<div class="fld"><label>Broadcast SSID</label><input id="wBcast" type="checkbox" checked></div>'
+                + '<button id="addWlan">Create WLAN</button></div></div></div></div>';
+            const script = '<script>'
+                + 'var CFG=' + JSON.stringify(cfg) + ';var MGMT_IP=' + JSON.stringify(wlc.ip || '') + ';'
+                + 'function val(id){return (document.getElementById(id).value||"").trim();}'
+                + 'function h(s){return String(s==null?"":s).replace(/[&<>\"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c];});}'
+                + 'function persist(){try{window.parent.postMessage({__wlc:true,ip:MGMT_IP,config:{dynamicInterfaces:CFG.dynamicInterfaces,wlans:CFG.wlans}},"*");}catch(e){}}'
+                + 'function opts(){var s=document.getElementById("wIf");var cur=s.value;s.innerHTML=CFG.dynamicInterfaces.map(function(d){return "<option value=\\""+h(d.name)+"\\">"+h(d.name)+" (VLAN "+h(d.vlan)+")</option>";}).join("")||"<option value=\\"\\">(none)</option>";if(cur)s.value=cur;}'
+                + 'function rIf(){var t=document.getElementById("ifTable");t.innerHTML=CFG.dynamicInterfaces.map(function(d,i){return "<tr><td>"+h(d.name)+"</td><td>"+h(d.vlan)+"</td><td>"+h(d.ip||"")+"</td><td><button class=\\"del\\" data-i=\\""+i+"\\">Remove</button></td></tr>";}).join("")||"<tr><td class=\\"empty\\" colspan=\\"4\\">No dynamic interfaces yet</td></tr>";Array.prototype.forEach.call(t.querySelectorAll("button.del"),function(b){b.onclick=function(){CFG.dynamicInterfaces.splice(+b.getAttribute("data-i"),1);rIf();opts();persist();};});}'
+                + 'function rW(){var t=document.getElementById("wlanTable");t.innerHTML=CFG.wlans.map(function(w,i){return "<tr><td>"+h(w.ssid)+"</td><td>"+(w.security==="wpa2"?"WPA2-PSK":"Open")+"</td><td>"+(w.broadcast?"Enabled":"Disabled")+"</td><td>"+h(w.iface||"")+"</td><td><button class=\\"del\\" data-i=\\""+i+"\\">Remove</button></td></tr>";}).join("")||"<tr><td class=\\"empty\\" colspan=\\"5\\">No WLANs yet</td></tr>";Array.prototype.forEach.call(t.querySelectorAll("button.del"),function(b){b.onclick=function(){CFG.wlans.splice(+b.getAttribute("data-i"),1);rW();persist();};});}'
+                + 'document.getElementById("addIf").onclick=function(){var n=val("ifName"),v=val("ifVlan"),ip=val("ifIp");if(!n||!v){alert("Interface name and VLAN are required.");return;}CFG.dynamicInterfaces.push({name:n,vlan:v,ip:ip});document.getElementById("ifName").value="";document.getElementById("ifVlan").value="";document.getElementById("ifIp").value="";rIf();opts();persist();};'
+                + 'document.getElementById("addWlan").onclick=function(){var s=val("wSsid"),sec=val("wSec"),psk=val("wPsk"),bc=document.getElementById("wBcast").checked,intf=val("wIf");if(!s){alert("WLAN SSID is required.");return;}if(sec==="wpa2"&&psk.length<8){alert("WPA2-PSK requires a passphrase of at least 8 characters.");return;}CFG.wlans.push({ssid:s,security:sec,psk:psk,broadcast:bc,iface:intf});document.getElementById("wSsid").value="";document.getElementById("wPsk").value="";rW();persist();};'
+                + 'rIf();rW();opts();'
+                + '<\/script>';
+            return head + bar + mgmt + ifaces + wlans + script + '</body></html>';
+        }
+
+        // Receive GUI updates posted from the served admin page (browser iframe -> parent sim).
+        window.addEventListener('message', (e) => {
+            const d = e && e.data;
+            if (!d || d.__wlc !== true || !d.ip) return;
+            wlcApplyConfig(d.ip, d.config);
+        });
+
+        // Properties panel for a WLC: management IP config + live summary + how to reach the GUI.
+        function renderPropWlc(dev) {
+            const ifRows = (dev.dynamicInterfaces || []).map(d => `<tr><td class="px-2 py-1 border-t">${d.name}</td><td class="px-2 py-1 border-t">${d.vlan}</td><td class="px-2 py-1 border-t">${d.ip || ''}</td></tr>`).join('') || '<tr><td colspan="3" class="px-2 py-2 text-center text-slate-400">None</td></tr>';
+            const joinedAps = Object.values(devices).filter(d => d.type === 'AP' && apController(d) === dev);
+            const apRows = joinedAps.map(a => `<li>${a.name}</li>`).join('') || '<li class="text-slate-400">No access points have joined this controller</li>';
+            const wRows = (dev.wlans || []).map(w => `<tr><td class="px-2 py-1 border-t">${w.ssid}</td><td class="px-2 py-1 border-t">${w.security === 'wpa2' ? 'WPA2-PSK' : 'Open'}</td><td class="px-2 py-1 border-t">${w.broadcast ? 'Yes' : 'No'}</td></tr>`).join('') || '<tr><td colspan="3" class="px-2 py-2 text-center text-slate-400">None</td></tr>';
+            return `
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Management Interface</h3>
+                        <div class="space-y-2">
+                            <div><label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">IP Address</label>
+                                <input type="text" id="prop-ip" value="${dev.ip}" placeholder="192.168.99.10" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900"></div>
+                            <div class="flex space-x-2">
+                                <div class="w-1/2"><label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Subnet Mask</label>
+                                    <input type="text" id="prop-sub" value="${dev.subnet}" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900"></div>
+                                <div class="w-1/2"><label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Gateway</label>
+                                    <input type="text" id="prop-gw" value="${dev.gateway}" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900"></div>
+                            </div>
+                            <div><label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Management VLAN</label>
+                                <input type="number" id="prop-wlc-mgmtvlan" value="${dev.mgmtVlan || 99}" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900"></div>
+                        </div>
+                        <button onclick="window.saveWlcSettings('${dev.id}')" id="btn-save-wlc" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition-colors shadow-sm mt-3">Save Management Config</button>
+                    </div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 rounded p-2 leading-relaxed">
+                        Configure WLANs and dynamic interfaces from the <b>web GUI</b>: open a PC on the management VLAN, launch its Web Browser, and browse to <b>${dev.ip && dev.ip !== '0.0.0.0' ? dev.ip : 'the management IP'}</b>. Access points join this controller by its management IP and broadcast its WLANs.
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Joined Access Points</h3>
+                        <ul class="text-[11px] space-y-0.5 list-disc list-inside">${apRows}</ul>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Dynamic Interfaces</h3>
+                        <table class="w-full text-[11px]"><thead><tr class="text-slate-500 dark:text-slate-400"><th class="px-2 py-1 text-left">Name</th><th class="px-2 py-1 text-left">VLAN</th><th class="px-2 py-1 text-left">IP</th></tr></thead><tbody>${ifRows}</tbody></table>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">WLANs</h3>
+                        <table class="w-full text-[11px]"><thead><tr class="text-slate-500 dark:text-slate-400"><th class="px-2 py-1 text-left">SSID</th><th class="px-2 py-1 text-left">Security</th><th class="px-2 py-1 text-left">Broadcast</th></tr></thead><tbody>${wRows}</tbody></table>
+                    </div>
+                </div>`;
+        }
+        window.saveWlcSettings = (id) => {
+            const dev = devices[id];
+            if (!dev || !dev.isWlc) return;
+            dev.ip = document.getElementById('prop-ip').value;
+            dev.subnet = document.getElementById('prop-sub').value;
+            dev.gateway = document.getElementById('prop-gw').value;
+            const mv = document.getElementById('prop-wlc-mgmtvlan');
+            if (mv) dev.mgmtVlan = parseInt(mv.value, 10) || 99;
+            flashSavedButton('btn-save-wlc', 'Save Management Config');
+            log(`[${dev.name}] Management configuration saved.`);
+        };
+
+
         class AccessPoint extends Device {
             constructor(x, y) {
                 super('AP', x, y);
                 this.ports = [{ id: 1, connectedLink: null, stpState: 'forwarding', adminState: 'up' }]; // 1 LAN uplink port
-                this.macTable = {}; 
-                this.ssid = `WiFi_${this.name}`;
+                this.macTable = {};
+                this.ssid = `WiFi_${this.name}`;   // autonomous SSID, used only when not joined to a WLC
                 this.band = '2.4'; // 2.4 or 5
                 this.security = 'WPA2'; // WPA or WPA2
                 this.password = '';
+                this.controllerIp = '';            // management IP of the WLC to join (lightweight mode)
             }
 
+            // Bridge wireless clients to the wired uplink. When a client is on a WLC WLAN, its
+            // frames are tagged with that WLAN's VLAN onto the trunk uplink; autonomous clients
+            // are bridged untagged. Traffic returning on the trunk is delivered to the matching client.
             async receive(frame, inPortId) {
-                this.macTable[frame.sourceMac] = { portId: inPortId, time: Date.now() };
-
-                await sleep(35); // Processing delay
-
-                const wirelessLinks = Object.values(links).filter(l => l.isWireless && (l.source === this.id || l.target === this.id));
+                this.macTable = this.macTable || {};
+                const wl = Object.values(links).filter(l => l.isWireless && (l.source === this.id || l.target === this.id));
+                const fromWireless = wl.some(l => l.id === inPortId);
+                const clientOf = (l) => devices[l.source === this.id ? l.target : l.source];
+                if (frame.sourceMac) this.macTable[frame.sourceMac] = { portId: inPortId, time: Date.now() };
+                await sleep(35);
                 const wiredPort = this.ports.find(p => p.id === 1);
+                const wiredUp = wiredPort && wiredPort.connectedLink && wiredPort.adminState === 'up';
 
-                const forwardTo = (portId) => transmit(frame, this.id, portId);
-
-                if (frame.destMac === 'FF:FF:FF:FF:FF:FF') {
-                    if (wiredPort && wiredPort.connectedLink && wiredPort.adminState === 'up' && inPortId !== 1) forwardTo(1);
-                    wirelessLinks.forEach(l => {
-                        const wPort = l.id; // virtual target port is the link itself
-                        if (wPort !== inPortId) forwardTo(wPort);
+                if (fromWireless) {
+                    const lap = clientOf(links[inPortId]);
+                    const vlan = (lap && lap.wlanVlan != null) ? lap.wlanVlan : frame.vlan;
+                    if (wiredUp) transmit(Object.assign({}, frame, { vlan }), this.id, 1);
+                    return;
+                }
+                // From the wired uplink: deliver to the right wireless client (matching WLAN VLAN)
+                const dest = this.macTable[frame.destMac];
+                if (dest && wl.some(l => l.id === dest.portId)) {
+                    const lap = clientOf(links[dest.portId]);
+                    if (frame.vlan == null || !lap || lap.wlanVlan == null || lap.wlanVlan == frame.vlan) {
+                        const out = Object.assign({}, frame); delete out.vlan;
+                        transmit(out, this.id, dest.portId);
+                    }
+                    return;
+                }
+                if (frame.destMac === 'FF:FF:FF:FF:FF:FF' || !dest) {
+                    wl.forEach(l => {
+                        if (l.id === inPortId) return;
+                        const lap = clientOf(l);
+                        if (!lap) return;
+                        if (frame.vlan == null || lap.wlanVlan == null || lap.wlanVlan == frame.vlan) {
+                            const out = Object.assign({}, frame); delete out.vlan;
+                            transmit(out, this.id, l.id);
+                        }
                     });
-                } else if (this.macTable[frame.destMac]) {
-                    const outPortId = this.macTable[frame.destMac].portId;
-                    if (outPortId !== inPortId) forwardTo(outPortId);
-                } else {
-                    if (wiredPort && wiredPort.connectedLink && wiredPort.adminState === 'up' && inPortId !== 1) forwardTo(1);
-                    wirelessLinks.forEach(l => {
-                        const wPort = l.id;
-                        if (wPort !== inPortId) forwardTo(wPort);
-                    });
+                    return;
                 }
             }
         }
@@ -5046,7 +5356,9 @@
             let linkId;
             
             if (isEndDevice(fromDevice)) {
-                if (fromDevice.type === 'Laptop') {
+                if (fromDevice.isWlc && fromPortId && links[fromPortId] && links[fromPortId].isWireless) {
+                    linkId = fromPortId;                 // WLC serving a wireless client
+                } else if (fromDevice.type === 'Laptop') {
                     // A laptop can be cabled and associated with an AP at the same time.
                     // Prefer the wired uplink when a cable is connected, otherwise use Wi-Fi.
                     linkId = (fromDevice.port && links[fromDevice.port]) ? fromDevice.port : fromDevice.wirelessLink;
@@ -5083,7 +5395,7 @@
             
             let targetPortId;
             if (link.isWireless) {
-                targetPortId = targetDevice.type === 'AP' ? link.id : 'wlan0';
+                targetPortId = (targetDevice.type === 'AP' || targetDevice.isWlc) ? link.id : 'wlan0';
             } else {
                 targetPortId = link.source === fromDeviceId ? link.targetPort : link.sourcePort;
             }
@@ -5439,6 +5751,27 @@
                         if (existing) { if (metric < existing.metric) { existing.metric = metric; existing.nextHop = hop[D.id].nextHopIp; existing.interface = hop[D.id].outIface; } }
                         else srcR.routingTable.push({ network: net, mask: iface.subnet, nextHop: hop[D.id].nextHopIp, interface: hop[D.id].outIface, metric, type: 'O', ad: 110 });
                     });
+                });
+                // Injected OSPF routes: default-information originate + redistribute static/connected
+                routers.forEach(D => {
+                    if (D.id === srcR.id || dist[D.id] === Infinity || !hop[D.id]) return;
+                    const nh = hop[D.id];
+                    if (D.ospf.defaultOriginate) {
+                        const hasDefault = D.routingTable.some(rt => rt.network === '0.0.0.0' && rt.mask === '0.0.0.0');
+                        if ((D.ospf.defaultOriginate === 'always' || hasDefault) && !srcR.routingTable.some(x => x.network === '0.0.0.0' && x.mask === '0.0.0.0' && (x.type === 'C' || x.type === 'S'))) {
+                            if (!srcR.routingTable.some(x => x.type === 'O' && x.network === '0.0.0.0' && x.mask === '0.0.0.0')) srcR.routingTable.push({ network: '0.0.0.0', mask: '0.0.0.0', nextHop: nh.nextHopIp, interface: nh.outIface, metric: 1, type: 'O', ad: 110, ospfExternal: true });
+                        }
+                    }
+                    const redis = D.ospf.redistribute;
+                    if (redis) {
+                        D.routingTable.forEach(sr => {
+                            if (!((redis.static && sr.type === 'S') || (redis.connected && sr.type === 'C'))) return;
+                            if (sr.network === '0.0.0.0') return;
+                            const isLocal = Object.values(srcR.interfaces).some(i => i.ip && i.ip !== '0.0.0.0' && getNetwork(i.ip, i.subnet) === sr.network && i.subnet === sr.mask);
+                            if (isLocal) return;
+                            if (!srcR.routingTable.some(x => x.network === sr.network && x.mask === sr.mask && (x.type === 'C' || x.type === 'S' || x.type === 'O'))) srcR.routingTable.push({ network: sr.network, mask: sr.mask, nextHop: nh.nextHopIp, interface: nh.outIface, metric: 20, type: 'O', ad: 110, ospfExternal: true });
+                        });
+                    }
                 });
             });
             if (propertiesDeviceId && devices[propertiesDeviceId] && l3capable(devices[propertiesDeviceId])) updatePropertiesPanel();
@@ -5829,6 +6162,14 @@
                 const r = new Router(x, y);
                 devices[r.id] = r;
                 log(`Added ${r.name}`);
+            } else if (type === 'ISPRouter') {
+                const r = new ISPRouter(x, y);
+                devices[r.id] = r;
+                log(`Added ${r.name}`);
+            } else if (type === 'WLC') {
+                const w = new WirelessController(x, y);
+                devices[w.id] = w;
+                log(`Added ${w.name}`);
             } else if (type === 'AP') {
                 const ap = new AccessPoint(x, y);
                 devices[ap.id] = ap;
@@ -6910,7 +7251,7 @@
                 iconDiv.className = `node-icon w-16 h-16 rounded-xl flex items-center justify-center shadow-md border ${isEndDevice(dev) ? 'bg-white dark:bg-slate-100 border-slate-300 dark:border-slate-400 text-slate-600 dark:text-slate-700' : 'bg-slate-800 border-slate-900 text-white'}`;
                 
                 // Inject SVG dynamically from our dictionary
-                iconDiv.innerHTML = (dev.l3 ? DEVICE_ICONS['L3Switch'] : DEVICE_ICONS[dev.type]) || DEVICE_ICONS['PC'];
+                iconDiv.innerHTML = (dev.isWlc ? DEVICE_ICONS['WLC'] : dev.isISP ? DEVICE_ICONS['ISPRouter'] : dev.l3 ? DEVICE_ICONS['L3Switch'] : DEVICE_ICONS[dev.type]) || DEVICE_ICONS['PC'];
 
                 const labelDiv = document.createElement('div');
                 labelDiv.className = 'text-[10px] font-bold mt-1 text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-800/80 px-2 py-0.5 rounded text-center shadow-sm whitespace-nowrap';
@@ -7916,9 +8257,27 @@
         }
 
         function renderPropAP(dev) {
+            const wlc = apController(dev);
+            const bwl = apBroadcastWlans(dev);
+            const joinBadge = wlc
+                ? `<span class="text-green-600 dark:text-green-400 font-semibold">Joined to ${wlc.name}</span>`
+                : `<span class="text-amber-600 dark:text-amber-400 font-semibold">Not joined (autonomous)</span>`;
+            const bcastList = wlc
+                ? (bwl.length ? bwl.map(w => `<li>${w.ssid} <span class="text-slate-400">(${w.security === 'open' ? 'Open' : 'WPA2-PSK'}${w.vlan != null ? ', VLAN ' + w.vlan : ''})</span></li>`).join('') : '<li class="text-slate-400">Controller has no broadcast WLANs</li>')
+                : '<li class="text-slate-400">Using the autonomous SSID below</li>';
             return `
                 <div class="space-y-4">
                     <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Controller (WLC)</h3>
+                        <label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Controller Management IP</label>
+                        <input type="text" id="prop-ap-controller" value="${dev.controllerIp || ''}" placeholder="leave blank to auto-join a single WLC" class="w-full px-3 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
+                        <div class="text-[11px] mt-2">Status: ${joinBadge}</div>
+                        <div class="text-[11px] mt-1 text-slate-500 dark:text-slate-400">Broadcasting:</div>
+                        <ul class="text-[11px] mt-1 space-y-0.5 list-disc list-inside">${bcastList}</ul>
+                        <div class="text-[10px] text-slate-400 mt-2 leading-relaxed">When joined, the AP broadcasts the controller's WLANs and tags client traffic onto the mapped VLAN, so its uplink to the switch should be a trunk.</div>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Autonomous Settings <span class="text-[10px] font-normal text-slate-400">(used only when not joined)</span></h3>
                         <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">SSID</label>
                         <input type="text" id="prop-ssid" value="${dev.ssid}" class="w-full px-3 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
                     </div>
@@ -8246,7 +8605,7 @@
             } else if (dev.type === 'Server') {
                 html += renderPropDHCPServer(dev);
             } else if (dev.type === 'WebServer') {
-                html += renderPropWebServer(dev);
+                html += dev.isWlc ? renderPropWlc(dev) : renderPropWebServer(dev);
             } else if (dev.type === 'Router') {
                 html += renderPropRouter(dev);
             } else if (dev.type === 'AP') {
@@ -8365,6 +8724,8 @@
             dev.band = document.getElementById('prop-band').value;
             dev.security = document.getElementById('prop-sec').value;
             dev.password = document.getElementById('prop-pass').value;
+            const ctrl = document.getElementById('prop-ap-controller');
+            if (ctrl) dev.controllerIp = ctrl.value.trim();
 
             window.evaluateWifiConnections(); // Re-evaluate laptops; drops mismatching, picks up new matches
 
@@ -8662,7 +9023,7 @@
             }
             devices = {}; links = {}; labels = {};
             selectedDeviceId = null; selectedLabelId = null; selectedLinkId = null; propertiesDeviceId = null; pendingCableSource = null; pendingCableSourcePort = null;
-            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1 };
+            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1 };
             CONSOLE.innerHTML = '<div>> Network cleared.</div>';
             hidePortSelector();
             closeCLI();
