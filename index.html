@@ -2114,10 +2114,11 @@
             if (cmd === 'exit') {
                 if (dev.cli.mode === 'conf-vlan') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentVlan = null; return; }
                 if (dev.cli.mode === 'conf-router') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.routerProto = null; return; }
+                if (dev.cli.mode === 'conf-vpc') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; return; }
                 if (dev.cli.mode === 'conf-dhcp') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.dhcpPool = null; return; }
                 if (dev.cli.mode === 'conf-line') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; return; }
                 if (dev.cli.mode === 'conf-acl') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.aclName = null; return; }
-                if (dev.cli.mode === 'conf-if') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentInterface = null; dev.cli.rangePorts = null; return; }
+                if (dev.cli.mode === 'conf-if') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentInterface = null; dev.cli.rangePorts = null; dev.cli.poCtx = null; return; }
                 if (dev.cli.mode === 'conf') { dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`; return; }
                 if (dev.cli.mode === 'priv') { dev.cli.mode = 'user'; dev.cli.prompt = `${dev.name}>`; return; }
                 return;
@@ -2452,6 +2453,35 @@
                         print('---------------------------------------------------------------------------');
                         return;
                     }
+                    if (dev.type === 'Switch' && args[1] === 'vpc') {
+                        if (!dev.vpc || dev.vpc.domain == null) { print('% vPC domain not configured. Use "vpc domain <id>".'); return; }
+                        const pcs = dev.portChannels || {};
+                        const chanUp = (n) => dev.ports.filter(p => p.channelGroup == n && p.connectedLink).length > 0;
+                        const peerPo = Object.keys(pcs).find(n => pcs[n].role === 'peer-link');
+                        const peerOk = peerPo != null && chanUp(peerPo);
+                        const members = Object.keys(pcs).filter(n => pcs[n].vpcId != null);
+                        print(`Legend:`);
+                        print(`                (*) - local vPC is down, forwarding via vPC peer-link\n`);
+                        print(`vPC domain id                     : ${dev.vpc.domain}`);
+                        print(`Peer status                       : ${peerOk ? 'peer adjacency formed ok' : 'peer link down / not configured'}`);
+                        print(`vPC keep-alive status             : ${dev.vpc.keepalive ? 'peer is alive' : 'Disabled'}`);
+                        print(`Configuration consistency status  : success`);
+                        print(`Type-2 consistency status         : success`);
+                        print(`vPC role                          : primary`);
+                        print(`Number of vPCs configured         : ${members.length}\n`);
+                        print(`vPC Peer-link status`);
+                        print(`---------------------------------------------------------------------`);
+                        print(`id    Port      Status   Active vlans`);
+                        print(`--    ----      ------   ------------`);
+                        print(peerPo != null ? `1     Po${peerPo}       ${chanUp(peerPo) ? 'up      ' : 'down    '} 1,10,20` : `      --        (peer-link not configured)`);
+                        print(`\nvPC status`);
+                        print(`----------------------------------------------------------------------`);
+                        print(`id    Port      Status   Consistency  Reason   Active vlans`);
+                        print(`--    ----      ------   -----------  ------   ------------`);
+                        if (members.length) members.forEach(n => print(`${pcs[n].vpcId}${' '.repeat(Math.max(1,6-String(pcs[n].vpcId).length))}Po${n}${' '.repeat(Math.max(1,8-String(n).length))}${chanUp(n) ? 'up      ' : 'down    '} success      success  1,10,20`));
+                        else print(`      --        (no vPCs configured)`);
+                        return;
+                    }
                     if (dev.type === 'Switch' && (args[1] === 'etherchannel' || args[1] === 'ether') && (!args[2] || args[2] === 'summary' || args[2] === 'sum')) {
                         const groups = {};
                         dev.ports.forEach(p => { if (p.channelGroup != null && p.connectedLink) { (groups[p.channelGroup] = groups[p.channelGroup] || []).push(p); } });
@@ -2610,6 +2640,27 @@
                 return;
             }
 
+                if (dev.cli.mode === 'conf' && cmd === 'feature' && dev.type === 'Switch') { return; } // NX-OS feature toggles (feature vpc / lacp)
+                if (dev.cli.mode === 'conf' && cmd === 'vpc' && args[1] === 'domain' && args[2] && dev.type === 'Switch') {
+                    dev.vpc = dev.vpc || {}; dev.vpc.domain = parseInt(args[2], 10);
+                    dev.cli.mode = 'conf-vpc'; dev.cli.prompt = `${dev.name}(config-vpc-domain)#`;
+                    return;
+                }
+                if (dev.cli.mode === 'conf-vpc' && dev.type === 'Switch') {
+                    dev.vpc = dev.vpc || {};
+                    if (cmd === 'peer-keepalive') { const di = args.indexOf('destination'); if (di >= 0 && args[di + 1]) dev.vpc.keepalive = args[di + 1]; return; }
+                    if (cmd === 'role' && args[1] === 'priority' && args[2]) { dev.vpc.rolePriority = parseInt(args[2], 10); return; }
+                    if (['peer-gateway', 'auto-recovery', 'peer-switch', 'system-priority', 'delay', 'ip', 'graceful', 'no'].includes(cmd)) { return; }
+                }
+                if (dev.cli.mode === 'conf-if' && cmd === 'vpc' && dev.type === 'Switch' && dev.cli.poCtx != null) {
+                    dev.portChannels = dev.portChannels || {}; const po = (dev.portChannels[dev.cli.poCtx] = dev.portChannels[dev.cli.poCtx] || {});
+                    if (args[1] === 'peer-link') { po.role = 'peer-link'; print(`vPC peer-link configured on Port-channel ${dev.cli.poCtx}.`); return; }
+                    const idn = parseInt(args[1], 10);
+                    if (!isNaN(idn)) { po.vpcId = idn; print(`vPC ${idn} configured on Port-channel ${dev.cli.poCtx}.`); return; }
+                    print('% Usage: vpc <id>  |  vpc peer-link'); return;
+                }
+                if (dev.cli.mode === 'conf-if' && cmd === 'no' && args[1] === 'vpc' && dev.type === 'Switch' && dev.cli.poCtx != null) { const po = (dev.portChannels || {})[dev.cli.poCtx]; if (po) { delete po.role; delete po.vpcId; } return; }
+
             // Interface selection: works from global config and, so you can move straight to
             // another interface, from interface-config mode as well.
             if ((dev.cli.mode === 'conf' || dev.cli.mode === 'conf-if') && (cmd === 'int' || cmd === 'interface')) {
@@ -2622,8 +2673,17 @@
                     const gm = spec.match(/^(?:g|gi|gig\w*)\s*0\/(\d+)\s*-\s*(\d+)$/i);
                     if (fm) { const a = parseInt(fm[1], 10), b = parseInt(fm[2], 10); for (let i = Math.min(a, b); i <= Math.max(a, b); i++) { const p = dev.ports.find(pt => pt.id === i && pt.media !== 'fiber'); if (p) ids.push(i); } }
                     else if (gm) { const a = parseInt(gm[1], 10), b = parseInt(gm[2], 10); for (let i = Math.min(a, b); i <= Math.max(a, b); i++) { const p = dev.ports.find(pt => pt.media === 'fiber' && pt.gi === i); if (p) ids.push(p.id); } }
-                    if (ids.length) { dev.cli.mode = 'conf-if'; dev.cli.prompt = `${dev.name}(config-if-range)#`; dev.cli.currentInterface = ids[0]; dev.cli.rangePorts = ids; return; }
+                    if (ids.length) { dev.cli.mode = 'conf-if'; dev.cli.prompt = `${dev.name}(config-if-range)#`; dev.cli.currentInterface = ids[0]; dev.cli.rangePorts = ids; dev.cli.poCtx = null; return; }
                     print('% Invalid interface range'); return;
+                }
+                if (dev.type === 'Switch') {
+                    const pom2 = ifaceName.match(/^po(?:rt-channel)?(\d+)$/i);
+                    const poN2 = pom2 ? parseInt(pom2[1], 10) : ((/^po(?:rt-channel)?$/i.test(ifaceName) && args[2]) ? parseInt(args[2], 10) : NaN);
+                    if (!isNaN(poN2) && poN2 >= 1) {
+                        dev.portChannels = dev.portChannels || {}; dev.portChannels[poN2] = dev.portChannels[poN2] || {};
+                        dev.cli.mode = 'conf-if'; dev.cli.prompt = `${dev.name}(config-if)#`; dev.cli.currentInterface = `Po${poN2}`; dev.cli.poCtx = poN2; dev.cli.rangePorts = null;
+                        return;
+                    }
                 }
                 let resolvedIface = null;
                 if (dev.type === 'Router') {
@@ -2662,6 +2722,7 @@
                     dev.cli.prompt = `${dev.name}(config-if)#`;
                     dev.cli.currentInterface = resolvedIface;
                     dev.cli.rangePorts = null;
+                    dev.cli.poCtx = null;
                     return;
                 }
                 print('% Invalid interface type and number');
@@ -2691,6 +2752,13 @@
                         else if (ifaceName.match(/se.*0\/0\/0/)) resolvedIface = 'Se0/0/0';
                         else if (ifaceName.match(/se.*0\/0\/1/)) resolvedIface = 'Se0/0/1';
                     } else if (dev.type === 'Switch') {
+                        let pom = ifaceName.match(/^po(?:rt-channel)?(\d+)$/i);
+                        let poN = pom ? parseInt(pom[1], 10) : ((/^po(?:rt-channel)?$/i.test(ifaceName) && args[2]) ? parseInt(args[2], 10) : NaN);
+                        if (!isNaN(poN) && poN >= 1) {
+                            dev.portChannels = dev.portChannels || {}; dev.portChannels[poN] = dev.portChannels[poN] || {};
+                            dev.cli.mode = 'conf-if'; dev.cli.prompt = `${dev.name}(config-if)#`; dev.cli.currentInterface = `Po${poN}`; dev.cli.poCtx = poN;
+                            return;
+                        }
                         let vmatch = ifaceName.match(/^vl(?:an)?(\d+)$/);
                         let vid = vmatch ? parseInt(vmatch[1], 10) : ((/^vl(?:an)?$/.test(ifaceName) && args[2]) ? parseInt(args[2], 10) : NaN);
                         if (!isNaN(vid) && vid >= 1 && vid <= 4094) {
@@ -2708,6 +2776,7 @@
                         dev.cli.mode = 'conf-if'; 
                         dev.cli.prompt = `${dev.name}(config-if)#`; 
                         dev.cli.currentInterface = resolvedIface;
+                        dev.cli.poCtx = null;
                         return;
                     } else {
                         print('% Invalid interface type and number');
@@ -3655,6 +3724,8 @@
                     if (p.channelGroup) L.push(` channel-group ${p.channelGroup} mode ${p.channelMode}`);
                     if (p.portSecurity) { L.push(' switchport port-security'); if (p.psMax) L.push(` switchport port-security maximum ${p.psMax}`); if (p.psViolation) L.push(` switchport port-security violation ${p.psViolation}`); }
                 });
+                if (dev.vpc && dev.vpc.domain != null) { L.push('!', `vpc domain ${dev.vpc.domain}`); if (dev.vpc.keepalive) L.push(` peer-keepalive destination ${dev.vpc.keepalive}`); if (dev.vpc.rolePriority != null) L.push(` role priority ${dev.vpc.rolePriority}`); }
+                if (dev.portChannels) Object.keys(dev.portChannels).forEach(n => { const po = dev.portChannels[n]; if (po.role || po.vpcId != null) { L.push('!', `interface Port-channel${n}`); if (po.role === 'peer-link') L.push(' vpc peer-link'); if (po.vpcId != null) L.push(` vpc ${po.vpcId}`); } });
                 if (dev.svis) Object.values(dev.svis).forEach(svi => { L.push('!', `interface Vlan${svi.vlan}`); if (svi.ip && svi.ip !== '0.0.0.0') L.push(` ip address ${svi.ip} ${svi.subnet}`); if (svi.helperAddresses) svi.helperAddresses.forEach(h => L.push(` ip helper-address ${h}`)); if (svi.hsrp && svi.hsrp.virtualIp) { L.push(` standby ${svi.hsrp.group} ip ${svi.hsrp.virtualIp}`); if (svi.hsrp.priority != null && svi.hsrp.priority !== 100) L.push(` standby ${svi.hsrp.group} priority ${svi.hsrp.priority}`); if (svi.hsrp.preempt) L.push(` standby ${svi.hsrp.group} preempt`); } L.push(' no shutdown'); });
                 if (dev.l3) {
                     (dev.staticRoutes || []).forEach(sr => L.push('!', `ip route ${sr.network} ${sr.mask} ${sr.nextHop !== '0.0.0.0' ? sr.nextHop : sr.interface}`));
@@ -4110,6 +4181,10 @@
                 this.poolDns = '8.8.8.8';
                 this.leaseTime = '86400';
                 this.leases = {}; // ip -> { mac, expires }
+
+                // Dual-homing (NIC teaming / LACP bond across two leaf switches, vPC on the switch side)
+                this.dualHomed = false;   // when true the server has two NICs (eth0 + eth1) in one bond
+                this.port2 = null;        // second NIC's link id (eth1); this.port is eth0
             }
 
             findFreeIp(mac) {
@@ -4128,6 +4203,17 @@
             }
 
             async receive(frame, inPortId) {
+                // Bond de-duplication: a broadcast can reach both NICs (via each leaf), and a frame
+                // can loop back through the vPC peer-link; accept each packet once, never our own.
+                if (this.dualHomed) {
+                    if (frame.sourceMac === this.mac) return;
+                    if (frame.captureId != null) {
+                        this._rxSeen = this._rxSeen || new Set();
+                        if (this._rxSeen.has(frame.captureId)) return;
+                        this._rxSeen.add(frame.captureId);
+                        if (this._rxSeen.size > 400) this._rxSeen = new Set([frame.captureId]);
+                    }
+                }
                 await super.receive(frame, inPortId); // Hand off ARP/ICMP to PC parent logic
                 
                 const payload = frame.payload;
@@ -5362,6 +5448,9 @@
                     // A laptop can be cabled and associated with an AP at the same time.
                     // Prefer the wired uplink when a cable is connected, otherwise use Wi-Fi.
                     linkId = (fromDevice.port && links[fromDevice.port]) ? fromDevice.port : fromDevice.wirelessLink;
+                } else if (fromDevice.type === 'Server' && fromDevice.dualHomed) {
+                    const nicUp = (lid) => { const l = links[lid]; if (!l) return false; const remId = l.source === fromDevice.id ? l.target : l.source; const remPort = l.source === fromDevice.id ? l.targetPort : l.sourcePort; const rem = devices[remId]; if (!rem) return false; if (rem.type === 'Switch' && rem.ports) { const rp = rem.ports.find(p => p.id == remPort); return !!rp && rp.adminState !== 'down'; } return true; };
+                    linkId = nicUp(fromDevice.port) ? fromDevice.port : (nicUp(fromDevice.port2) ? fromDevice.port2 : (fromDevice.port || fromDevice.port2));
                 } else {
                     linkId = fromDevice.port;
                 }
@@ -6527,8 +6616,13 @@
                         return;
                     }
                     if (isEndDevice(dev)) {
-                        if (dev.port) { log(`Error: ${dev.name} already has a cable.`, 'error'); return; }
-                        finalizeLink(id, 1);
+                        if (dev.type === 'Server' && dev.dualHomed) {
+                            if (dev.port && dev.port2) { log(`Error: ${dev.name} both NICs (eth0, eth1) are already cabled.`, 'error'); return; }
+                            finalizeLink(id, dev.port ? 2 : 1);
+                        } else {
+                            if (dev.port) { log(`Error: ${dev.name} already has a cable.`, 'error'); return; }
+                            finalizeLink(id, 1);
+                        }
                     } else {
                         showPortSelector(id, clickX, clickY, (portId) => {
                             finalizeLink(id, portId);
@@ -6565,11 +6659,11 @@
             const linkMedia = (fiberEnd(devA, sourcePort) && fiberEnd(devB, targetPort)) ? 'fiber' : 'copper';
             links[linkId] = { id: linkId, source: sourceId, target: targetId, sourcePort: sourcePort, targetPort: targetPort, media: linkMedia };
 
-            if (isEndDevice(devA)) devA.port = linkId;
+            if (isEndDevice(devA)) { if (devA.type === 'Server' && devA.dualHomed) { if (!devA.port) devA.port = linkId; else devA.port2 = linkId; } else devA.port = linkId; }
             else if (devA.type === 'Router') devA.interfaces[sourcePort].connectedLink = linkId;
             else devA.ports.find(p => p.id === sourcePort).connectedLink = linkId;
 
-            if (isEndDevice(devB)) devB.port = linkId;
+            if (isEndDevice(devB)) { if (devB.type === 'Server' && devB.dualHomed) { if (!devB.port) devB.port = linkId; else devB.port2 = linkId; } else devB.port = linkId; }
             else if (devB.type === 'Router') devB.interfaces[targetPort].connectedLink = linkId;
             else devB.ports.find(p => p.id === targetPort).connectedLink = linkId;
 
@@ -6603,6 +6697,7 @@
             if (devA) {
                 if (isEndDevice(devA)) {
                     if (devA.type === 'Laptop' && l.isWireless) { devA.wirelessLink = null; devA.connectedApId = null; }
+                    else if (devA.type === 'Server' && devA.dualHomed) { if (devA.port === linkId) devA.port = null; else if (devA.port2 === linkId) devA.port2 = null; else devA.port = null; }
                     else devA.port = null;
                 }
                 else if (devA.type === 'Router') { devA.interfaces[l.sourcePort].connectedLink = null; devA.updateConnectedRoutes(); devA.ripBroadcastCount = 0; }
@@ -6613,6 +6708,7 @@
             if (devB) {
                 if (isEndDevice(devB)) {
                     if (devB.type === 'Laptop' && l.isWireless) { devB.wirelessLink = null; devB.connectedApId = null; }
+                    else if (devB.type === 'Server' && devB.dualHomed) { if (devB.port === linkId) devB.port = null; else if (devB.port2 === linkId) devB.port2 = null; else devB.port = null; }
                     else devB.port = null;
                 }
                 else if (devB.type === 'Router') { devB.interfaces[l.targetPort].connectedLink = null; devB.updateConnectedRoutes(); devB.ripBroadcastCount = 0; }
@@ -8392,6 +8488,7 @@
         }
 
         function renderPropDHCPServer(dev) {
+            const nicStatus = (lid) => { if (!lid || !links[lid]) return '<span class=\"text-slate-400\">disconnected</span>'; const l = links[lid]; const rid = l.source === dev.id ? l.target : l.source; const rp = l.source === dev.id ? l.targetPort : l.sourcePort; const rd = devices[rid]; return `<span class=\"text-green-600 dark:text-green-400\">connected \u2192 ${rd ? rd.name : '?'}${rd && rd.type === 'Switch' ? ' (Fa0/' + rp + ')' : ''}</span>`; };
             return `
                 <div class="space-y-4">
                     <div>
@@ -8412,6 +8509,18 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="pt-2 border-t">
+                        <div class="flex items-center space-x-2 mb-2 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
+                            <input type="checkbox" id="prop-dualhome" ${dev.dualHomed ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <label for="prop-dualhome" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Dual-Homing / NIC Teaming (LACP bond)</label>
+                        </div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Bond two NICs (eth0 + eth1) across two leaf switches configured as a vPC pair. One IP on the bond, both links active, survives a leaf failure. Cable eth0 to one leaf and eth1 to the other.</div>
+                        <ul class="text-[11px] mt-2 space-y-0.5">
+                            <li>eth0: ${nicStatus(dev.port)}</li>
+                            <li>eth1: ${dev.dualHomed ? nicStatus(dev.port2) : '<span class=\"text-slate-400\">disabled (enable dual-homing to add a second NIC)</span>'}</li>
+                        </ul>
                     </div>
 
                     <div class="pt-2 border-t">
@@ -8772,6 +8881,9 @@
             dev.poolGateway = document.getElementById('prop-pool-gw').value;
             dev.poolDns = document.getElementById('prop-pool-dns').value;
             dev.leaseTime = document.getElementById('prop-pool-lease').value;
+
+            const dh = document.getElementById('prop-dualhome');
+            if (dh) { const was = dev.dualHomed; dev.dualHomed = dh.checked; if (was && !dev.dualHomed && dev.port2) { window.deleteLink(dev.port2, true); dev.port2 = null; } }
 
             // Visual feedback
             flashSavedButton('btn-save-server', 'Save DHCP Server Config');
