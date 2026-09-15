@@ -3723,6 +3723,8 @@
                     else if (p.vlan && p.vlan !== 1) L.push(` switchport access vlan ${p.vlan}`);
                     if (p.channelGroup) L.push(` channel-group ${p.channelGroup} mode ${p.channelMode}`);
                     if (p.portSecurity) { L.push(' switchport port-security'); if (p.psMax) L.push(` switchport port-security maximum ${p.psMax}`); if (p.psViolation) L.push(` switchport port-security violation ${p.psViolation}`); }
+                    if (p.portfast) L.push(' spanning-tree portfast');
+                    if (p.bpduguard) L.push(' spanning-tree bpduguard enable');
                 });
                 if (dev.vpc && dev.vpc.domain != null) { L.push('!', `vpc domain ${dev.vpc.domain}`); if (dev.vpc.keepalive) L.push(` peer-keepalive destination ${dev.vpc.keepalive}`); if (dev.vpc.rolePriority != null) L.push(` role priority ${dev.vpc.rolePriority}`); }
                 if (dev.portChannels) Object.keys(dev.portChannels).forEach(n => { const po = dev.portChannels[n]; if (po.role || po.vpcId != null) { L.push('!', `interface Port-channel${n}`); if (po.role === 'peer-link') L.push(' vpc peer-link'); if (po.vpcId != null) L.push(` vpc ${po.vpcId}`); } });
