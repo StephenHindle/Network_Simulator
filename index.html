@@ -484,6 +484,7 @@
         
         // --- System Optimisation Helpers ---
         const END_DEVICES = ['PC', 'Laptop', 'Server', 'WebServer', 'DNSServer'];
+        const isBondServer = (d) => !!d && !!d.dualHomed && !d.isWlc && (d.type === 'Server' || d.type === 'WebServer' || d.type === 'DNSServer');
         const isEndDevice = (devOrType) => {
             const type = typeof devOrType === 'string' ? devOrType : devOrType.type;
             return END_DEVICES.includes(type);
@@ -972,6 +973,8 @@
                 if (!Cls) { log(`Skipped unknown device type "${d.type}" while loading.`, 'warning'); continue; }
                 const instance = new Cls(d.x, d.y);
                 Object.assign(instance, d);
+                if (!(instance.openTcpPorts instanceof Set)) instance.openTcpPorts = new Set(Array.isArray(d.openTcpPorts) ? d.openTcpPorts : []);
+                if (instance._rxSeen && !(instance._rxSeen instanceof Set)) instance._rxSeen = new Set();
                 devices[id] = instance;
             }
             links = data.links || {};
@@ -4012,6 +4015,20 @@
 
             isTcpListening(port) { return (port === 21 && this.ftpEnabled) || (this.mailEnabled && (port === 25 || port === 110)) || (this.openTcpPorts && this.openTcpPorts.has(port)); }
 
+            _bondDrop(frame) {
+                // Dual-homed (bonded) end device: a broadcast can arrive on both NICs and a frame can
+                // loop back via the vPC peer-link. Accept each packet once, and never one we sent.
+                if (!this.dualHomed) return false;
+                if (frame.sourceMac === this.mac) return true;
+                if (frame.captureId != null) {
+                    if (!(this._rxSeen instanceof Set)) this._rxSeen = new Set();
+                    if (this._rxSeen.has(frame.captureId)) return true;
+                    this._rxSeen.add(frame.captureId);
+                    if (this._rxSeen.size > 400) this._rxSeen = new Set([frame.captureId]);
+                }
+                return false;
+            }
+
             async requestDHCP() {
                 if (!this.port && !this.wirelessLink) { log(`[${this.name}] Network interface disconnected. Cannot reach DHCP.`, 'error'); return; }
                 log(`[${this.name}] Broadcasting DHCP Discover...`, 'info');
@@ -4205,17 +4222,7 @@
             }
 
             async receive(frame, inPortId) {
-                // Bond de-duplication: a broadcast can reach both NICs (via each leaf), and a frame
-                // can loop back through the vPC peer-link; accept each packet once, never our own.
-                if (this.dualHomed) {
-                    if (frame.sourceMac === this.mac) return;
-                    if (frame.captureId != null) {
-                        this._rxSeen = this._rxSeen || new Set();
-                        if (this._rxSeen.has(frame.captureId)) return;
-                        this._rxSeen.add(frame.captureId);
-                        if (this._rxSeen.size > 400) this._rxSeen = new Set([frame.captureId]);
-                    }
-                }
+                if (this._bondDrop(frame)) return; // dual-homing bond de-duplication
                 await super.receive(frame, inPortId); // Hand off ARP/ICMP to PC parent logic
                 
                 const payload = frame.payload;
@@ -4266,9 +4273,11 @@
                     'www.server.local': '192.168.1.100',
                     'google.com': '8.8.8.8'
                 };
+                this.dualHomed = false; this.port2 = null;
             }
 
             async receive(frame, inPortId) {
+                if (this._bondDrop(frame)) return; // dual-homing bond de-duplication
                 await super.receive(frame, inPortId); // Hand off ARP/ICMP to PC parent logic
                 
                 const payload = frame.payload;
@@ -4301,11 +4310,13 @@
                 this.httpsEnabled = false;
                 this._placeholderHttp = true;
                 this.htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<title>My Server</title>\n<style>\n  body { font-family: sans-serif; text-align: center; padding-top: 50px; color: #334155; }\n  h1 { color: #2563eb; }\n</style>\n</head>\n<body>\n  <h1>Welcome to Web Server 1</h1>\n  <p>Your HTTP request was completely successful!</p>\n</body>\n</html>';
+                this.dualHomed = false; this.port2 = null;
             }
 
             isTcpListening(port) { return (port === 80 && this.httpEnabled) || (port === 443 && this.httpsEnabled) || super.isTcpListening(port); }
 
             async receive(frame, inPortId) {
+                if (this._bondDrop(frame)) return; // dual-homing bond de-duplication
                 await super.receive(frame, inPortId); // Hand off ARP/ICMP to PC parent logic
                 
                 const payload = frame.payload;
@@ -5450,7 +5461,7 @@
                     // A laptop can be cabled and associated with an AP at the same time.
                     // Prefer the wired uplink when a cable is connected, otherwise use Wi-Fi.
                     linkId = (fromDevice.port && links[fromDevice.port]) ? fromDevice.port : fromDevice.wirelessLink;
-                } else if (fromDevice.type === 'Server' && fromDevice.dualHomed) {
+                } else if (isBondServer(fromDevice)) {
                     const nicUp = (lid) => { const l = links[lid]; if (!l) return false; const remId = l.source === fromDevice.id ? l.target : l.source; const remPort = l.source === fromDevice.id ? l.targetPort : l.sourcePort; const rem = devices[remId]; if (!rem) return false; if (rem.type === 'Switch' && rem.ports) { const rp = rem.ports.find(p => p.id == remPort); return !!rp && rp.adminState !== 'down'; } return true; };
                     linkId = nicUp(fromDevice.port) ? fromDevice.port : (nicUp(fromDevice.port2) ? fromDevice.port2 : (fromDevice.port || fromDevice.port2));
                 } else {
@@ -6604,8 +6615,13 @@
 
                 if (!pendingCableSource) {
                     if (isEndDevice(dev)) {
-                        if (dev.port) { log(`Error: ${dev.name} already has a cable.`, 'error'); return; }
-                        setPendingSource(id, 1);
+                        if (isBondServer(dev)) {
+                            if (dev.port && dev.port2) { log(`Error: ${dev.name} both NICs (eth0, eth1) are already cabled.`, 'error'); return; }
+                            setPendingSource(id, dev.port ? 2 : 1);
+                        } else {
+                            if (dev.port) { log(`Error: ${dev.name} already has a cable.`, 'error'); return; }
+                            setPendingSource(id, 1);
+                        }
                     } else {
                         showPortSelector(id, clickX, clickY, (portId) => {
                             setPendingSource(id, portId);
@@ -6618,7 +6634,7 @@
                         return;
                     }
                     if (isEndDevice(dev)) {
-                        if (dev.type === 'Server' && dev.dualHomed) {
+                        if (isBondServer(dev)) {
                             if (dev.port && dev.port2) { log(`Error: ${dev.name} both NICs (eth0, eth1) are already cabled.`, 'error'); return; }
                             finalizeLink(id, dev.port ? 2 : 1);
                         } else {
@@ -6661,11 +6677,11 @@
             const linkMedia = (fiberEnd(devA, sourcePort) && fiberEnd(devB, targetPort)) ? 'fiber' : 'copper';
             links[linkId] = { id: linkId, source: sourceId, target: targetId, sourcePort: sourcePort, targetPort: targetPort, media: linkMedia };
 
-            if (isEndDevice(devA)) { if (devA.type === 'Server' && devA.dualHomed) { if (!devA.port) devA.port = linkId; else devA.port2 = linkId; } else devA.port = linkId; }
+            if (isEndDevice(devA)) { if (isBondServer(devA)) { if (!devA.port) devA.port = linkId; else devA.port2 = linkId; } else devA.port = linkId; }
             else if (devA.type === 'Router') devA.interfaces[sourcePort].connectedLink = linkId;
             else devA.ports.find(p => p.id === sourcePort).connectedLink = linkId;
 
-            if (isEndDevice(devB)) { if (devB.type === 'Server' && devB.dualHomed) { if (!devB.port) devB.port = linkId; else devB.port2 = linkId; } else devB.port = linkId; }
+            if (isEndDevice(devB)) { if (isBondServer(devB)) { if (!devB.port) devB.port = linkId; else devB.port2 = linkId; } else devB.port = linkId; }
             else if (devB.type === 'Router') devB.interfaces[targetPort].connectedLink = linkId;
             else devB.ports.find(p => p.id === targetPort).connectedLink = linkId;
 
@@ -6699,7 +6715,7 @@
             if (devA) {
                 if (isEndDevice(devA)) {
                     if (devA.type === 'Laptop' && l.isWireless) { devA.wirelessLink = null; devA.connectedApId = null; }
-                    else if (devA.type === 'Server' && devA.dualHomed) { if (devA.port === linkId) devA.port = null; else if (devA.port2 === linkId) devA.port2 = null; else devA.port = null; }
+                    else if (isBondServer(devA)) { if (devA.port === linkId) devA.port = null; else if (devA.port2 === linkId) devA.port2 = null; else devA.port = null; }
                     else devA.port = null;
                 }
                 else if (devA.type === 'Router') { devA.interfaces[l.sourcePort].connectedLink = null; devA.updateConnectedRoutes(); devA.ripBroadcastCount = 0; }
@@ -6710,7 +6726,7 @@
             if (devB) {
                 if (isEndDevice(devB)) {
                     if (devB.type === 'Laptop' && l.isWireless) { devB.wirelessLink = null; devB.connectedApId = null; }
-                    else if (devB.type === 'Server' && devB.dualHomed) { if (devB.port === linkId) devB.port = null; else if (devB.port2 === linkId) devB.port2 = null; else devB.port = null; }
+                    else if (isBondServer(devB)) { if (devB.port === linkId) devB.port = null; else if (devB.port2 === linkId) devB.port2 = null; else devB.port = null; }
                     else devB.port = null;
                 }
                 else if (devB.type === 'Router') { devB.interfaces[l.targetPort].connectedLink = null; devB.updateConnectedRoutes(); devB.ripBroadcastCount = 0; }
@@ -7964,6 +7980,16 @@
             return clickPath;
         }
 
+        // A link is part of a formed EtherChannel only when both ends are switches and the
+        // channel-group has bundled. Returns the channel-group number, or null.
+        function linkEtherChannel(link) {
+            const A = devices[link.source], B = devices[link.target];
+            if (!A || !B || A.type !== 'Switch' || B.type !== 'Switch' || !A.ports) return null;
+            const pA = A.ports.find(p => p.id == link.sourcePort);
+            if (!pA || pA.channelGroup == null || !channelFormed(A, pA)) return null;
+            return pA.channelGroup;
+        }
+
         function renderLinkGroup(pairId, group) {
             const g = document.createElementNS(SVG_NS, 'g');
             g.setAttribute('data-pair', pairId);
@@ -8082,6 +8108,42 @@
                 drawPortLight(ptA.x, ptA.y, adminA === 'down' ? '#94a3b8' : (stateA === 'blocking' ? '#ef4444' : '#22c55e'), g);
                 drawPortLight(ptB.x, ptB.y, adminB === 'down' ? '#94a3b8' : (stateB === 'blocking' ? '#ef4444' : '#22c55e'), g);
             });
+
+            // Traditional EtherChannel symbol: an oval encircling the bundled member links at the midpoint.
+            const ecGroupNum = (() => { for (const l of group) { const n = l.isWireless ? null : linkEtherChannel(l); if (n != null) return n; } return null; })();
+            if (ecGroupNum != null) {
+                const dA = devices[group[0].source], dB = devices[group[0].target];
+                if (dA && dB) {
+                    const dx = dB.x - dA.x, dy = dB.y - dA.y;
+                    const mx = (dA.x + dB.x) / 2, my = (dA.y + dB.y) / 2;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    const count = group.length;
+                    const spread = count > 1 ? (count - 1) * 15 : 0; // half-height of the fan at the midpoint
+                    const rx = 21;                                    // along the link
+                    const ry = spread + 15;                           // across the bundled lines
+                    const isDark = document.documentElement.classList.contains('dark');
+                    const ell = document.createElementNS(SVG_NS, 'ellipse');
+                    ell.setAttribute('cx', mx); ell.setAttribute('cy', my);
+                    ell.setAttribute('rx', rx); ell.setAttribute('ry', ry);
+                    ell.setAttribute('transform', `rotate(${angle} ${mx} ${my})`);
+                    ell.setAttribute('fill', isDark ? 'rgba(129,140,248,0.18)' : 'rgba(79,70,229,0.10)');
+                    ell.setAttribute('stroke', isDark ? '#a5b4fc' : '#4f46e5');
+                    ell.setAttribute('stroke-width', '2');
+                    ell.setAttribute('pointer-events', 'none');
+                    g.appendChild(ell);
+                    const lbl = document.createElementNS(SVG_NS, 'text');
+                    lbl.setAttribute('x', mx); lbl.setAttribute('y', my);
+                    lbl.setAttribute('text-anchor', 'middle');
+                    lbl.setAttribute('dominant-baseline', 'central');
+                    lbl.setAttribute('font-size', '10');
+                    lbl.setAttribute('font-weight', '700');
+                    lbl.setAttribute('fill', isDark ? '#c7d2fe' : '#4338ca');
+                    lbl.setAttribute('pointer-events', 'none');
+                    lbl.setAttribute('style', 'font-family: ui-sans-serif, system-ui, sans-serif');
+                    lbl.textContent = `Po${ecGroupNum}`;
+                    g.appendChild(lbl);
+                }
+            }
 
             return g;
         }
@@ -8265,8 +8327,28 @@
             `;
         }
 
+        function nicStatusHtml(dev, lid) {
+            if (!lid || !links[lid]) return '<span class="text-slate-400">disconnected</span>';
+            const l = links[lid]; const rid = l.source === dev.id ? l.target : l.source; const rp = l.source === dev.id ? l.targetPort : l.sourcePort; const rd = devices[rid];
+            return `<span class="text-green-600 dark:text-green-400">connected → ${rd ? rd.name : '?'}${rd && rd.type === 'Switch' ? ' (Fa0/' + rp + ')' : ''}</span>`;
+        }
+        function dualHomeSectionHtml(dev) {
+            return `
+                    <div class="pt-2 border-t">
+                        <div class="flex items-center space-x-2 mb-2 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
+                            <input type="checkbox" id="prop-dualhome" ${dev.dualHomed ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <label for="prop-dualhome" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Dual-Homing / NIC Teaming (LACP bond)</label>
+                        </div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Bond two NICs (eth0 + eth1) across two switches configured as a vPC pair. One IP on the bond, both links active, survives a switch failure. Cable eth0 to one switch and eth1 to the other.</div>
+                        <ul class="text-[11px] mt-2 space-y-0.5">
+                            <li>eth0: ${nicStatusHtml(dev, dev.port)}</li>
+                            <li>eth1: ${dev.dualHomed ? nicStatusHtml(dev, dev.port2) : '<span class="text-slate-400">disabled (enable dual-homing to add a second NIC)</span>'}</li>
+                        </ul>
+                    </div>`;
+        }
         function renderPropDNSServer(dev) {
             return `
+                ${dualHomeSectionHtml(dev)}
                 <div class="pt-2 border-t mt-4">
                     <div class="flex items-center space-x-2 mb-3 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
                         <input type="checkbox" id="prop-dns-en" ${dev.dnsEnabled ? 'checked' : ''} onchange="document.getElementById('dns-settings-container').className = this.checked ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'" class="w-4 h-4 text-blue-600 rounded">
@@ -8623,6 +8705,8 @@
                         </div>
                     </div>
 
+                    ${dualHomeSectionHtml(dev)}
+
                     <button onclick="window.saveWebServerSettings('${dev.id}')" id="btn-save-webserver" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition-colors shadow-sm mt-4">Save Web Server Config</button>
                 </div>
             `;
@@ -8823,6 +8907,8 @@
             
             dev.dnsEnabled = document.getElementById('prop-dns-en').checked;
 
+            const dh = document.getElementById('prop-dualhome');
+            if (dh) { const was = dev.dualHomed; dev.dualHomed = dh.checked; if (was && !dev.dualHomed && dev.port2) { window.deleteLink(dev.port2, true); dev.port2 = null; } }
             flashSavedButton('btn-save-dnsserver', 'Save DNS Server Config');
             log(`[${dev.name}] DNS Server configuration saved.`);
         };
@@ -8904,6 +8990,8 @@
             dev.httpEnabled = document.getElementById('prop-http-en').checked;
             dev.htmlContent = document.getElementById('prop-html-content').value;
 
+            const dh = document.getElementById('prop-dualhome');
+            if (dh) { const was = dev.dualHomed; dev.dualHomed = dh.checked; if (was && !dev.dualHomed && dev.port2) { window.deleteLink(dev.port2, true); dev.port2 = null; } }
             flashSavedButton('btn-save-webserver', 'Save Web Server Config');
             log(`[${dev.name}] Web Server configuration saved.`);
         };
