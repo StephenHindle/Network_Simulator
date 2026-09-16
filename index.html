@@ -320,6 +320,7 @@
                 <span class="text-xs font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h10l2-9 4 18 2-9h4"/></svg>
                     Packet Sniffer
+                    <span id="sniffer-filter" class="ml-1 text-[9px] font-normal normal-case tracking-normal text-emerald-300 bg-slate-700 px-1.5 py-0.5 rounded">All links</span>
                 </span>
                 <div class="flex items-center space-x-3">
                     <span class="text-[9px] text-slate-400 normal-case font-normal tracking-normal hidden sm:inline">Click a packet to inspect its layers</span>
@@ -460,6 +461,7 @@
         let activeBrowserDeviceId = null;
         let browserIsRunning = false;
         let snifferPacketCount = 0;
+        let snifferLinkFilter = null;     // when set, the sniffer captures only this link id
         let captureSeq = 0;                 // unique id stamped on every packet at first transmit
         let capturedIds = new Set();        // ids already logged, so each packet appears once
         let capturedPackets = {};           // display number -> full packet record for the detail pane
@@ -5521,7 +5523,7 @@
             if (!frame.silent) {
                 // Visual Animation (slot already acquired above)
                 try {
-                    if (typeof addPacketToSniffer === 'function') addPacketToSniffer(frame, fromDevice, targetDevice);
+                    if (typeof addPacketToSniffer === 'function') addPacketToSniffer(frame, fromDevice, targetDevice, link.id);
                     await animatePacket(fromDevice, targetDevice, frame.payload.type, link, frame);
                 } catch (e) {
                     console.error("Packet animation skipped.", e);
@@ -6962,8 +6964,25 @@
         makeDraggable(_g('protocol-legend'), _g('legend-header'));
         makeDraggable(_g('zoom-controls'), _g('zoom-grip'));
 
+        function linkEndpointsLabel(link) {
+            const a = devices[link.source], b = devices[link.target];
+            return `${a ? a.name : '?'} \u2194 ${b ? b.name : '?'}`;
+        }
+        function updateSnifferFilterLabel() {
+            const el = document.getElementById('sniffer-filter');
+            if (!el) return;
+            el.textContent = (snifferLinkFilter && links[snifferLinkFilter]) ? `Link: ${linkEndpointsLabel(links[snifferLinkFilter])}` : 'All links';
+        }
         window.toggleSniffer = () => {
             snifferWindow.classList.toggle('hidden');
+            if (!snifferWindow.classList.contains('hidden')) { snifferLinkFilter = null; updateSnifferFilterLabel(); }
+        };
+        window.openSnifferForLink = (linkId) => {
+            if (!links[linkId]) return;
+            snifferLinkFilter = linkId;
+            window.clearSniffer();
+            snifferWindow.classList.remove('hidden');
+            updateSnifferFilterLabel();
         };
 
         window.clearSniffer = () => {
@@ -7048,8 +7067,9 @@
             return mask.split('.').reduce((bits, oct) => bits + ((parseInt(oct, 10) || 0).toString(2).split('1').length - 1), 0);
         }
 
-        function addPacketToSniffer(frame, fromDev, toDev) {
+        function addPacketToSniffer(frame, fromDev, toDev, linkId) {
             if (snifferWindow.classList.contains('hidden')) return; // Not capturing while closed
+            if (snifferLinkFilter && linkId !== snifferLinkFilter) return; // per-link capture: ignore other links
             // Wireshark-style: log each packet a single time, at the point it is first seen,
             // rather than once for every cable it crosses.
             if (frame.captureId !== undefined) {
@@ -7547,6 +7567,34 @@
             menu.style.top = `${y}px`;
         }
 
+        const ICON_TRASH = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
+        const ICON_SNIFFER = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h10l2-9 4 18 2-9h4"/></svg>';
+        function showLinkContextMenu(clientX, clientY, linkId) {
+            const link = links[linkId];
+            const menu = document.getElementById('device-context-menu');
+            if (!link || !menu) return;
+            selectedLinkId = linkId; selectedDeviceId = null; selectedLabelId = null;
+            refreshNodeSelection(); refreshLinkStyles();
+            const items = [
+                { icon: ICON_TRASH, label: 'Delete Link', action: () => { pushUndo(); window.deleteLink(linkId); } },
+                { icon: ICON_SNIFFER, label: 'Open Packet Sniffer', action: () => window.openSnifferForLink(linkId) },
+            ];
+            menu.innerHTML = items.map((it, i) =>
+                `<button type="button" data-idx="${i}" class="w-full text-left px-3 py-1.5 flex items-center gap-2.5 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors">${it.icon}<span>${it.label}</span></button>`
+            ).join('');
+            menu.querySelectorAll('button').forEach(b => {
+                b.addEventListener('click', (ev) => { ev.stopPropagation(); const it = items[+b.dataset.idx]; hideDeviceContextMenu(); it.action(); });
+            });
+            const rect = WORKSPACE.getBoundingClientRect();
+            menu.classList.remove('hidden');
+            const mw = menu.offsetWidth, mh = menu.offsetHeight;
+            let x = clientX - rect.left, y = clientY - rect.top;
+            if (x + mw > rect.width - 8) x = Math.max(4, rect.width - mw - 8);
+            if (y + mh > rect.height - 8) y = Math.max(4, rect.height - mh - 8);
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+        }
+
         NODES_CONTAINER.addEventListener('contextmenu', (e) => {
             const nodeEl = e.target.closest('.device-node');
             if (!nodeEl) return; // let the browser handle right-clicks off a device
@@ -7971,6 +8019,11 @@
                 e.stopPropagation();
                 pushUndo();
                 window.deleteLink(link.id);
+            });
+            clickPath.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showLinkContextMenu(e.clientX, e.clientY, link.id);
             });
             const linkTitle = document.createElementNS(SVG_NS, 'title');
             const nameA = devA ? devA.name : '?';
