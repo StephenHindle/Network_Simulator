@@ -6961,8 +6961,12 @@
                 if (d.macTable) d.macTable = {};
                 if (d.arpCache) d.arpCache = {};
                 if (d.cli && Array.isArray(d.cli.history)) d.cli.history = [];
+                // Strip transient spanning-tree state. It is always recomputed on load, and a
+                // stale per-VLAN blocking state saved here would otherwise break connectivity
+                // (a blocked access port) when the lab file is reopened.
+                (d.ports || []).forEach(p => { delete p.stpVlan; if (p.stpState) p.stpState = 'forwarding'; });
             }
-            return { devices: cleanDevices, links, labels, deviceCounter, stpEnabled };
+            return { devices: cleanDevices, links, labels, shapes, deviceCounter, stpEnabled };
         }
 
         function applyLoadedTopology(data, sourceName) {
