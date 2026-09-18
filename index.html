@@ -38,6 +38,10 @@
             cursor: text !important;
         }
 
+        #workspace.mode-draw, #workspace.mode-draw * {
+            cursor: crosshair !important;
+        }
+
         #workspace.mode-addCable .device-node:hover .node-icon {
             border-color: #3b82f6 !important;
             box-shadow: 0 0 15px 4px rgba(59, 130, 246, 0.6) !important;
@@ -114,24 +118,24 @@
             
             <!-- Flyout Panel (End Devices) -->
             <div class="hidden group-hover:flex absolute left-full top-1/2 -translate-y-1/2 pl-1 z-50 pal-flyout">
-                <div class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-2xl flex-col space-y-2 w-24">
-                    <div draggable="true" ondragstart="handleDragStart(event, 'PC')" ontouchend="palTapItem(event, 'PC')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add PC">
+                <div class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-2xl flex flex-row space-x-2">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'PC')" ontouchend="palTapItem(event, 'PC')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add PC">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect width="14" height="8" x="5" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 18h2"/><path d="M12 18h6"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">PC</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'Laptop')" ontouchend="palTapItem(event, 'Laptop')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Laptop">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'Laptop')" ontouchend="palTapItem(event, 'Laptop')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Laptop">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">Laptop</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'Server')" ontouchend="palTapItem(event, 'Server')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add DHCP Server">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'Server')" ontouchend="palTapItem(event, 'Server')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add DHCP Server">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">DHCP<br>Server</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'DNSServer')" ontouchend="palTapItem(event, 'DNSServer')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add DNS Server">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'DNSServer')" ontouchend="palTapItem(event, 'DNSServer')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add DNS Server">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 6h.01"/><path d="M6 18h.01"/><path d="M11 6h7"/><path d="M11 18h7"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">DNS<br>Server</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'WebServer')" ontouchend="palTapItem(event, 'WebServer')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Web Server">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'WebServer')" ontouchend="palTapItem(event, 'WebServer')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Web Server">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">Web<br>Server</span>
                     </div>
@@ -148,28 +152,28 @@
             
             <!-- Flyout Panel (Network Devices) -->
             <div class="hidden group-hover:flex absolute left-full top-1/2 -translate-y-1/2 pl-1 z-50 pal-flyout">
-                <div class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-2xl flex-col space-y-2 w-24">
-                    <div draggable="true" ondragstart="handleDragStart(event, 'Switch')" ontouchend="palTapItem(event, 'Switch')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Switch">
+                <div class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-2xl flex flex-row space-x-2">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'Switch')" ontouchend="palTapItem(event, 'Switch')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Switch">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">Switch</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'L3Switch')" ontouchend="palTapItem(event, 'L3Switch')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Layer 3 Switch">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'L3Switch')" ontouchend="palTapItem(event, 'L3Switch')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Layer 3 Switch">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="2" y="9" width="20" height="10" rx="2"/><path d="M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/><path d="M8 6 6 4 4 6"/><path d="M6 4v3"/><path d="m16 6 2-2 2 2"/><path d="M18 4v3"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">L3 SW</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'Router')" ontouchend="palTapItem(event, 'Router')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Router">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'Router')" ontouchend="palTapItem(event, 'Router')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Router">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4h8l-4-4Z"/><path d="m12 16 4-4H8l4 4Z"/><path d="m8 12 4-4v8l-4-4Z"/><path d="m16 12-4 4V8l4 4Z"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">Router</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'ISPRouter')" ontouchend="palTapItem(event, 'ISPRouter')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add ISP Router">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'ISPRouter')" ontouchend="palTapItem(event, 'ISPRouter')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add ISP Router">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">ISP</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'WLC')" ontouchend="palTapItem(event, 'WLC')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Wireless LAN Controller">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'WLC')" ontouchend="palTapItem(event, 'WLC')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Wireless LAN Controller">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 17h.01"/><path d="M11 17h6"/><path d="M12 9a5 5 0 0 1 5 5"/><path d="M12 5a9 9 0 0 1 9 9"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">WLC</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'AP')" ontouchend="palTapItem(event, 'AP')" class="p-3 w-full flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Access Point (lightweight)">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'AP')" ontouchend="palTapItem(event, 'AP')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Access Point (lightweight)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">AP</span>
                     </div>
@@ -196,6 +200,7 @@
     <!-- Main Workspace -->
     <div class="flex-1 relative" id="workspace" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
         <div id="viewport" class="pointer-events-none">
+            <svg id="shapes" class="absolute inset-0 w-full h-full pointer-events-none" style="overflow: visible;"></svg>
             <svg id="cables" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
             <div id="nodes" class="absolute inset-0 w-full h-full pointer-events-none"></div>
         </div>
@@ -215,6 +220,10 @@
             <button onclick="setMode('addText')" id="btn-addText" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Add Text Annotation">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
                 <span class="text-[9px] leading-tight text-center">Add Text</span>
+            </button>
+            <button onclick="toggleDrawPanel()" id="btn-draw-toggle" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Draw Shapes">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
+                <span class="text-[9px] leading-tight text-center">Draw</span>
             </button>
             <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
             <button onclick="saveTopology()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Save Topology">
@@ -244,6 +253,25 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
                 <span class="text-[9px] leading-tight text-center">Legend</span>
             </button>
+        </div>
+
+        <!-- Draw Tools Panel -->
+        <div id="draw-panel" class="hidden absolute top-24 left-1/2 -translate-x-1/2 z-30 bg-slate-900 p-2 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 text-slate-200 select-none">
+            <div class="flex items-center gap-1">
+                <button onclick="setDrawTool('select')" id="btn-draw-select" title="Select / Move (Esc)" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/></svg></button>
+                <button onclick="setDrawTool('rect')" id="btn-draw-rect" title="Rectangle" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/></svg></button>
+                <button onclick="setDrawTool('roundrect')" id="btn-draw-roundrect" title="Rounded Rectangle" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="5"/></svg></button>
+                <button onclick="setDrawTool('ellipse')" id="btn-draw-ellipse" title="Ellipse / Circle" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="7"/></svg></button>
+                <button onclick="setDrawTool('line')" id="btn-draw-line" title="Line" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/></svg></button>
+                <button onclick="setDrawTool('arrow')" id="btn-draw-arrow" title="Arrow" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="18" y2="6"/><polyline points="10 5 19 5 19 14"/></svg></button>
+            </div>
+            <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
+            <label class="flex flex-col items-center gap-0.5 text-[9px] uppercase tracking-wide text-slate-400">Fill<input type="color" id="draw-fill" value="#3b82f6" oninput="onDrawStyleInput()" class="w-8 h-6 bg-transparent border-0 cursor-pointer p-0 rounded"></label>
+            <label class="flex flex-col items-center gap-0.5 text-[9px] uppercase tracking-wide text-slate-400">Shade<input type="range" min="0" max="100" value="25" id="draw-fillop" oninput="onDrawStyleInput()" class="w-16 accent-blue-500"></label>
+            <label class="flex flex-col items-center gap-0.5 text-[9px] uppercase tracking-wide text-slate-400">Border<input type="color" id="draw-stroke" value="#1d4ed8" oninput="onDrawStyleInput()" class="w-8 h-6 bg-transparent border-0 cursor-pointer p-0 rounded"></label>
+            <label class="flex flex-col items-center gap-0.5 text-[9px] uppercase tracking-wide text-slate-400">Width<input type="range" min="1" max="12" value="2" id="draw-strokew" oninput="onDrawStyleInput()" class="w-16 accent-blue-500"></label>
+            <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
+            <button onclick="deleteSelectedShape()" id="btn-draw-delete" title="Delete selected shape (Del)" class="p-2 rounded-lg text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         </div>
 
         <!-- Packet Playback Controls (bottom centre) -->
@@ -444,6 +472,7 @@
         let devices = {};
         let links = {};
         let labels = {}; // Store text annotations
+        let shapes = {}; // Store drawn shapes (rectangles, ellipses, arrows, lines)
         let currentMode = 'select'; // select, addCable, addText
         let selectedDeviceId = null;
         // Independent of selection: which device the pinned properties panel is showing.
@@ -451,6 +480,11 @@
         // changes until the user explicitly closes the panel via the X button or Escape.
         let propertiesDeviceId = null;
         let selectedLabelId = null;
+        let selectedShapeId = null;
+        let drawShapeKind = null; // active draw tool: 'rect'|'roundrect'|'ellipse'|'line'|'arrow' or null
+        let drawStyle = { fill: '#3b82f6', fillOpacity: 0.25, stroke: '#1d4ed8', strokeWidth: 2 };
+        let shapeInteraction = null; // { mode:'draw'|'move'|'resize', id, ... }
+        let justDrewOrMovedShape = false; // suppress the background-click deselect right after a shape action
         let pendingCableSource = null;
         let pendingCableSourcePort = null;
         let deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1 };
@@ -531,6 +565,8 @@
         const VIEWPORT = document.getElementById('viewport');
         const NODES_CONTAINER = document.getElementById('nodes');
         const CABLES_CONTAINER = document.getElementById('cables');
+        const SHAPES_CONTAINER = document.getElementById('shapes');
+        const SVGNS = 'http://www.w3.org/2000/svg';
         const CONSOLE = document.createElement('div'); // on-screen console removed; detached buffer keeps logging calls harmless
         const PROP_PANEL = document.getElementById('properties-panel');
 
@@ -795,6 +831,7 @@
 
         function applyView() {
             VIEWPORT.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+            if (typeof SHAPES_CONTAINER !== 'undefined' && SHAPES_CONTAINER && selectedShapeId) renderShapes();
             // Keep the dotted grid aligned with the world
             WORKSPACE.style.backgroundPosition = `${view.x}px ${view.y}px`;
             WORKSPACE.style.backgroundSize = `${20 * view.scale}px ${20 * view.scale}px`;
@@ -988,11 +1025,13 @@
                 }
             });
             labels = data.labels || {};
+            shapes = data.shapes || {};
             // Merge counters AFTER instantiation, since constructors increment them
             deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1, ...(data.deviceCounter || {}) };
             if (typeof data.stpEnabled === 'boolean') stpEnabled = data.stpEnabled;
             selectedDeviceId = null;
             selectedLabelId = null;
+            selectedShapeId = null;
             selectedLinkId = null;
             propertiesDeviceId = null; // Also close the pinned properties panel on state load
             pendingCableSource = null;
@@ -1000,7 +1039,7 @@
         }
 
         function snapshotState() {
-            return JSON.stringify({ devices, links, labels, deviceCounter, stpEnabled });
+            return JSON.stringify({ devices, links, labels, shapes, deviceCounter, stpEnabled });
         }
 
         function pushUndo() {
@@ -6300,6 +6339,10 @@
                 WORKSPACE.classList.remove('mode-addText');
             }
 
+            // Leaving any draw tool
+            drawShapeKind = null;
+            WORKSPACE.classList.remove('mode-draw');
+
             document.querySelectorAll('button[id^="btn-"]').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white');
                 btn.classList.add('text-slate-400');
@@ -6527,6 +6570,9 @@
             if (didPan) { didPan = false; return; }
 
             // Check for clicks on UI elements before processing workspace background clicks
+            if (justDrewOrMovedShape) { justDrewOrMovedShape = false; return; } // just finished a shape action
+            if (e.target.closest('#shapes')) return; // shape clicks handled by the shapes layer
+            if (e.target.closest('#draw-panel')) return; // ignore clicks on the draw panel
             if (e.target.closest('.device-node') || e.target.closest('.text-label-node')) return; // handled in node click
             if (e.target.closest('#port-selector')) return; // handled in port selector
             if (e.target.closest('#floating-console')) return; // ignore clicks on the floating console
@@ -6582,6 +6628,7 @@
             selectedDeviceId = null;
             selectedLabelId = null;
             selectedLinkId = null;
+            if (selectedShapeId) { selectedShapeId = null; renderShapes(); updateDrawPanelFromSelection(); }
             // Pinned properties panel stays open, matching double-click-until-close behaviour.
             // Selection ring clears (below) but propertiesDeviceId is untouched.
             refreshNodeSelection();
@@ -6590,6 +6637,7 @@
 
         function handleNodeClick(e, id, type = 'Device') {
             if (currentMode === 'select') {
+                if (selectedShapeId) { selectedShapeId = null; renderShapes(); updateDrawPanelFromSelection(); }
                 const wasAlreadySelected = (type === 'Device' && selectedDeviceId === id) || (type === 'Label' && selectedLabelId === id);
 
                 if (type === 'Device') {
@@ -7342,6 +7390,223 @@
             }
         }
 
+
+        // ================= Drawn shapes (annotations) =================
+        // Rectangles, rounded rectangles, ellipses, lines and arrows drawn by the user.
+        // Stored as plain objects { id, kind, x, y, w, h, fill, fillOpacity, stroke, strokeWidth }.
+        // For line/arrow, (x,y) is the start and (x+w, y+h) the end. Rendered in the zoomed
+        // #shapes SVG layer (world coordinates), behind devices but above cables.
+        function svgEl(tag, attrs) {
+            const el = document.createElementNS(SVGNS, tag);
+            for (const k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) el.setAttribute(k, attrs[k]);
+            return el;
+        }
+        function shapeBox(s) {
+            return { x: Math.min(s.x, s.x + s.w), y: Math.min(s.y, s.y + s.h), w: Math.abs(s.w), h: Math.abs(s.h) };
+        }
+        const SHAPE_HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+        function handlePoints(s) {
+            const b = shapeBox(s);
+            const midX = b.x + b.w / 2, midY = b.y + b.h / 2, rX = b.x + b.w, bY = b.y + b.h;
+            return { nw:{x:b.x,y:b.y}, n:{x:midX,y:b.y}, ne:{x:rX,y:b.y}, e:{x:rX,y:midY}, se:{x:rX,y:bY}, s:{x:midX,y:bY}, sw:{x:b.x,y:bY}, w:{x:b.x,y:midY} };
+        }
+        function handleCursor(hn) {
+            return { nw:'nwse-resize', se:'nwse-resize', ne:'nesw-resize', sw:'nesw-resize', n:'ns-resize', s:'ns-resize', e:'ew-resize', w:'ew-resize', start:'move', end:'move' }[hn] || 'pointer';
+        }
+        function handleRect(wx, wy, id, hn) {
+            const sc = (view && view.scale) || 1;
+            const sz = 9 / sc;
+            return svgEl('rect', { x: wx - sz/2, y: wy - sz/2, width: sz, height: sz, fill: '#ffffff', stroke: '#2563eb', 'stroke-width': 1.5/sc, rx: 1.5/sc, 'pointer-events': 'auto', 'data-handle': hn, 'data-shape': id, style: `cursor: ${handleCursor(hn)};` });
+        }
+        function arrowHead(s) {
+            const x1=s.x, y1=s.y, x2=s.x+s.w, y2=s.y+s.h;
+            const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy);
+            if (len < 1) return null;
+            const ux=dx/len, uy=dy/len, size=Math.max(10, (s.strokeWidth||2)*3.2);
+            const bx=x2-ux*size, by=y2-uy*size, px=-uy, py=ux, half=size*0.55;
+            const pts=`${x2},${y2} ${bx+px*half},${by+py*half} ${bx-px*half},${by-py*half}`;
+            return svgEl('polygon', { points: pts, fill: s.stroke, 'pointer-events': 'auto', 'data-shape': s.id, style: 'cursor: move;' });
+        }
+        function renderShapes() {
+            if (!SHAPES_CONTAINER) return;
+            SHAPES_CONTAINER.innerHTML = '';
+            for (const id in shapes) {
+                const s = shapes[id];
+                const common = { stroke: s.stroke, 'stroke-width': s.strokeWidth, 'pointer-events': 'auto', 'data-shape': id, style: 'cursor: move;' };
+                let body = null;
+                if (s.kind === 'rect' || s.kind === 'roundrect') {
+                    const b = shapeBox(s);
+                    body = svgEl('rect', { ...common, x:b.x, y:b.y, width:b.w, height:b.h, fill:s.fill, 'fill-opacity':s.fillOpacity, rx: s.kind==='roundrect' ? Math.min(18, b.w/2, b.h/2) : 0 });
+                } else if (s.kind === 'ellipse') {
+                    const b = shapeBox(s);
+                    body = svgEl('ellipse', { ...common, cx:b.x+b.w/2, cy:b.y+b.h/2, rx:b.w/2, ry:b.h/2, fill:s.fill, 'fill-opacity':s.fillOpacity });
+                } else if (s.kind === 'line' || s.kind === 'arrow') {
+                    body = svgEl('line', { ...common, x1:s.x, y1:s.y, x2:s.x+s.w, y2:s.y+s.h, fill:'none', 'stroke-linecap':'round' });
+                }
+                if (body) SHAPES_CONTAINER.appendChild(body);
+                if (s.kind === 'arrow') { const ah = arrowHead(s); if (ah) SHAPES_CONTAINER.appendChild(ah); }
+                // Selection outline + handles (only in select mode)
+                if (id === selectedShapeId && currentMode === 'select') {
+                    const sc = (view && view.scale) || 1;
+                    if (s.kind === 'line' || s.kind === 'arrow') {
+                        SHAPES_CONTAINER.appendChild(handleRect(s.x, s.y, id, 'start'));
+                        SHAPES_CONTAINER.appendChild(handleRect(s.x+s.w, s.y+s.h, id, 'end'));
+                    } else {
+                        const b = shapeBox(s);
+                        SHAPES_CONTAINER.appendChild(svgEl('rect', { x:b.x, y:b.y, width:b.w, height:b.h, fill:'none', stroke:'#2563eb', 'stroke-width':1/sc, 'stroke-dasharray':`${4/sc} ${3/sc}`, 'pointer-events':'none' }));
+                        const hp = handlePoints(s);
+                        for (const hn of SHAPE_HANDLES) SHAPES_CONTAINER.appendChild(handleRect(hp[hn].x, hp[hn].y, id, hn));
+                    }
+                }
+            }
+        }
+        function applyResize(s, orig, handle, wx, wy) {
+            if (s.kind === 'line' || s.kind === 'arrow') {
+                if (handle === 'start') { s.x = wx; s.y = wy; s.w = (orig.x + orig.w) - wx; s.h = (orig.y + orig.h) - wy; }
+                else { s.w = wx - orig.x; s.h = wy - orig.y; }
+                return;
+            }
+            let left = Math.min(orig.x, orig.x+orig.w), right = Math.max(orig.x, orig.x+orig.w);
+            let top = Math.min(orig.y, orig.y+orig.h), bottom = Math.max(orig.y, orig.y+orig.h);
+            if (handle.includes('w')) left = wx;
+            if (handle.includes('e')) right = wx;
+            if (handle.includes('n')) top = wy;
+            if (handle.includes('s')) bottom = wy;
+            s.x = left; s.y = top; s.w = right - left; s.h = bottom - top;
+        }
+
+        // ---- Draw tool UI ----
+        function selectShape(id) {
+            selectedShapeId = id; selectedDeviceId = null; selectedLabelId = null; selectedLinkId = null;
+            if (typeof refreshNodeSelection === 'function') refreshNodeSelection();
+            if (typeof refreshLinkStyles === 'function') refreshLinkStyles();
+            updateDrawPanelFromSelection();
+            renderShapes();
+        }
+        function updateDrawPanelFromSelection() {
+            const s = (selectedShapeId && shapes[selectedShapeId]) ? shapes[selectedShapeId] : drawStyle;
+            const f=document.getElementById('draw-fill'), fo=document.getElementById('draw-fillop'), st=document.getElementById('draw-stroke'), sw=document.getElementById('draw-strokew');
+            if (!f) return;
+            f.value = s.fill || '#3b82f6';
+            fo.value = Math.round(((s.fillOpacity != null ? s.fillOpacity : 0.25)) * 100);
+            st.value = s.stroke || '#1d4ed8';
+            sw.value = s.strokeWidth || 2;
+        }
+        window.onDrawStyleInput = () => {
+            const f=document.getElementById('draw-fill'), fo=document.getElementById('draw-fillop'), st=document.getElementById('draw-stroke'), sw=document.getElementById('draw-strokew');
+            if (!f) return;
+            drawStyle = { fill: f.value, fillOpacity: parseInt(fo.value, 10)/100, stroke: st.value, strokeWidth: parseInt(sw.value, 10) };
+            if (selectedShapeId && shapes[selectedShapeId]) {
+                const s = shapes[selectedShapeId];
+                s.fill = drawStyle.fill; s.fillOpacity = drawStyle.fillOpacity; s.stroke = drawStyle.stroke; s.strokeWidth = drawStyle.strokeWidth;
+                renderShapes(); scheduleAutosave();
+            }
+        };
+        window.setDrawTool = (kind) => {
+            document.querySelectorAll('button[id^="btn-"]').forEach(b => { b.classList.remove('bg-blue-600', 'text-white'); b.classList.add(b.classList.contains('draw-tool') ? 'text-slate-300' : 'text-slate-400'); });
+            pendingCableSource = null; pendingCableSourcePort = null;
+            WORKSPACE.classList.remove('mode-addCable', 'mode-addText');
+            const active = document.getElementById('btn-draw-' + kind);
+            if (active) { active.classList.remove('text-slate-300', 'text-slate-400'); active.classList.add('bg-blue-600', 'text-white'); }
+            if (kind === 'select') { drawShapeKind = null; currentMode = 'select'; WORKSPACE.classList.remove('mode-draw'); }
+            else { drawShapeKind = kind; currentMode = 'draw'; WORKSPACE.classList.add('mode-draw'); }
+            const dt = document.getElementById('btn-draw-toggle'); if (dt) { dt.classList.remove('text-slate-400'); dt.classList.add('bg-blue-600', 'text-white'); }
+            renderShapes();
+        };
+        window.toggleDrawPanel = () => {
+            const panel = document.getElementById('draw-panel');
+            const btn = document.getElementById('btn-draw-toggle');
+            if (!panel) return;
+            const nowHidden = panel.classList.toggle('hidden');
+            if (nowHidden) {
+                drawShapeKind = null; WORKSPACE.classList.remove('mode-draw');
+                if (currentMode === 'draw') currentMode = 'select';
+                if (btn) { btn.classList.remove('bg-blue-600', 'text-white'); btn.classList.add('text-slate-400'); }
+                renderShapes();
+            } else {
+                setDrawTool('select');
+                updateDrawPanelFromSelection();
+            }
+        };
+        window.deleteSelectedShape = () => {
+            if (!selectedShapeId || !shapes[selectedShapeId]) return;
+            pushUndo();
+            delete shapes[selectedShapeId];
+            selectedShapeId = null;
+            renderShapes(); scheduleAutosave();
+            updateDrawPanelFromSelection();
+        };
+
+        // ---- Draw tool interaction (select / move / resize / draw) ----
+        SHAPES_CONTAINER.addEventListener('mousedown', (e) => {
+            if (e.button !== 0 || spaceHeld) return;
+            if (currentMode !== 'select') return;
+            const handleEl = e.target.closest('[data-handle]');
+            if (handleEl) {
+                const id = handleEl.getAttribute('data-shape'), hn = handleEl.getAttribute('data-handle');
+                if (!shapes[id]) return;
+                e.stopPropagation(); e.preventDefault();
+                shapeInteraction = { mode: 'resize', id, handle: hn, orig: { ...shapes[id] }, pushed: false };
+                return;
+            }
+            const shapeEl = e.target.closest('[data-shape]');
+            if (shapeEl) {
+                const id = shapeEl.getAttribute('data-shape');
+                if (!shapes[id]) return;
+                e.stopPropagation(); e.preventDefault();
+                selectShape(id);
+                const w = toWorld(e.clientX, e.clientY);
+                shapeInteraction = { mode: 'move', id, startWX: w.x, startWY: w.y, orig: { ...shapes[id] }, pushed: false };
+            }
+        });
+
+        WORKSPACE.addEventListener('mousedown', (e) => {
+            if (e.button !== 0 || spaceHeld) return;
+            if (currentMode !== 'draw' || !drawShapeKind) return;
+            if (e.target.closest('#bottom-toolbar') || e.target.closest('#draw-panel') || e.target.closest('#floating-ping') ||
+                e.target.closest('#floating-properties') || e.target.closest('.cli-window') || e.target.closest('#floating-browser') ||
+                e.target.closest('#floating-sniffer') || e.target.closest('#zoom-controls') || e.target.closest('#protocol-legend') ||
+                e.target.closest('#help-modal') || e.target.closest('#playback-bar') || e.target.closest('#port-selector')) return;
+            e.preventDefault(); e.stopPropagation();
+            const w = toWorld(e.clientX, e.clientY);
+            pushUndo();
+            const id = generateId();
+            shapes[id] = { id, kind: drawShapeKind, x: w.x, y: w.y, w: 0, h: 0, fill: drawStyle.fill, fillOpacity: drawStyle.fillOpacity, stroke: drawStyle.stroke, strokeWidth: drawStyle.strokeWidth };
+            selectedShapeId = id; selectedDeviceId = null; selectedLabelId = null; selectedLinkId = null;
+            shapeInteraction = { mode: 'draw', id, startWX: w.x, startWY: w.y, pushed: true };
+            renderShapes();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!shapeInteraction) return;
+            const s = shapes[shapeInteraction.id];
+            if (!s) { shapeInteraction = null; return; }
+            const w = toWorld(e.clientX, e.clientY);
+            if (!shapeInteraction.pushed) { pushUndo(); shapeInteraction.pushed = true; }
+            if (shapeInteraction.mode === 'draw') {
+                s.w = w.x - shapeInteraction.startWX; s.h = w.y - shapeInteraction.startWY;
+            } else if (shapeInteraction.mode === 'move') {
+                s.x = shapeInteraction.orig.x + (w.x - shapeInteraction.startWX);
+                s.y = shapeInteraction.orig.y + (w.y - shapeInteraction.startWY);
+            } else if (shapeInteraction.mode === 'resize') {
+                applyResize(s, shapeInteraction.orig, shapeInteraction.handle, w.x, w.y);
+            }
+            renderShapes();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!shapeInteraction) return;
+            const inter = shapeInteraction; shapeInteraction = null;
+            const s = shapes[inter.id];
+            if (s && inter.mode === 'draw' && Math.abs(s.w) < 3 && Math.abs(s.h) < 3) {
+                if (s.kind === 'line' || s.kind === 'arrow') { s.w = 90; s.h = 0; } else { s.w = 100; s.h = 66; }
+            }
+            justDrewOrMovedShape = true;
+            updateDrawPanelFromSelection();
+            renderShapes();
+            scheduleAutosave();
+        });
+
         function renderNodes() {
             // Hide any device tooltip: its source node is about to be recreated, so a
             // lingering tooltip could refer to a device that has moved or no longer exists.
@@ -7435,6 +7700,7 @@
             // Keep the floating ping tool dropdown up to date with available PCs
             updatePingDropdown();
             updateMinimap();
+            renderShapes();
         }
 
         // --- Delegated node interactions (replaces per-node listeners) ---
@@ -7930,6 +8196,11 @@
                     window.deleteLink(lid);
                     return;
                 }
+                if (selectedShapeId && shapes[selectedShapeId]) {
+                    e.preventDefault();
+                    deleteSelectedShape();
+                    return;
+                }
                 if (selectedDeviceId || selectedLabelId) {
                     e.preventDefault();
                     deleteSelected();
@@ -7944,7 +8215,9 @@
                     return;
                 }
                 hidePortSelector();
-                if (currentMode !== 'select' || pendingCableSource) {
+                if (currentMode === 'draw') {
+                    setDrawTool('select');
+                } else if (currentMode !== 'select' || pendingCableSource) {
                     setMode('select');
                 } else {
                     selectedDeviceId = null;
@@ -9271,13 +9544,13 @@
         };
 
         window.clearNetwork = () => {
-            const hasContent = Object.keys(devices).length > 0 || Object.keys(labels).length > 0;
+            const hasContent = Object.keys(devices).length > 0 || Object.keys(labels).length > 0 || Object.keys(shapes).length > 0;
             if (hasContent) {
                 if (!confirm('Clear the whole network? You can undo this with Ctrl+Z.')) return;
                 pushUndo();
             }
-            devices = {}; links = {}; labels = {};
-            selectedDeviceId = null; selectedLabelId = null; selectedLinkId = null; propertiesDeviceId = null; pendingCableSource = null; pendingCableSourcePort = null;
+            devices = {}; links = {}; labels = {}; shapes = {};
+            selectedDeviceId = null; selectedLabelId = null; selectedShapeId = null; selectedLinkId = null; propertiesDeviceId = null; pendingCableSource = null; pendingCableSourcePort = null;
             deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1 };
             CONSOLE.innerHTML = '<div>> Network cleared.</div>';
             hidePortSelector();
