@@ -1567,7 +1567,7 @@
             let options = [];
 
             if (dev.cli.mode === 'cmd') {
-                if (prevArgs.length === 0) options = ['ipconfig', 'arp', 'ping', 'curl', 'cls', 'clear', 'help'];
+                if (prevArgs.length === 0) options = ['ipconfig', 'arp', 'ping', 'curl', 'ftp', 'sftp', 'cls', 'clear', 'help'];
                 else if (prev1 === 'arp' && prevArgs.length === 1) options = ['-a'];
                 else if (prev1 === 'ping' && prevArgs.length === 1) options = ['<target-ip>'];
                 else if (prev1 === 'curl' && prevArgs.length === 1) options = ['<target-url>'];
@@ -1843,7 +1843,7 @@
         }
 
         const processCLICommand = (dev, input) => {
-            if (dev.cli && !dev.cli.pendingAuth && !dev.cli.pendingCopy && !dev.cli.remoteSession) input = expandCliAbbrev(input);
+            if (dev.cli && !dev.cli.pendingAuth && !dev.cli.pendingCopy && !dev.cli.remoteSession && !dev.cli.ftpSession) input = expandCliAbbrev(input);
             const args = input.trim().toLowerCase().split(/\s+/);
             if (args.length === 0 || args[0] === '') return;
             const cmd = args[0];
@@ -1866,6 +1866,7 @@
                 dev.cli.prompt = target.cli.prompt;
                 return;
             }
+            if (dev.cli.ftpSession) { handleFileSessionInput(dev, input); return; }
             if (dev.cli.pendingCopy) {
                 const pcopy = dev.cli.pendingCopy;
                 if (pcopy.stage === 'host') { pcopy.host = input.trim(); pcopy.stage = 'file'; dev.cli.history.push(`${pcopy.op === 'put' ? 'Destination' : 'Source'} filename [${pcopy.defaultFile}]?`); return; }
@@ -1931,6 +1932,9 @@
                     print('  arp -a        Display ARP table');
                     print('  ping <target> Send ICMP Echo Requests');
                     print('  curl <target> Fetch HTTP content from a web server');
+                    print('  ftp <ip> [user] [pass]      Connect to an FTP server (cleartext)');
+                    print('  sftp <user>@<ip> [pass]     Connect to an SFTP server (encrypted)');
+                    print('    then: ls, get <file>, put <file>, bye');
                     print('  cls / clear   Clear screen');
                     return;
                 } else if (dev.cli.mode === 'user') {
@@ -2082,7 +2086,13 @@
                         send('PASS', pass); print('PASS ****');
                         const server = Object.values(devices).find(d => d.ip === ip);
                         const ok = server && server.ftpEnabled && server.ftpUsers && server.ftpUsers[user] === pass;
-                        if (ok) { print('230 User ' + user + ' logged in.'); dev.cli.ftpSession = { ip, mac: res.mac, srcPort: res.srcPort, user }; }
+                        if (ok) {
+                            print('230 User ' + user + ' logged in.');
+                            dev.cli._savedPrompt = dev.cli.prompt;
+                            dev.cli.ftpSession = { ip, mac: res.mac, srcPort: res.srcPort, user, secure: false };
+                            dev.cli.prompt = 'ftp>';
+                            print("Remote system type is UNIX. Commands: ls, get <file>, put <file>, bye");
+                        }
                         else { print('530 Login incorrect.'); try { await tcpClose(dev, ip, 21, res.srcPort, res.mac); } catch (e) {} }
                     })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
@@ -2107,6 +2117,40 @@
                         dev.cli._savedPrompt = dev.cli.prompt;
                         dev.cli.pendingAuth = { targetId: target.id, protocol: 'telnet', targetIp: ip, mac: res.mac, srcPort: res.srcPort, destPort: 23 };
                         dev.cli.prompt = 'Password:';
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
+                    return;
+                }
+                if (cmd === 'sftp') {
+                    const toks = input.trim().split(/\s+/);
+                    let ip = null, user = null, pass = null;
+                    for (let i = 1; i < toks.length; i++) {
+                        const t = toks[i];
+                        if (t === '-l' && toks[i + 1]) { user = toks[++i]; }
+                        else if (t.includes('@')) { const parts = t.split('@'); user = user || parts[0]; ip = parts[1]; }
+                        else if (/^(\d{1,3}\.){3}\d{1,3}$/.test(t)) { ip = t; }
+                        else if (user === null) { user = t; }
+                        else if (pass === null) { pass = t; }
+                    }
+                    if (!ip || !user) { print('Usage: sftp <user>@<ip> <password>   (or  sftp -l <user> <ip> <password>)'); return; }
+                    if (pass === null) pass = '';
+                    dev.cli.isRunning = true;
+                    (async () => {
+                        print(`Connecting to ${ip}...`);
+                        const res = await tcpConnect(dev, ip, 22);
+                        if (!res.established) { print(res.reason === 'rst' ? `ssh: connect to host ${ip} port 22: Connection refused` : `ssh: connect to host ${ip} port 22: Connection timed out`); return; }
+                        const server = Object.values(devices).find(d => deviceIpMatches(d, ip));
+                        // SSH key exchange + encrypted auth (shows as encrypted SSHv2 in the sniffer)
+                        try { transmit({ sourceMac: dev.mac, destMac: res.mac, payload: tcpSeg(dev.ip, ip, res.srcPort, 22, { psh: true, ack: true }, res.srcPort, 0, { ssh: true, sftp: true, blob: sshObfuscate('AUTH ' + user), len: 40 }) }, dev.id, 1); } catch (e) {}
+                        print(`${user}@${ip}'s password: ****`);
+                        if (!server || !server.sftpEnabled) { print(`Connection closed by remote host`); try { await tcpClose(dev, ip, 22, res.srcPort, res.mac); } catch (e) {} return; }
+                        const ok = server.ftpUsers && server.ftpUsers[user] === pass;
+                        if (ok) {
+                            print(`Connected to ${ip}.`);
+                            dev.cli._savedPrompt = dev.cli.prompt;
+                            dev.cli.ftpSession = { ip, mac: res.mac, srcPort: res.srcPort, user, secure: true };
+                            dev.cli.prompt = 'sftp>';
+                            print("Commands: ls, get <file>, put <file>, bye");
+                        } else { print('Permission denied (password).'); try { await tcpClose(dev, ip, 22, res.srcPort, res.mac); } catch (e) {} }
                     })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
@@ -3565,6 +3609,75 @@
             for (let i = 0; i < n; i++) out += '0123456789abcdef'[Math.floor(Math.random() * 16)];
             return out;
         }
+        // Interactive FTP / SFTP client session. Called for every line typed while
+        // dev.cli.ftpSession is active. secure=true => SFTP (encrypted over TCP 22),
+        // secure=false => FTP (cleartext over TCP 21). Each verb is put on the wire so the
+        // packet sniffer shows cleartext FTP versus encrypted SSH, while the file list/content
+        // is read/written directly against the server object (matching the login check).
+        function handleFileSessionInput(dev, input) {
+            const sess = dev.cli.ftpSession;
+            const print = (s) => dev.cli.history.push(s);
+            const server = Object.values(devices).find(d => deviceIpMatches(d, sess.ip));
+            const toks = input.trim().split(/\s+/);
+            const cmd = (toks[0] || '').toLowerCase();
+            const port = sess.secure ? 22 : 21;
+            const wire = (verb, arg) => {
+                try {
+                    const data = sess.secure
+                        ? { ssh: true, sftp: true, blob: sshObfuscate(verb + ' ' + (arg || '')), len: String(verb).length + String(arg || '').length + 8 }
+                        : { ftp: verb, arg: arg || '' };
+                    transmit({ sourceMac: dev.mac, destMac: sess.mac, payload: tcpSeg(dev.ip, sess.ip, sess.srcPort, port, { psh: true, ack: true }, sess.srcPort, 0, data) }, dev.id, 1);
+                } catch (e) {}
+            };
+            if (!input.trim()) return;
+            if (cmd === 'bye' || cmd === 'quit' || cmd === 'exit' || cmd === 'close') {
+                wire('QUIT');
+                try { tcpClose(dev, sess.ip, port, sess.srcPort, sess.mac); } catch (e) {}
+                print(sess.secure ? 'Disconnected.' : '221 Goodbye.');
+                dev.cli.ftpSession = null;
+                dev.cli.prompt = dev.cli._savedPrompt || 'C:\\>';
+                return;
+            }
+            if (cmd === 'help' || cmd === '?') { print('Commands: ls, get <file>, put <file>, pwd, bye'); return; }
+            if (cmd === 'pwd') { print(sess.secure ? 'Remote working directory: /' : '257 "/" is the current directory.'); return; }
+            if (cmd === 'ls' || cmd === 'dir') {
+                wire('LIST');
+                const files = (server && server.files) || {};
+                const names = Object.keys(files);
+                if (!names.length) { print(sess.secure ? '(remote directory is empty)' : '226 Directory send OK. (0 files)'); return; }
+                if (!sess.secure) print('200 PORT command successful.');
+                names.forEach(f => print(`-rw-r--r-- 1 ftp ftp ${String((files[f] || '').length).padStart(7)} ${f}`));
+                if (!sess.secure) print(`226 Directory send OK. (${names.length} files)`);
+                return;
+            }
+            if (cmd === 'get') {
+                const f = toks[1]; if (!f) { print('Usage: get <file>'); return; }
+                wire('RETR', f);
+                const files = (server && server.files) || {};
+                if (files[f] != null) {
+                    dev.localFiles = dev.localFiles || {};
+                    dev.localFiles[f] = files[f];
+                    const bytes = String(files[f]).length;
+                    if (sess.secure) { print(`Fetching /${f} to ${f}`); print(`${f}                100%  ${bytes} bytes`); }
+                    else { print('150 Opening data connection.'); print(`226 Transfer complete. (${bytes} bytes received)`); }
+                    scheduleAutosave();
+                } else { print(sess.secure ? `remote open("/${f}"): No such file or directory` : `550 ${f}: No such file or directory.`); }
+                return;
+            }
+            if (cmd === 'put') {
+                const f = toks[1]; if (!f) { print('Usage: put <file>'); return; }
+                dev.localFiles = dev.localFiles || {};
+                if (dev.localFiles[f] == null) { print(sess.secure ? `local file "${f}" not found. (try: ls on this host has notes.txt)` : `550 ${f}: No such file on the local host.`); return; }
+                wire('STOR', f);
+                if (server) { server.files = server.files || {}; server.files[f] = dev.localFiles[f]; }
+                const bytes = String(dev.localFiles[f]).length;
+                if (sess.secure) { print(`Uploading ${f} to /${f}`); print(`${f}                100%  ${bytes} bytes`); }
+                else { print('150 Opening data connection.'); print(`226 Transfer complete. (${bytes} bytes sent)`); }
+                scheduleAutosave();
+                return;
+            }
+            print(sess.secure ? `Unknown command "${cmd}". Try: ls, get, put, bye` : `?Invalid command. Try: ls, get, put, bye`);
+        }
         function deviceIpMatches(dev, ip) {
             if (dev.type === 'Router') return Object.values(dev.interfaces).some(i => i.ip === ip);
             if (dev.type === 'Switch') return dev.svis && Object.values(dev.svis).some(s => s.ip === ip);
@@ -4049,6 +4162,7 @@
                 this.ipMode = 'static'; // static, dhcp
                 this.openTcpPorts = new Set(); // TCP ports this host accepts connections on
                 this.tcpConns = {}; // active/established TCP sockets keyed by "ip:port"
+                this.localFiles = { 'notes.txt': 'A local file on this host.\n' }; // files for ftp/sftp put, and where get saves
                 
                 // Windows CMD Mock State
                 this.cli = { mode: 'cmd', prompt: `C:\\>`, history: [`Microsoft Windows [Version 10.0.19045]\n(c) Microsoft Corporation. All rights reserved.\n`], isRunning: false };
@@ -4349,12 +4463,19 @@
                 // HTTP Web Server Settings
                 this.httpEnabled = false;
                 this.httpsEnabled = false;
+                this.ftpEnabled = false;                 // FTP control on TCP 21 (cleartext)
+                this.sftpEnabled = false;                // SFTP over SSH on TCP 22 (encrypted)
+                this.ftpUsers = { cisco: 'cisco' };      // account shared by FTP and SFTP
+                this.files = {                           // files served over FTP / SFTP
+                    'readme.txt': 'Welcome to the file server.\nDownload me over FTP (port 21) or SFTP (port 22).\n',
+                    'backup.cfg': 'hostname LAB-DEVICE\n!\nend\n'
+                };
                 this._placeholderHttp = true;
                 this.htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<title>My Server</title>\n<style>\n  body { font-family: sans-serif; text-align: center; padding-top: 50px; color: #334155; }\n  h1 { color: #2563eb; }\n</style>\n</head>\n<body>\n  <h1>Welcome to Web Server 1</h1>\n  <p>Your HTTP request was completely successful!</p>\n</body>\n</html>';
                 this.dualHomed = false; this.port2 = null;
             }
 
-            isTcpListening(port) { return (port === 80 && this.httpEnabled) || (port === 443 && this.httpsEnabled) || super.isTcpListening(port); }
+            isTcpListening(port) { return (port === 80 && this.httpEnabled) || (port === 443 && this.httpsEnabled) || (port === 22 && this.sftpEnabled) || super.isTcpListening(port); }
 
             async receive(frame, inPortId) {
                 if (this._bondDrop(frame)) return; // dual-homing bond de-duplication
@@ -9031,6 +9152,28 @@
                         </div>
                     </div>
 
+                    <div class="pt-2 border-t mt-4">
+                        <div class="flex items-center space-x-2 mb-2 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
+                            <input type="checkbox" id="prop-ftp-en" ${dev.ftpEnabled ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <label for="prop-ftp-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable FTP Server &middot; TCP 21 &middot; <span class="text-amber-600 dark:text-amber-400">cleartext</span></label>
+                        </div>
+                        <div class="flex items-center space-x-2 mb-3 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
+                            <input type="checkbox" id="prop-sftp-en" ${dev.sftpEnabled ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <label for="prop-sftp-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable SFTP Server &middot; TCP 22 &middot; <span class="text-green-600 dark:text-green-400">encrypted</span></label>
+                        </div>
+                        <div class="flex space-x-2">
+                            <div class="w-1/2">
+                                <label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">File Account Username</label>
+                                <input type="text" id="prop-ftp-user" value="${ftpAccountOf(dev).user}" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
+                            </div>
+                            <div class="w-1/2">
+                                <label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Password</label>
+                                <input type="text" id="prop-ftp-pass" value="${ftpAccountOf(dev).pass}" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-2 leading-snug">FTP and SFTP share this account. Files on the server: <span class="font-mono text-slate-600 dark:text-slate-300">${Object.keys(dev.files || {}).join(', ') || '(none)'}</span>.<br>From a PC or laptop: <span class="font-mono">ftp ${dev.ip} ${ftpAccountOf(dev).user} ${ftpAccountOf(dev).pass}</span> or <span class="font-mono">sftp ${ftpAccountOf(dev).user}@${dev.ip} ${ftpAccountOf(dev).pass}</span></p>
+                    </div>
+
                     ${dualHomeSectionHtml(dev)}
 
                     <button onclick="window.saveWebServerSettings('${dev.id}')" id="btn-save-webserver" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition-colors shadow-sm mt-4">Save Web Server Config</button>
@@ -9305,6 +9448,11 @@
             updatePropertiesPanel(true); // refresh to show opaque/faded dhcp panel
         };
         
+        function ftpAccountOf(dev) {
+            const users = dev.ftpUsers || { cisco: 'cisco' };
+            const u = Object.keys(users)[0] || 'cisco';
+            return { user: u, pass: users[u] != null ? users[u] : '' };
+        }
         window.saveWebServerSettings = (id) => {
             const dev = devices[id];
             if (!dev || dev.type !== 'WebServer') return;
@@ -9315,6 +9463,13 @@
             
             dev.httpEnabled = document.getElementById('prop-http-en').checked;
             dev.htmlContent = document.getElementById('prop-html-content').value;
+
+            dev.ftpEnabled = document.getElementById('prop-ftp-en').checked;
+            dev.sftpEnabled = document.getElementById('prop-sftp-en').checked;
+            const ftpUser = (document.getElementById('prop-ftp-user').value || '').trim() || 'cisco';
+            const ftpPass = document.getElementById('prop-ftp-pass').value || '';
+            dev.ftpUsers = { [ftpUser]: ftpPass };
+            if (!dev.files) dev.files = {};
 
             const dh = document.getElementById('prop-dualhome');
             if (dh) { const was = dev.dualHomed; dev.dualHomed = dh.checked; if (was && !dev.dualHomed && dev.port2) { window.deleteLink(dev.port2, true); dev.port2 = null; } }
