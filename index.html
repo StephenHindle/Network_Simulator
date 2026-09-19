@@ -1224,7 +1224,11 @@
                 if (!dev) return { stp: 'forwarding', admin: 'up' };
                 if (dev.type === 'Switch' || dev.type === 'AP') {
                     const p = dev.ports.find(p => p.id === portId);
-                    return p ? { stp: p.stpState, admin: p.adminState } : { stp: 'forwarding', admin: 'up' };
+                    if (!p) return { stp: 'forwarding', admin: 'up' };
+                    // Show the link as blocked if STP has blocked it for any VLAN it carries
+                    // (per-VLAN entries only exist for carried VLANs, so this reflects real blocking).
+                    const blockedVlan = p.stpVlan && Object.values(p.stpVlan).some(x => x.state === 'blocking');
+                    return { stp: (blockedVlan ? 'blocking' : (p.stpState || 'forwarding')), admin: p.adminState };
                 }
                 if (dev.type === 'Router') {
                     const p = dev.interfaces[portId];
@@ -4542,10 +4546,14 @@
 
             async receive(frame, inPortId) {
                 const inPort = this.ports.find(p => p.id == inPortId); // Loose equality fixes string/int mismatches
-                if (!inPort || inPort.stpState === 'blocking' || inPort.adminState === 'down') return;
+                if (!inPort || inPort.adminState === 'down') return;
 
                 // Determine Frame VLAN (Assume 802.1Q tag if present on Trunk, else tag with Access Port VLAN)
                 let frameVlan = frame.vlan || (isTrunkPort(this, inPort) ? 1 : (inPort.vlan || 1));
+                // Spanning tree is per VLAN: drop a frame that arrives on a port blocked for its VLAN.
+                // (Using the scalar stpState here would miss a port that is blocked in one VLAN but
+                // forwarding in another, letting a redundant link loop that VLAN.)
+                if (portStpState(this, inPort, frameVlan) === 'blocking') return;
 
                 // Port security: validate the source MAC against this port's secure address set
                 if (inPort.portSecurity) {
@@ -6246,7 +6254,7 @@
             const st = {}; // switchId -> { cost, rootPort, nextHopMac, nextHopPort }
             switches.forEach(s => {
                 st[s.id] = { cost: s.id === root.id ? 0 : Infinity, rootPort: null, nextHopMac: null, nextHopPort: null };
-                s.ports.forEach(p => { if (!p.stpVlan) p.stpVlan = {}; if (p.connectedLink) p.stpVlan[vlan] = { state: p.adminState === 'down' ? 'down' : 'blocking', role: 'Altn' }; });
+                s.ports.forEach(p => { if (!p.stpVlan) p.stpVlan = {}; if (p.connectedLink && (isTrunkPort(s, p) || (p.vlan || 1) === vlan)) p.stpVlan[vlan] = { state: p.adminState === 'down' ? 'down' : 'blocking', role: 'Altn' }; });
             });
 
             const carries = (link) => {
