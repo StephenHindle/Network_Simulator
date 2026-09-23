@@ -1036,6 +1036,7 @@
             propertiesDeviceId = null; // Also close the pinned properties panel on state load
             pendingCableSource = null;
             pendingCableSourcePort = null;
+            try { netEventsReseed(); } catch (e) {}
         }
 
         function snapshotState() {
@@ -1761,6 +1762,17 @@
                 return; 
             }
 
+            // Ctrl-Z leaves configuration mode, like 'end'
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+                e.preventDefault();
+                if (dev.cli.mode && dev.cli.mode.startsWith('conf') && !dev.cli.isRunning) {
+                    dev.cli.history.push(`${dev.cli.prompt}^Z`);
+                    e.target.value = '';
+                    processCLICommand(dev, 'end');
+                    renderCLI(cliDeviceId);
+                }
+                return;
+            }
             if (e.key === 'Enter') {
                 const input = e.target.value.trim();
                 e.target.value = '';
@@ -1846,7 +1858,7 @@
             return out.join(' ');
         }
 
-        const processCLICommand = (dev, input) => {
+        const processCLICommandInner = (dev, input) => {
             if (dev.cli && !dev.cli.pendingAuth && !dev.cli.pendingCopy && !dev.cli.remoteSession && !dev.cli.ftpSession) input = expandCliAbbrev(input);
             const args = input.trim().toLowerCase().split(/\s+/);
             if (args.length === 0 || args[0] === '') return;
@@ -2199,6 +2211,7 @@
             }
             if (cmd === 'end' && dev.cli.mode && dev.cli.mode.startsWith('conf')) {
                 dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`;
+                consoleLog(dev, 5, 'SYS-5-CONFIG_I: Configured from console by console');
                 dev.cli.currentInterface = null; dev.cli.currentVlan = null; dev.cli.routerProto = null; dev.cli.aclName = null;
                 dev.cli.rangePorts = null; dev.cli.dhcpPool = null;
                 return;
@@ -2211,7 +2224,7 @@
                 if (dev.cli.mode === 'conf-line') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; return; }
                 if (dev.cli.mode === 'conf-acl') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.aclName = null; return; }
                 if (dev.cli.mode === 'conf-if') { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentInterface = null; dev.cli.rangePorts = null; dev.cli.poCtx = null; return; }
-                if (dev.cli.mode === 'conf') { dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`; return; }
+                if (dev.cli.mode === 'conf') { dev.cli.mode = 'priv'; dev.cli.prompt = `${dev.name}#`; consoleLog(dev, 5, 'SYS-5-CONFIG_I: Configured from console by console'); return; }
                 if (dev.cli.mode === 'priv') { dev.cli.mode = 'user'; dev.cli.prompt = `${dev.name}>`; return; }
                 return;
             }
@@ -2219,6 +2232,7 @@
             // User Exec Mode
             if (dev.cli.mode === 'user') {
                 if (cmd === 'ping') { print('% Not supported in mock user exec.'); return; }
+                if (args.length === 1 && dev.domainLookup !== false) print(`Translating "${input.trim()}"...domain server (255.255.255.255)`);
                 print('% Unknown command or computer name, or unable to find computer address');
                 return;
             }
@@ -2227,6 +2241,7 @@
             if (dev.cli.mode === 'priv') {
                 if (cmd === 'conf' || cmd === 'configure') {
                     if (args[1] === 't' || args[1] === 'terminal') {
+                        print('Enter configuration commands, one per line.  End with CNTL/Z.');
                         dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; return;
                     }
                 }
@@ -2295,9 +2310,9 @@
                     if (dev.type === 'Router' && args[1] === 'ip' && (args[2] === 'int' || args[2] === 'interface') && (args[3] === 'br' || args[3] === 'brief')) {
                         print('Interface              IP-Address      OK? Method Status                Protocol');
                         Object.values(dev.interfaces).forEach(iface => {
-                            let linkState = iface.connectedLink ? 'up' : 'down';
-                            let adminState = iface.adminState === 'up' ? 'up' : 'administratively down';
-                            let protoState = (adminState === 'up' && linkState === 'up') ? 'up' : 'down';
+                            const st = ifOperState(dev, iface);
+                            const adminState = st === 'admin' ? 'administratively down' : (st === 'up' ? 'up' : 'down');
+                            const protoState = st === 'up' ? 'up' : 'down';
                             print(`${iface.id.padEnd(22)} ${iface.ip.padEnd(15)} YES manual ${adminState.padEnd(21)} ${protoState}`);
                         });
                         return;
@@ -2388,15 +2403,31 @@
                         print(`Trap receiver: ${dev.snmpHost || 'none'}   Traps: ${dev.snmpTraps ? 'enabled' : 'disabled'}`);
                         return;
                     }
+                    if (dev.type === 'Switch' && args[1] === 'errdisable' && args[2] === 'recovery') {
+                        const r = dev.errRecovery || { causes: {}, interval: 300 };
+                        print('ErrDisable Reason            Timer Status');
+                        print('-----------------            --------------');
+                        ['bpduguard', 'psecure-violation'].forEach(c => print(`${c.padEnd(29)}${(r.causes[c] || r.causes.all) ? 'Enabled' : 'Disabled'}`));
+                        print(''); print(`Timer interval: ${r.interval || 300} seconds`); print('');
+                        const due = (dev.ports || []).filter(p => p.errDisabled && (r.causes[p.errDisabled] || r.causes.all));
+                        print('Interfaces that will be enabled at the next timeout:');
+                        if (due.length) { print(''); print('Interface       Errdisable reason       Time left(sec)'); print('---------       -----------------       --------------'); due.forEach(p => print(`${swPortName(p).padEnd(16)}${p.errDisabled.padEnd(24)}${r.interval || 300}`)); }
+                        return;
+                    }
                     if ((dev.type === 'Router' || dev.type === 'Switch') && args[1] === 'logging') {
                         print(`Syslog logging: ${dev.loggingHost ? 'enabled' : 'enabled (local buffer)'}`);
                         const lv = ['emergencies', 'alerts', 'critical', 'errors', 'warnings', 'notifications', 'informational', 'debugging'];
+                        print(`    Console logging: ${dev.loggingConsole === false ? 'disabled' : 'level ' + lv[dev.loggingConsoleLevel != null ? dev.loggingConsoleLevel : 7]}, ${(dev.logBuf || []).length} messages logged`);
+                        print(`    Buffer logging:  level debugging, ${(dev.logBuf || []).length} messages logged`);
                         print(`    Trap logging: level ${lv[dev.loggingTrap != null ? dev.loggingTrap : 6]}`);
                         print(dev.loggingHost ? `    Logging to ${dev.loggingHost} (udp port 514)` : '    No logging host configured');
                         if (dev.syslogBuffer && dev.syslogBuffer.length) {
-                            print('Log Buffer:');
+                            print('Received syslog messages:');
                             dev.syslogBuffer.slice(-15).forEach(e => print(`  ${e.from}: ${e.msg}`));
                         }
+                        print('');
+                        print('Log Buffer (4096 bytes):');
+                        (dev.logBuf || []).slice(-30).forEach(l => print(l));
                         return;
                     }
                     if ((dev.type === 'Router' || dev.type === 'Switch') && args[1] === 'clock') {
@@ -2606,9 +2637,15 @@
                         return;
                     }
                     if (dev.type === 'Switch' && (args[1] === 'interfaces' || args[1] === 'int' || args[1] === 'interface') && (args[2] === 'status' || args[2] === 'stat')) {
+                        if (/^err/.test(args[3] || '')) {
+                            print('Port      Name               Status       Reason               Err-disabled Vlans');
+                            dev.ports.filter(p => p.errDisabled).forEach(p => print(`${swPortName(p).padEnd(9)} ${''.padEnd(18)} ${'err-disabled'.padEnd(12)} ${p.errDisabled}`));
+                            return;
+                        }
                         print('Port      Name               Status       Vlan       Duplex  Speed Type');
                         dev.ports.forEach(p => {
-                            let status = p.adminState === 'down' ? 'disabled' : (p.connectedLink ? 'connected' : 'notconnect');
+                            const st = ifOperState(dev, p);
+                            let status = st === 'errdis' ? 'err-disabled' : (st === 'admin' ? 'disabled' : (st === 'up' ? 'connected' : 'notconnect'));
                             let vlanCol = isTrunkPort(dev, p) ? 'trunk' : String(p.vlan || 1);
                             const speed = p.media === 'fiber' ? 'a-1000' : 'a-100';
                             const type = p.media === 'fiber' ? '1000BaseSX' : '10/100BaseTX';
@@ -2693,7 +2730,7 @@
                         Object.entries(dev.macTable).forEach(([key, data]) => {
                             let vlanId = data.vlan || 1;
                             let macStr = data.mac ? data.mac.toLowerCase() : key.toLowerCase();
-                            print(`   ${vlanId.toString().padEnd(4)} ${macStr.padEnd(16)} DYNAMIC     Fa0/${data.portId}`);
+                            print(`   ${vlanId.toString().padEnd(4)} ${macStr.padEnd(16)} DYNAMIC     ${swPortNameById(dev, data.portId)}`);
                             count++;
                         });
                         if (count === 0) print('Total Mac Addresses for this criterion: 0');
@@ -2727,6 +2764,12 @@
                         });
                         return;
                     }
+                }
+                const EXEC_WORDS = ['reload', 'debug', 'undebug', 'terminal', 'clock', 'setup', 'erase', 'dir', 'more', 'verify', 'traceroute', 'telnet', 'ssh', 'write', 'copy', 'show', 'clear', 'ping', 'disable', 'enable', 'exit', 'logout', 'configure', 'do', 'no'];
+                if (args.length === 1 && /^[a-z0-9][a-z0-9.-]*$/i.test(input.trim()) && !EXEC_WORDS.includes(cmd)) {
+                    if (dev.domainLookup !== false) print(`Translating "${input.trim()}"...domain server (255.255.255.255)`);
+                    print('% Unknown command or computer name, or unable to find computer address');
+                    return;
                 }
                 print('% Invalid input detected.');
                 return;
@@ -2782,7 +2825,8 @@
                     const fm = ifaceName.match(/^(?:f|fa|fast\w*|g|gi|gig\w*)\s*0\/(\d+)(\.\d+)?$/i);
                     const sm = ifaceName.match(/^(?:s|se|ser\w*)\s*0\/0\/(\d+)$/i);
                     if (fm) {
-                        const base = `Gig0/${fm[1]}`;
+                        const order = /^f/i.test(ifaceName) ? ['Fa', 'Gig', 'Gi'] : ['Gig', 'Gi', 'Fa'];
+                        const base = order.map(pf => `${pf}0/${fm[1]}`).find(k => dev.interfaces[k] && dev.interfaces[k].type !== 'subinterface') || `Gig0/${fm[1]}`;
                         if (dev.interfaces[base]) {
                             if (fm[2]) {
                                 resolvedIface = `${base}${fm[2]}`;
@@ -2902,10 +2946,12 @@
                 if (cmd === 'ip' && args[1] === 'domain-name' && args[2]) { dev.domainName = input.trim().split(/\s+/).slice(2).join(' '); return; }
                 if (cmd === 'crypto' && args[1] === 'key' && args[2] === 'generate' && args[3] === 'rsa') {
                     if (!dev.domainName) { print('% Please define a domain-name first.'); return; }
+                    const hadRsa = dev.rsaKey;
                     dev.rsaKey = true;
                     print(`The name for the keys will be: ${dev.name}.${dev.domainName}`);
                     print('% The key modulus size is 1024 bits');
                     print('% Generating 1024 bit RSA keys, keys will be non-exportable...[OK]');
+                    if (!hadRsa) consoleLog(dev, 5, 'SSH-5-ENABLED: SSH 1.99 has been enabled');
                     return;
                 }
                 if (cmd === 'logging' && args[1] === 'host' && args[2]) { dev.loggingHost = args[2]; print(`%SYS-6-LOGGINGHOST_STARTSTOP: Logging to host ${args[2]} started`); return; }
@@ -2913,6 +2959,34 @@
                 if (cmd === 'logging' && args[1] === 'trap' && args[2]) { const m = { emergencies: 0, alerts: 1, critical: 2, errors: 3, warnings: 4, notifications: 5, informational: 6, debugging: 7 }; dev.loggingTrap = (m[args[2]] != null ? m[args[2]] : (parseInt(args[2], 10) || 6)); return; }
                 if (cmd === 'no' && args[1] === 'logging' && (args[2] === 'host' || /^(\d{1,3}\.){3}\d{1,3}$/.test(args[2] || ''))) { dev.loggingHost = null; return; }
                 if (cmd === 'service' && args[1] === 'timestamps') { dev.serviceTimestamps = true; return; }
+                if (cmd === 'no' && args[1] === 'service' && args[2] === 'timestamps') { dev.serviceTimestamps = false; return; }
+                if (cmd === 'no' && args[1] === 'ip' && (args[2] === 'domain-lookup' || (args[2] === 'domain' && args[3] === 'lookup'))) { dev.domainLookup = false; return; }
+                if (cmd === 'ip' && (args[1] === 'domain-lookup' || (args[1] === 'domain' && args[2] === 'lookup'))) { dev.domainLookup = true; return; }
+                if (cmd === 'logging' && args[1] === 'console') {
+                    const names = ['emergencies', 'alerts', 'critical', 'errors', 'warnings', 'notifications', 'informational', 'debugging'];
+                    let lvl = 7;
+                    if (args[2] != null) { lvl = /^\d$/.test(args[2]) ? parseInt(args[2], 10) : names.indexOf(args[2]); if (lvl < 0 || lvl > 7) { print('% Invalid input detected.'); return; } }
+                    dev.loggingConsole = true; dev.loggingConsoleLevel = lvl; return;
+                }
+                if (cmd === 'no' && args[1] === 'logging' && args[2] === 'console') { dev.loggingConsole = false; return; }
+                if (cmd === 'logging' && args[1] === 'buffered') { return; } // the local buffer is always kept
+                if (cmd === 'errdisable' && args[1] === 'recovery') {
+                    dev.errRecovery = dev.errRecovery || { causes: {}, interval: 300 };
+                    if (args[2] === 'cause' && args[3]) {
+                        if (!['all', 'psecure-violation', 'bpduguard'].includes(args[3])) { print('% Invalid input detected. Supported causes: all, bpduguard, psecure-violation'); return; }
+                        dev.errRecovery.causes[args[3]] = true;
+                    } else if (args[2] === 'interval' && args[3]) {
+                        const n = parseInt(args[3], 10);
+                        if (isNaN(n) || n < 30 || n > 86400) { print('% Invalid input detected. The interval is 30 to 86400 seconds.'); return; }
+                        dev.errRecovery.interval = n;
+                    } else { print('% Incomplete command.'); return; }
+                    (dev.ports || []).forEach(p => { if (p.errDisabled) armErrRecovery(dev, p); });
+                    return;
+                }
+                if (cmd === 'no' && args[1] === 'errdisable' && args[2] === 'recovery') {
+                    if (dev.errRecovery) { if (args[3] === 'cause' && args[4]) delete dev.errRecovery.causes[args[4]]; else if (args[3] === 'interval') dev.errRecovery.interval = 300; }
+                    return;
+                }
                 if (cmd === 'service' && args[1] === 'password-encryption') { dev.servicePwEnc = true; return; }
                 if (cmd === 'no' && args[1] === 'service' && args[2] === 'password-encryption') { dev.servicePwEnc = false; return; }
                 if (cmd === 'ntp' && args[1] === 'master') { dev.ntpMaster = true; dev.ntpStratum = parseInt(args[2], 10) || 8; dev.ntpSynced = true; if (dev.clockEpoch == null) { dev.clockEpoch = Date.UTC(2024, 0, 1, 12, 0, 0); dev.clockBase = Date.now(); } dev.ntpRef = '127.127.1.1'; return; }
@@ -3217,12 +3291,14 @@
                     if (args[1] === 'mode' && args[2] === 'access') {
                         iface.mode = 'access';
                         flushMacTables();
+                        if (stpEnabled) calculateSTP(); else renderLinks();
                         if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
                         return;
                     }
                     if (args[1] === 'mode' && args[2] === 'trunk') {
                         iface.mode = 'trunk';
                         flushMacTables();
+                        if (stpEnabled) calculateSTP(); else renderLinks();
                         if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
                         return;
                     }
@@ -3245,11 +3321,13 @@
                             iface.vlan = vlanId;
                             ensureVtp(dev);
                             if (!dev.vlanDb[vlanId] && dev.vtp.mode !== 'client') {
+                                print(`% Access VLAN does not exist. Creating vlan ${vlanId}`);
                                 dev.vlanDb[vlanId] = `VLAN${String(vlanId).padStart(4, '0')}`;
                                 if (dev.vtp.mode === 'server' && dev.vtp.domain) dev.vtp.revision++;
                                 reconcileVtpDomain();
                             }
                             flushMacTables();
+                            if (stpEnabled) calculateSTP(); else renderLinks();
                             if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
                             return;
                         } else {
@@ -3258,7 +3336,7 @@
                         }
                     }
                     if (args[1] === 'port-security') {
-                        if (iface.mode && iface.mode.startsWith('dynamic')) { print(`Command rejected: FastEthernet0/${iface.id} is a dynamic port.`); return; }
+                        if (iface.mode && iface.mode.startsWith('dynamic')) { print(`Command rejected: ${swPortLongName(iface)} is a dynamic port.`); return; }
                         if (!args[2]) { iface.portSecurity = true; if (iface.psMax == null) iface.psMax = 1; if (!iface.psViolation) iface.psViolation = 'shutdown'; if (!iface.psSecureMacs) iface.psSecureMacs = []; iface.psStatus = iface.adminState === 'down' ? 'secure-shutdown' : 'secure-up'; return; }
                         if (args[2] === 'maximum' && args[3]) { const m = parseInt(args[3], 10); if (!isNaN(m) && m >= 1 && m <= 132) iface.psMax = m; else print('% Invalid maximum (1-132).'); return; }
                         if (args[2] === 'violation' && ['shutdown', 'restrict', 'protect'].includes(args[3])) { iface.psViolation = args[3]; return; }
@@ -3320,6 +3398,8 @@
                 }
                 if (cmd === 'ip' && args[1] === 'address' && (dev.type === 'Router' || (dev.type === 'Switch' && iface && (String(iface.id || '').startsWith('Vlan') || (dev.l3 && iface.routed))))) {
                     if (args[2] && args[3]) {
+                        const overlap = l3OverlapCheck(dev, iface, args[2], args[3]);
+                        if (overlap) { print(`% ${getNetwork(args[2], args[3])} overlaps with ${overlap}`); return; }
                         iface.ip = args[2];
                         iface.subnet = args[3];
                         if (l3capable(dev)) { dev.updateConnectedRoutes(); try { computeOspf(); } catch (e) {} try { computeEigrp(); } catch (e) {} try { computeBgp(); } catch (e) {} }
@@ -3365,30 +3445,29 @@
                     return;
                 }
                 if ((cmd === 'no' && (args[1] === 'shutdown' || args[1] === 'shut')) || cmd === 'no shut') {
+                    // IOS: an err-disabled port stays err-disabled until 'shutdown' then 'no shutdown'
+                    if (iface.errDisabled) return;
                     iface.adminState = 'up';
                     if (iface.portSecurity) iface.psStatus = 'secure-up';
-                    if (dev.type === 'Router') dev.updateConnectedRoutes();
+                    refreshL3State();
                     flushMacTables();
                     if (stpEnabled) calculateSTP(); else renderLinks();
                     log(`[${dev.name}] Interface state changed to UP via CLI`);
                     
                     let niceName = String(iface.id).startsWith('Vlan') ? iface.id : (dev.type === 'Switch' ? swPortLongName(iface) : dev.cli.currentInterface);
-                    print(`\n%LINK-3-UPDOWN: Interface ${niceName}, changed state to up`);
-                    deviceSyslog(dev, 3, `LINK-3-UPDOWN: Interface ${niceName}, changed state to up`);
                     if (dev.snmpTraps && dev.snmpHost) originateUdp(dev, dev.snmpHost, 162, { snmp: 'TRAP', trap: 'linkUp', ifName: niceName, from: dev.name }, 162);
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel(); // Sync GUI
                     return;
                 }
                 if (cmd === 'shutdown' || cmd === 'shut') {
                     iface.adminState = 'down';
-                    if (dev.type === 'Router') dev.updateConnectedRoutes();
+                    iface.errDisabled = null; // shutdown clears err-disable (the port is now administratively down)
+                    refreshL3State();
                     flushMacTables();
                     if (stpEnabled) calculateSTP(); else renderLinks();
                     log(`[${dev.name}] Interface state changed to DOWN via CLI`);
                     
                     let niceName = String(iface.id).startsWith('Vlan') ? iface.id : (dev.type === 'Switch' ? swPortLongName(iface) : dev.cli.currentInterface);
-                    print(`\n%LINK-5-CHANGED: Interface ${niceName}, changed state to administratively down`);
-                    deviceSyslog(dev, 5, `LINK-5-CHANGED: Interface ${niceName}, changed state to administratively down`);
                     if (dev.snmpTraps && dev.snmpHost) originateUdp(dev, dev.snmpHost, 162, { snmp: 'TRAP', trap: 'linkDown', ifName: niceName, from: dev.name }, 162);
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel(); // Sync GUI
                     return;
@@ -3503,6 +3582,8 @@
                 if (cmd === 'login') { dev.vty = dev.vty || {}; dev.vty.login = 'password'; return; }
                 if (cmd === 'transport' && args[1] === 'input' && args[2]) { dev.vty = dev.vty || {}; dev.vty.transport = args[2]; return; }
                 if (cmd === 'no' && args[1] === 'login') { dev.vty = dev.vty || {}; dev.vty.login = null; return; }
+                if (cmd === 'logging' && args[1] === 'synchronous') { return; } // the console already keeps messages off the input line
+                if (cmd === 'exec-timeout' || (cmd === 'no' && (args[1] === 'exec-timeout' || args[1] === 'logging'))) { return; }
                 print('% Invalid input detected.');
                 return;
             }
@@ -3522,6 +3603,7 @@
                 return;
             }
         };
+        const processCLICommand = (dev, input) => { try { return processCLICommandInner(dev, input); } finally { scheduleNetEvents(); } };
 
         // Terminal Ping execution logic
         async function runTerminalPing(dev, target) {
@@ -3795,6 +3877,267 @@
         }
         function ntpSync(dev, ip) { originateUdp(dev, ip, 123, { ntp: 'REQ' }, 123); }
 
+        // ================= Device console event feedback (IOS-style log messages) =================
+        // Events (links changing state, err-disable, adjacencies, HSRP roles, CDP mismatches) are
+        // printed to the affected device's own console, the way a real Cisco device reports them.
+        // A diff-based reconciler compares a snapshot of every interface, neighbour and HSRP group
+        // with the previous one, so messages appear on BOTH ends of a link whichever side changed.
+        function isIosDevice(d) { return !!d && (d.type === 'Switch' || d.type === 'Router') && !!d.cli && d.cli.mode !== 'cmd'; }
+        function iosIfLong(dev, id) {
+            if (id == null) return '';
+            if (dev && dev.ports && /^\d+$/.test(String(id))) { const p = dev.ports.find(x => x.id == id); if (p) return swPortLongName(p); }
+            const s = String(id); let m;
+            if ((m = s.match(/^(?:Gig|Gi)(\d.*)$/))) return 'GigabitEthernet' + m[1];
+            if ((m = s.match(/^Fa(\d.*)$/))) return 'FastEthernet' + m[1];
+            if ((m = s.match(/^Se(\d.*)$/))) return 'Serial' + m[1];
+            if ((m = s.match(/^Po(\d+)$/))) return 'Port-channel' + m[1];
+            return s;
+        }
+        function iosMac(mac) { const h = String(mac || '').replace(/[^0-9a-f]/gi, '').toLowerCase().padEnd(12, '0'); return `${h.slice(0, 4)}.${h.slice(4, 8)}.${h.slice(8, 12)}`; }
+        function iosUptimeStamp() {
+            const t = new Date(Date.UTC(1993, 2, 1) + Math.max(0, Date.now() - snmpBootTime));
+            const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][t.getUTCMonth()];
+            const p2 = (n) => String(n).padStart(2, '0');
+            return `${mon} ${String(t.getUTCDate()).padStart(2, ' ')} ${p2(t.getUTCHours())}:${p2(t.getUTCMinutes())}:${p2(t.getUTCSeconds())}.${String(t.getUTCMilliseconds()).padStart(3, '0')}`;
+        }
+        // Print one log message on a device console (subject to 'logging console'), keep it in the
+        // local buffer for 'show logging', and forward it to any configured syslog server.
+        function consoleLog(dev, sev, msg) {
+            if (!isIosDevice(dev)) return;
+            const line = `${dev.serviceTimestamps ? '*' + iosUptimeStamp() + ': ' : ''}%${msg}`;
+            dev.logBuf = dev.logBuf || []; dev.logBuf.push(line);
+            if (dev.logBuf.length > 100) dev.logBuf.splice(0, dev.logBuf.length - 100);
+            try { deviceSyslog(dev, sev, msg); } catch (e) {}
+            const conLevel = dev.loggingConsole === false ? -1 : (dev.loggingConsoleLevel != null ? dev.loggingConsoleLevel : 7);
+            if (sev <= conLevel) {
+                dev.cli.history.push(line);
+                if (dev.cli.history.length > 200) dev.cli.history = dev.cli.history.slice(-200);
+                try { renderCLI(dev.id); } catch (e) {}
+            }
+            // Faults an instructor would want to spot at a glance also go to the activity log
+            if (sev <= 2 || /ERR_DISABLE|DUPADDR|NATIVE_VLAN_MISMATCH|BLOCK_BPDUGUARD/.test(msg)) log(`[${dev.name}] %${msg}`, sev <= 3 ? 'error' : 'warning');
+        }
+
+        // --- Operational (line protocol) state of an interface ---
+        // The far end of a physical link is 'up' unless that port is administratively down or err-disabled.
+        function ifPeerUp(dev, phys) {
+            const l = phys && links[phys.connectedLink];
+            if (!l) return false;
+            if (l.isWireless) return true;
+            const pid = l.source === dev.id ? l.target : l.source;
+            const pp = l.source === dev.id ? l.targetPort : l.sourcePort;
+            const P = devices[pid];
+            if (!P) return false;
+            if (P.type === 'Router' && P.interfaces) { const i = P.interfaces[pp]; return !i || (i.adminState !== 'down' && !i.errDisabled); }
+            if (P.ports) { const p = P.ports.find(x => x.id == pp); return !p || (p.adminState !== 'down' && !p.errDisabled); }
+            return true; // PCs, servers and other end devices have no shutdown state
+        }
+        // 'admin' (shutdown), 'errdis' (err-disabled), 'down' (no carrier / peer down) or 'up'
+        function ifOperState(dev, obj) {
+            if (!obj) return 'down';
+            if (obj.errDisabled) return 'errdis';
+            if (obj.type === 'subinterface') {
+                if (obj.adminState === 'down') return 'admin';
+                return ifOperState(dev, dev.interfaces && dev.interfaces[obj.parent]) === 'up' ? 'up' : 'down';
+            }
+            if (obj.adminState === 'down') return 'admin';
+            return (obj.connectedLink && ifPeerUp(dev, obj)) ? 'up' : 'down';
+        }
+        function trunkCarriesVlan(p, v) {
+            const a = p.allowedVlans;
+            if (!a || /^all$/i.test(String(a).trim())) return true;
+            return String(a).replace(/^add\s+/i, '').split(',').some(r => { const m = r.trim().match(/^(\d+)(?:-(\d+))?$/); if (!m) return false; const lo = +m[1], hi = m[2] ? +m[2] : lo; return v >= lo && v <= hi; });
+        }
+        function sviOperState(dev, svi) {
+            if (svi.adminState === 'down') return 'admin';
+            const v = svi.vlan;
+            if (v !== 1 && !(dev.vlanDb && dev.vlanDb[v] !== undefined)) return 'down';
+            const up = (dev.ports || []).some(p => !p.routed && ifOperState(dev, p) === 'up' && (isTrunkPort(dev, p) ? trunkCarriesVlan(p, v) : (p.vlan || 1) === v));
+            return up ? 'up' : 'down';
+        }
+        function hsrpStateOf(dev, iface) {
+            const peers = hsrpPeers(iface.hsrp.virtualIp);
+            const idx = peers.findIndex(p => p.router.id === dev.id && p.iface === iface);
+            return idx === 0 ? 'Active' : idx === 1 ? 'Standby' : idx > 1 ? 'Listen' : 'Init';
+        }
+
+        // --- Err-disable (port security, BPDU guard) and automatic recovery ---
+        function errDisablePort(dev, p, reason) {
+            p.errDisabled = reason; p.adminState = 'down';
+            if (p.portSecurity) p.psStatus = 'secure-shutdown';
+            const s = swPortName(p);
+            consoleLog(dev, 4, `PM-4-ERR_DISABLE: ${reason} error detected on ${s}, putting ${s} in err-disable state`);
+            armErrRecovery(dev, p);
+            try { refreshL3State(); } catch (e) {}
+            scheduleNetEvents();
+        }
+        // BPDU guard: a guarded port that hears BPDUs (its neighbour is a switch running STP) err-disables.
+        function applyBpduGuard(switches) {
+            switches.forEach(s => (s.ports || []).forEach(p => {
+                if (!p.bpduguard || p.routed || !p.connectedLink || p.adminState === 'down' || p.errDisabled) return;
+                const l = links[p.connectedLink]; if (!l || l.isWireless) return;
+                const peer = devices[l.source === s.id ? l.target : l.source];
+                const pp = l.source === s.id ? l.targetPort : l.sourcePort;
+                if (!peer || peer.type !== 'Switch') return;
+                const pport = (peer.ports || []).find(x => x.id == pp);
+                if (!pport || pport.routed || pport.adminState === 'down' || pport.errDisabled) return;
+                consoleLog(s, 2, `SPANTREE-2-BLOCK_BPDUGUARD: Received BPDU on port ${swPortLongName(p)} with BPDU Guard enabled. Disabling port.`);
+                errDisablePort(s, p, 'bpduguard');
+            }));
+        }
+        // Recompute connected routes and routing protocols after an interface state change
+        function refreshL3State() {
+            Object.values(devices).forEach(d => { if (l3capable(d) && typeof d.updateConnectedRoutes === 'function') { try { d.updateConnectedRoutes(); } catch (e) {} } });
+            try { computeOspf(); } catch (e) {} try { computeEigrp(); } catch (e) {} try { computeBgp(); } catch (e) {}
+        }
+
+        // --- The reconciler ---
+        const netEvtState = new Map();   // key -> last observed record (module level, never serialised)
+        let netEvtSeeded = false, netEvtTimer = null;
+        function scheduleNetEvents() {
+            if (netEvtTimer) return;
+            netEvtTimer = setTimeout(() => { netEvtTimer = null; try { netEventsReconcile(); } catch (e) { console.error('netEvents', e); } }, 0);
+        }
+        const dupAddrSeen = new Map(); // throttle %IP-4-DUPADDR to once a minute per interface/MAC
+        function armErrRecovery(dev, p) {
+            const r = dev.errRecovery, reason = p.errDisabled;
+            if (!reason || !r || !r.causes || !(r.causes[reason] || r.causes.all)) return;
+            const token = (p._errTok = (p._errTok || 0) + 1), s = swPortName(p);
+            setTimeout(() => {
+                if (devices[dev.id] !== dev || p.errDisabled !== reason || p._errTok !== token) return;
+                consoleLog(dev, 4, `PM-4-ERR_RECOVER: Attempting to recover from ${reason} err-disable state on ${s}`);
+                p.errDisabled = null; p.adminState = 'up';
+                if (p.portSecurity) p.psStatus = 'secure-up';
+                flushMacTables(); refreshL3State();
+                if (stpEnabled) calculateSTP(); else renderLinks();
+                scheduleNetEvents();
+                if (propertiesDeviceId === dev.id) updatePropertiesPanel();
+            }, (r.interval || 300) * 1000);
+        }
+        function maskBits(m) { return String(m || '').split('.').reduce((a, o) => a + ((parseInt(o, 10) >>> 0).toString(2).split('1').length - 1), 0); }
+        // IOS refuses an interface address whose subnet overlaps another interface on the same device
+        function l3OverlapCheck(dev, self, ip, mask) {
+            const toI = (x) => String(x).split('.').reduce((a, o) => ((a << 8) >>> 0) + (parseInt(o, 10) || 0), 0) >>> 0;
+            const cand = dev.type === 'Router' ? Object.values(dev.interfaces || {}) : [...Object.values(dev.svis || {}), ...(dev.ports || []).filter(p => p.routed)];
+            for (const o of cand) {
+                if (o === self || !o.ip || o.ip === '0.0.0.0' || !o.subnet || o.subnet === '0.0.0.0') continue;
+                const m = Math.min(maskBits(mask), maskBits(o.subnet));
+                const mk = m === 0 ? 0 : ((0xFFFFFFFF << (32 - m)) >>> 0);
+                if (((toI(ip) & mk) >>> 0) === ((toI(o.ip) & mk) >>> 0)) {
+                    if (dev.type === 'Router') return iosIfLong(dev, o.id);
+                    return String(o.id || '').startsWith('Vlan') ? o.id : swPortLongName(o);
+                }
+            }
+            return null;
+        }
+        function netEventsReseed() { netEvtState.clear(); netEvtSeeded = false; scheduleNetEvents(); }
+        function netEventsCollect() {
+            const cur = new Map();
+            Object.values(devices).forEach(dev => {
+                if (!isIosDevice(dev)) return;
+                if (dev.type === 'Switch') {
+                    (dev.ports || []).forEach(p => cur.set(`if|${dev.id}|p${p.id}`, { kind: 'phys', dev, v: ifOperState(dev, p), name: swPortLongName(p) }));
+                    if (dev.svis) Object.values(dev.svis).forEach(s => cur.set(`if|${dev.id}|Vlan${s.vlan}`, { kind: 'svi', dev, v: sviOperState(dev, s), name: `Vlan${s.vlan}` }));
+                    const groups = {};
+                    (dev.ports || []).forEach(p => { if (p.channelGroup) (groups[p.channelGroup] = groups[p.channelGroup] || []).push(p); });
+                    Object.keys(groups).forEach(g => cur.set(`if|${dev.id}|Po${g}`, { kind: 'virt', dev, v: groups[g].some(p => ifOperState(dev, p) === 'up') ? 'up' : 'down', name: `Port-channel${g}` }));
+                }
+                if (dev.type === 'Router' && dev.interfaces) Object.values(dev.interfaces).forEach(i => cur.set(`if|${dev.id}|${i.id}`, { kind: i.type === 'subinterface' ? 'virt' : 'phys', dev, v: ifOperState(dev, i), name: iosIfLong(dev, i.id) }));
+                const hs = [];
+                if (dev.type === 'Router' && dev.interfaces) Object.values(dev.interfaces).forEach(i => { if (i.hsrp && i.hsrp.virtualIp) hs.push([i, iosIfLong(dev, i.id)]); });
+                if (dev.l3 && dev.svis) Object.values(dev.svis).forEach(s => { if (s.hsrp && s.hsrp.virtualIp) hs.push([s, `Vlan${s.vlan}`]); });
+                hs.forEach(([i, nm]) => cur.set(`hsrp|${dev.id}|${nm}|${i.hsrp.group}`, { kind: 'hsrp', dev, v: hsrpStateOf(dev, i), name: nm, group: i.hsrp.group }));
+                (dev.ospfNeighbors || []).forEach(n => cur.set(`ospf|${dev.id}|${n.routerId}|${n.iface}`, { kind: 'ospf', dev, v: 'FULL', rid: n.routerId, name: iosIfLong(dev, n.iface), pid: dev.ospf ? dev.ospf.processId : 1 }));
+                (dev.eigrpNeighbors || []).forEach(n => cur.set(`eigrp|${dev.id}|${n.ip}|${n.iface}`, { kind: 'eigrp', dev, v: 'up', ip: n.ip, name: iosIfLong(dev, n.iface), asn: dev.eigrp ? dev.eigrp.asn : 1 }));
+                (dev.bgpPeers || []).forEach(p => cur.set(`bgp|${dev.id}|${p.ip}`, { kind: 'bgp', dev, v: p.state, ip: p.ip }));
+            });
+            // CDP native VLAN mismatch on a switch-to-switch link (CDP advertises the native VLAN of a
+            // trunk, or the access VLAN of an access port)
+            Object.values(links).forEach(l => {
+                if (l.isWireless) return;
+                const A = devices[l.source], B = devices[l.target];
+                if (!A || !B || A.type !== 'Switch' || B.type !== 'Switch' || A.cdpEnabled === false || B.cdpEnabled === false) return;
+                const pa = (A.ports || []).find(x => x.id == l.sourcePort), pb = (B.ports || []).find(x => x.id == l.targetPort);
+                if (!pa || !pb || pa.routed || pb.routed || ifOperState(A, pa) !== 'up' || ifOperState(B, pb) !== 'up') return;
+                const nv = (d, p) => isTrunkPort(d, p) ? (p.nativeVlan || 1) : (p.vlan || 1);
+                const na = nv(A, pa), nb = nv(B, pb);
+                if (na !== nb) cur.set(`cdpnv|${l.id}`, { kind: 'cdpnv', v: `${na}/${nb}`, A, B, pa, pb, na, nb });
+            });
+            return cur;
+        }
+        function emitIfTransition(c, prev) {
+            const dev = c.dev, name = c.name;
+            const P = (x) => (x === 'errdis' ? 'down' : x);
+            const was = P(prev), now = P(c.v);
+            if (was === now) return;
+            const lp = (st) => consoleLog(dev, 5, `LINEPROTO-5-UPDOWN: Line protocol on Interface ${name}, changed state to ${st}`);
+            if (now === 'admin') {
+                consoleLog(dev, 5, `LINK-5-CHANGED: Interface ${name}, changed state to administratively down`);
+                if (was === 'up') lp('down');
+                return;
+            }
+            if (c.kind === 'svi') {
+                if (was === 'admin') consoleLog(dev, 5, `LINK-5-CHANGED: Interface ${name}, changed state to up`);
+                if (now === 'up') lp('up'); else if (was === 'up') lp('down');
+                return;
+            }
+            if (now === 'up') { consoleLog(dev, 3, `LINK-3-UPDOWN: Interface ${name}, changed state to up`); lp('up'); return; }
+            if (was === 'up') lp('down');
+            consoleLog(dev, 3, `LINK-3-UPDOWN: Interface ${name}, changed state to down`);
+        }
+        function netEventsReconcile() {
+            const cur = netEventsCollect();
+            const seeding = !netEvtSeeded; netEvtSeeded = true;
+            cur.forEach((c, key) => {
+                const had = netEvtState.has(key);
+                const prevRec = netEvtState.get(key);
+                netEvtState.set(key, c);
+                if (c.kind === 'cdpnv') {
+                    // A mismatch is a standing fault, so it is reported even when a lab is first opened
+                    if (!had || prevRec.v !== c.v) {
+                        consoleLog(c.A, 4, `CDP-4-NATIVE_VLAN_MISMATCH: Native VLAN mismatch discovered on ${swPortLongName(c.pa)} (${c.na}), with ${c.B.name} ${swPortLongName(c.pb)} (${c.nb}).`);
+                        consoleLog(c.B, 4, `CDP-4-NATIVE_VLAN_MISMATCH: Native VLAN mismatch discovered on ${swPortLongName(c.pb)} (${c.nb}), with ${c.A.name} ${swPortLongName(c.pa)} (${c.na}).`);
+                    }
+                    return;
+                }
+                if (seeding) return;
+                const prev = had ? prevRec.v : null;
+                if (had && prev === c.v) return;
+                const dev = c.dev;
+                switch (c.kind) {
+                    case 'phys':
+                        if (had) emitIfTransition(c, prev);
+                        break;
+                    case 'virt': case 'svi':
+                        // A newly created virtual interface (subinterface, SVI, Port-channel) announces itself
+                        emitIfTransition(c, had ? prev : (c.kind === 'svi' ? 'admin' : 'down'));
+                        break;
+                    case 'hsrp':
+                        if (!had && c.v === 'Init') break;
+                        consoleLog(dev, 6, `HSRP-6-STATECHANGE: ${c.name} Grp ${c.group} state ${had ? prev : 'Speak'} -> ${c.v}`);
+                        break;
+                    case 'ospf':
+                        consoleLog(dev, 5, `OSPF-5-ADJCHG: Process ${c.pid}, Nbr ${c.rid} on ${c.name} from LOADING to FULL, Loading Done`);
+                        break;
+                    case 'eigrp':
+                        consoleLog(dev, 5, `DUAL-5-NBRCHANGE: EIGRP-IPv4 ${c.asn}: Neighbor ${c.ip} (${c.name}) is up: new adjacency`);
+                        break;
+                    case 'bgp':
+                        if (c.v === 'Established') consoleLog(dev, 5, `BGP-5-ADJCHANGE: neighbor ${c.ip} Up`);
+                        else if (prev === 'Established') consoleLog(dev, 5, `BGP-5-ADJCHANGE: neighbor ${c.ip} Down Interface flap`);
+                        break;
+                }
+            });
+            Array.from(netEvtState.keys()).forEach(key => {
+                if (cur.has(key)) return;
+                const r = netEvtState.get(key); netEvtState.delete(key);
+                if (seeding || !r || !r.dev || devices[r.dev.id] !== r.dev) return;
+                if (r.kind === 'ospf') consoleLog(r.dev, 5, `OSPF-5-ADJCHG: Process ${r.pid}, Nbr ${r.rid} on ${r.name} from FULL to DOWN, Neighbor Down: Interface down or detached`);
+                else if (r.kind === 'eigrp') consoleLog(r.dev, 5, `DUAL-5-NBRCHANGE: EIGRP-IPv4 ${r.asn}: Neighbor ${r.ip} (${r.name}) is down: interface down`);
+                else if (r.kind === 'bgp' && r.v === 'Established') consoleLog(r.dev, 5, `BGP-5-ADJCHANGE: neighbor ${r.ip} Down Interface flap`);
+            });
+        }
+
         // --- SNMP (UDP 161 polling, UDP 162 traps) ---
         let snmpBootTime = Date.now();
         function snmpValue(dev, oid) {
@@ -3828,6 +4171,13 @@
             if (dev.enablePassword) L.push(`enable secret ${dev.enablePassword}`, '!');
             if (dev.users) Object.keys(dev.users).forEach(u => L.push(`username ${u}${(dev.userPriv && dev.userPriv[u]) ? ' privilege ' + dev.userPriv[u] : ''} password ${pwDisplay(dev, dev.users[u])}`));
             if (dev.domainName) L.push(`ip domain-name ${dev.domainName}`);
+            if (dev.domainLookup === false) L.push('no ip domain-lookup');
+            if (dev.loggingConsole === false) L.push('no logging console');
+            else if (dev.loggingConsoleLevel != null && dev.loggingConsoleLevel !== 7) L.push(`logging console ${['emergencies','alerts','critical','errors','warnings','notifications','informational','debugging'][dev.loggingConsoleLevel]}`);
+            if (dev.errRecovery) {
+                Object.keys(dev.errRecovery.causes || {}).forEach(c => L.push(`errdisable recovery cause ${c}`));
+                if (dev.errRecovery.interval && dev.errRecovery.interval !== 300) L.push(`errdisable recovery interval ${dev.errRecovery.interval}`);
+            }
             const aclAddr = (a, w) => (a === 'any' || a == null) ? 'any' : ((w === '0.0.0.0' || w == null) ? `host ${a}` : `${a} ${w}`);
             const aclLine = (r, t) => t === 'standard'
                 ? `${r.action} ${aclAddr(r.src, r.srcWild)}`
@@ -3886,6 +4236,7 @@
                     if (p.portSecurity) { L.push(' switchport port-security'); if (p.psMax) L.push(` switchport port-security maximum ${p.psMax}`); if (p.psViolation) L.push(` switchport port-security violation ${p.psViolation}`); }
                     if (p.portfast) L.push(' spanning-tree portfast');
                     if (p.bpduguard) L.push(' spanning-tree bpduguard enable');
+                    if (p.adminState === 'down' && !p.errDisabled) L.push(' shutdown');
                 });
                 if (dev.vpc && dev.vpc.domain != null) { L.push('!', `vpc domain ${dev.vpc.domain}`); if (dev.vpc.keepalive) L.push(` peer-keepalive destination ${dev.vpc.keepalive}`); if (dev.vpc.rolePriority != null) L.push(` role priority ${dev.vpc.rolePriority}`); }
                 if (dev.portChannels) Object.keys(dev.portChannels).forEach(n => { const po = dev.portChannels[n]; if (po.role || po.vpcId != null) { L.push('!', `interface Port-channel${n}`); if (po.role === 'peer-link') L.push(' vpc peer-link'); if (po.vpcId != null) L.push(` vpc ${po.vpcId}`); } });
@@ -4567,13 +4918,13 @@
                             inPort.psLastMac = src;
                             const action = inPort.psViolation || 'shutdown';
                             if (action === 'shutdown') {
-                                inPort.adminState = 'down';
-                                inPort.psStatus = 'secure-shutdown';
-                                log(`%PORT_SECURITY-2-PSECURE_VIOLATION: Fa0/${inPort.id} on ${this.name} err-disabled, offending MAC ${src}`, 'error');
+                                errDisablePort(this, inPort, 'psecure-violation');
+                                consoleLog(this, 2, `PORT_SECURITY-2-PSECURE_VIOLATION: Security violation occurred, caused by MAC address ${iosMac(src)} on port ${swPortLongName(inPort)}.`);
+                                flushMacTables();
                                 if (stpEnabled) calculateSTP(); else renderLinks();
                                 if (propertiesDeviceId === this.id) updatePropertiesPanel();
                             } else if (action === 'restrict') {
-                                log(`%PORT_SECURITY-2-PSECURE_VIOLATION: Fa0/${inPort.id} on ${this.name} restricted, offending MAC ${src}`, 'warning');
+                                if (inPort._psLoggedMac !== src) { inPort._psLoggedMac = src; consoleLog(this, 2, `PORT_SECURITY-2-PSECURE_VIOLATION: Security violation occurred, caused by MAC address ${iosMac(src)} on port ${swPortLongName(inPort)}.`); }
                             }
                             return; // drop the offending frame (all three actions drop the traffic)
                         }
@@ -4974,7 +5325,7 @@
                 this.routingTable = this.routingTable.filter(r => r.type === 'R' || r.type === 'O' || r.type === 'D' || r.type === 'B'); // keep dynamic
                 Object.values(this.interfaces).forEach(iface => {
                     const physIface = iface.type === 'subinterface' ? this.interfaces[iface.parent] : iface;
-                    if (iface.ip !== '0.0.0.0' && iface.adminState === 'up' && physIface && physIface.connectedLink) {
+                    if (iface.ip !== '0.0.0.0' && iface.adminState === 'up' && physIface && physIface.connectedLink && physIface.adminState !== 'down' && ifPeerUp(this, physIface)) {
                         this.routingTable.push({
                             network: getNetwork(iface.ip, iface.subnet),
                             mask: iface.subnet, nextHop: '0.0.0.0', interface: iface.id, metric: 0, type: 'C', ad: 0
@@ -5018,6 +5369,12 @@
                 const hsrpActive = hsrpVMac ? isHsrpActive(this, inIface) : false;
                 const isForMe = frame.destMac === macToMatch || frame.destMac === 'FF:FF:FF:FF:FF:FF' || frame.destMac === '01:00:5E:00:00:09' || (hsrpActive && frame.destMac === hsrpVMac);
                 if (!isForMe) return;
+
+                // Another host claiming this interface's address
+                if (payload && (payload.type === 'ARP_REQ' || payload.type === 'ARP_REP') && inIface.ip && inIface.ip !== '0.0.0.0' && payload.sourceIp === inIface.ip && frame.sourceMac !== macToMatch && frame.sourceMac !== hsrpVMac) {
+                    const k = `${this.id}|${inIface.id}|${frame.sourceMac}`;
+                    if (!dupAddrSeen.has(k) || Date.now() - dupAddrSeen.get(k) > 60000) { dupAddrSeen.set(k, Date.now()); consoleLog(this, 4, `IP-4-DUPADDR: Duplicate address ${inIface.ip} on ${iosIfLong(this, inIface.id)}, sourced by ${iosMac(frame.sourceMac)}`); }
+                }
 
                 // NAT: return traffic arriving on an outside interface -> translate destination and route inside
                 if (inIface.natOutside && payload && payload.targetIp && natTranslateInbound(this, payload)) {
@@ -5128,7 +5485,7 @@
                     return;
                 }
 
-                if (payload.type === 'ICMP_REQ' && Object.values(this.interfaces).some(i => i.ip === payload.targetIp)) {
+                if (payload.type === 'ICMP_REQ' && Object.values(this.interfaces).some(i => i.ip === payload.targetIp || (i.hsrp && i.hsrp.virtualIp === payload.targetIp && isHsrpActive(this, i)))) {
                     await sleep(35);
                     const macToMatch = inIface.mac || this.interfaces[inIface.parent]?.mac || inIface.mac;
                     transmit({
@@ -5968,7 +6325,7 @@
             const out = [];
             Object.values(r.interfaces).forEach(i => {
                 const phys = i.parent ? r.interfaces[i.parent] : i;
-                if (!i.ip || i.ip === '0.0.0.0' || i.adminState === 'down' || !phys || !phys.connectedLink) return;
+                if (!i.ip || i.ip === '0.0.0.0' || i.adminState === 'down' || !phys || !phys.connectedLink || phys.adminState === 'down' || phys.errDisabled || !ifPeerUp(r, phys)) return;
                 const ns = (r.ospf.networks || []).find(n => ospfWildMatch(i.ip, n.network, n.wildcard));
                 if (ns) out.push({ iface: i, area: ns.area, cost: ospfCost(i) });
             });
@@ -6066,7 +6423,7 @@
             const out = [];
             Object.values(r.interfaces).forEach(i => {
                 const phys = i.parent ? r.interfaces[i.parent] : i;
-                if (!i.ip || i.ip === '0.0.0.0' || i.adminState === 'down' || !phys || !phys.connectedLink) return;
+                if (!i.ip || i.ip === '0.0.0.0' || i.adminState === 'down' || !phys || !phys.connectedLink || phys.adminState === 'down' || phys.errDisabled || !ifPeerUp(r, phys)) return;
                 if ((r.eigrp.networks || []).some(n => eigrpNetMatch(i.ip, n))) out.push(Object.assign({ iface: i }, eigrpIfaceParams(i)));
             });
             return out;
@@ -6342,6 +6699,7 @@
             if (switches.length === 0) { renderLinks(); return; }
             log("Running Spanning Tree Protocol...", "warning");
             switches.forEach(ensureStp);
+            applyBpduGuard(switches);
 
             // Active VLANs: VLAN 1 plus every access VLAN in use
             const vlanSet = new Set([1]);
@@ -6365,6 +6723,7 @@
                 });
             });
             log("STP Converged. Topology loops blocked.", "success");
+            scheduleNetEvents();
             flushMacTables();
             renderLinks();
             if (propertiesDeviceId) updatePropertiesPanel();
@@ -6832,7 +7191,7 @@
         function setPendingSource(id, portId) {
             pendingCableSource = id;
             pendingCableSourcePort = portId;
-            const portName = devices[id].type === 'Switch' ? `Fa0/${portId}` : (devices[id].type === 'Router' ? portId : 'Port');
+            const portName = linkPortName(devices[id], portId);
             log(`Cable started at ${devices[id].name} (${portName}). Select destination.`);
             renderNodes();
             renderLinks();
@@ -6882,11 +7241,13 @@
             }
             // A newly connected switch may bring a higher VTP revision into the domain
             if (devA.type === 'Switch' || devB.type === 'Switch') { try { reconcileVtpDomain(); } catch (e) {} }
+            scheduleNetEvents();
         }
 
         window.deleteLink = (linkId, skipUpdate = false) => {
             const l = links[linkId];
             if (!l) return;
+            setTimeout(() => { try { refreshL3State(); } catch (e) {} scheduleNetEvents(); }, 0);
             if (selectedLinkId === linkId) selectedLinkId = null;
             const devA = devices[l.source];
             const devB = devices[l.target];
@@ -6969,6 +7330,7 @@
                 if (d.macTable) d.macTable = {};
                 if (d.arpCache) d.arpCache = {};
                 if (d.cli && Array.isArray(d.cli.history)) d.cli.history = [];
+                delete d.logBuf;
                 // Strip transient spanning-tree state. It is always recomputed on load, and a
                 // stale per-VLAN blocking state saved here would otherwise break connectivity
                 // (a blocked access port) when the lab file is reopened.
@@ -8527,13 +8889,13 @@
                     const tB = 1 - Math.min(0.4, 65 / len);
                     if (devA.type === 'Switch' || devA.type === 'Router' || devA.type === 'AP') {
                         const pA = (devA.type === 'Switch' || devA.type === 'AP') ? devA.ports.find(p => p.id === link.sourcePort) : devA.interfaces[link.sourcePort];
-                        const labelText = (devA.type === 'Switch' || devA.type === 'AP') ? `Fa0/${link.sourcePort}` : link.sourcePort;
+                        const labelText = (devA.type === 'Switch' || devA.type === 'AP') ? linkPortName(devA, link.sourcePort) : link.sourcePort;
                         const pt = getPoint(tA);
                         drawPortLabel(pt.x, pt.y, labelText, devA.id, link.sourcePort, pA ? pA.adminState : 'up', g);
                     }
                     if (devB.type === 'Switch' || devB.type === 'Router' || devB.type === 'AP') {
                         const pB = (devB.type === 'Switch' || devB.type === 'AP') ? devB.ports.find(p => p.id === link.targetPort) : devB.interfaces[link.targetPort];
-                        const labelText = (devB.type === 'Switch' || devB.type === 'AP') ? `Fa0/${link.targetPort}` : link.targetPort;
+                        const labelText = (devB.type === 'Switch' || devB.type === 'AP') ? linkPortName(devB, link.targetPort) : link.targetPort;
                         const pt = getPoint(tB);
                         drawPortLabel(pt.x, pt.y, labelText, devB.id, link.targetPort, pB ? pB.adminState : 'up', g);
                     }
@@ -8608,6 +8970,7 @@
         }
 
         function renderLinks() {
+            try { scheduleNetEvents(); } catch (e) {} // GUI-driven changes also produce console feedback
             CABLES_CONTAINER.innerHTML = '';
             const linkGroups = buildLinkGroups();
             for (let pairId in linkGroups) {
@@ -8702,9 +9065,11 @@
             
             if (!p) return;
 
-            p.adminState = p.adminState === 'up' ? 'down' : 'up';
+            if (p.errDisabled) { p.errDisabled = null; p.adminState = 'up'; if (p.portSecurity) p.psStatus = 'secure-up'; }
+            else p.adminState = p.adminState === 'up' ? 'down' : 'up';
             
-            if (dev.type === 'Router') { dev.updateConnectedRoutes(); dev.ripBroadcastCount = 0; }
+            if (dev.type === 'Router') { dev.ripBroadcastCount = 0; }
+            refreshL3State(); scheduleNetEvents();
             log(`[${dev.name}] Interface ${dev.type==='Switch'?swPortName(p):(dev.type==='AP'?'Fa0/'+portId:portId)} changed state to ${p.adminState}`);
 
             flushMacTables();
@@ -9006,7 +9371,7 @@
                                     ${Object.entries(dev.macTable).map(([key, data]) => {
                                         const age = Math.floor((Date.now() - data.time)/1000);
                                         const macStr = data.mac ? data.mac : key;
-                                        return `<tr><td class="px-2 py-1 border-t text-slate-500 dark:text-slate-400">${data.vlan || 1}</td><td class="px-2 py-1 border-t font-bold">${macStr}</td><td class="px-2 py-1 border-t">Fa0/${data.portId}</td><td class="px-2 py-1 border-t">${age}s</td></tr>`;
+                                        return `<tr><td class="px-2 py-1 border-t text-slate-500 dark:text-slate-400">${data.vlan || 1}</td><td class="px-2 py-1 border-t font-bold">${macStr}</td><td class="px-2 py-1 border-t">${swPortNameById(dev, data.portId)}</td><td class="px-2 py-1 border-t">${age}s</td></tr>`;
                                     }).join('') || '<tr><td colspan="4" class="px-2 py-2 text-center text-slate-400">Table empty</td></tr>'}
                                 </tbody>
                             </table>
@@ -9524,7 +9889,7 @@
             const dev = devices[id]; if (!dev || dev.type !== 'Router') return;
             const iface = dev.interfaces[ifaceId]; if (!iface) return;
             iface.adminState = iface.adminState === 'up' ? 'down' : 'up';
-            if (typeof dev.updateConnectedRoutes === 'function') dev.updateConnectedRoutes();
+            refreshL3State(); scheduleNetEvents(); try { renderLinks(); } catch (e) {}
             log(`[${dev.name}] Interface ${iface.id} is now ${iface.adminState === 'up' ? 'up (no shutdown)' : 'administratively down'}.`, iface.adminState === 'up' ? 'success' : 'info');
             scheduleAutosave();
             if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
@@ -9580,7 +9945,7 @@
 
                 Object.values(router.interfaces).forEach(iface => {
                     const physIface = iface.type === 'subinterface' ? router.interfaces[iface.parent] : iface;
-                    if (iface.ip !== '0.0.0.0' && iface.adminState === 'up' && physIface && physIface.connectedLink) {
+                    if (iface.ip !== '0.0.0.0' && iface.adminState === 'up' && physIface && physIface.connectedLink && physIface.adminState !== 'down' && ifPeerUp(router, physIface)) {
                         // Split horizon: do not send routes back out the interface they were learned on
                         // For simplicity in this sim, we just broadcast the full table
                         transmit({
