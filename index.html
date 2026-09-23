@@ -182,6 +182,60 @@
         </div>
 
         <div class="flex-1"></div>
+        <!-- Tools Category (formerly the top toolbar) -->
+        <div class="relative group w-full flex justify-center pal-cat" id="tools-cat">
+            <div ontouchend="palTapCat(event, this)" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer" title="Tools">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                <span class="text-[10px] font-bold uppercase tracking-wide">Tools</span>
+            </div>
+
+            <!-- Flyout Panel (Tools) -->
+            <div class="hidden group-hover:flex absolute left-full top-1/2 -translate-y-1/2 pl-1 z-50 pal-flyout">
+                <div id="tools-menu" onclick="this.closest('.pal-cat').classList.remove('pal-open')" class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-2xl flex flex-row items-stretch space-x-1">
+                    <button onclick="toggleSniffer()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Packet Sniffer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h10l2-9 4 18 2-9h4"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Packet Sniffer</span>
+                    </button>
+                    <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
+                    <button onclick="setMode('addText')" id="btn-addText" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Add Text Annotation">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Add Text</span>
+                    </button>
+                    <button onclick="toggleDrawPanel()" id="btn-draw-toggle" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Draw Shapes">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Draw</span>
+                    </button>
+                    <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
+                    <button onclick="saveTopology()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Save Topology">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Save</span>
+                    </button>
+                    <button onclick="loadTopology()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Load Topology">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Load</span>
+                    </button>
+                    <input type="file" id="file-upload" class="hidden" accept=".json" onchange="loadTopology(event)">
+                    <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
+                    <button onclick="undoAction()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Undo (Ctrl+Z)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Undo</span>
+                    </button>
+                    <button onclick="redoAction()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Redo (Ctrl+Y)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Redo</span>
+                    </button>
+                    <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
+                    <button onclick="toggleSnap()" id="snap-toggle-btn" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Snap to Grid: Off">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Snap Grid</span>
+                    </button>
+                    <button onclick="toggleLegend()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Protocol Colour Legend">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                        <span class="text-[9px] leading-tight text-center">Legend</span>
+                    </button>
+                </div>
+            </div>
+        </div>
         <button onclick="toggleTheme()" id="theme-toggle-btn" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" title="Toggle Dark Mode">
             <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1 hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -209,54 +263,9 @@
              regardless of viewport zoom. Populated and repositioned by showDeviceTooltip(). -->
         <div id="device-tooltip" class="hidden absolute pointer-events-none z-40 bg-slate-900/95 dark:bg-slate-800/95 text-slate-100 text-[11px] rounded-md shadow-xl border border-slate-700 px-3 py-2 whitespace-nowrap backdrop-blur-sm" style="max-width: 260px;"></div>
 
-        <!-- Bottom Left Toolbar (Text, Save, Load) -->
-        <div id="bottom-toolbar" class="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-stretch space-x-1 bg-slate-900 p-2 rounded-xl shadow-2xl border border-slate-700">
-            <div id="toolbar-grip" class="flex items-center text-slate-500 hover:text-slate-300 pr-1" style="cursor:move" title="Drag to move"><svg width="8" height="18" viewBox="0 0 8 18" fill="currentColor"><circle cx="2" cy="3" r="1"/><circle cx="6" cy="3" r="1"/><circle cx="2" cy="9" r="1"/><circle cx="6" cy="9" r="1"/><circle cx="2" cy="15" r="1"/><circle cx="6" cy="15" r="1"/></svg></div>
-            <button onclick="toggleSniffer()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Packet Sniffer">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h10l2-9 4 18 2-9h4"/></svg>
-                <span class="text-[9px] leading-tight text-center">Packet Sniffer</span>
-            </button>
-            <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
-            <button onclick="setMode('addText')" id="btn-addText" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Add Text Annotation">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
-                <span class="text-[9px] leading-tight text-center">Add Text</span>
-            </button>
-            <button onclick="toggleDrawPanel()" id="btn-draw-toggle" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Draw Shapes">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
-                <span class="text-[9px] leading-tight text-center">Draw</span>
-            </button>
-            <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
-            <button onclick="saveTopology()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Save Topology">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                <span class="text-[9px] leading-tight text-center">Save</span>
-            </button>
-            <button onclick="loadTopology()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Load Topology">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                <span class="text-[9px] leading-tight text-center">Load</span>
-            </button>
-            <input type="file" id="file-upload" class="hidden" accept=".json" onchange="loadTopology(event)">
-            <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
-            <button onclick="undoAction()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Undo (Ctrl+Z)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
-                <span class="text-[9px] leading-tight text-center">Undo</span>
-            </button>
-            <button onclick="redoAction()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Redo (Ctrl+Y)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg>
-                <span class="text-[9px] leading-tight text-center">Redo</span>
-            </button>
-            <div class="w-px self-stretch bg-slate-700 mx-0.5"></div>
-            <button onclick="toggleSnap()" id="snap-toggle-btn" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Snap to Grid: Off">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
-                <span class="text-[9px] leading-tight text-center">Snap Grid</span>
-            </button>
-            <button onclick="toggleLegend()" class="p-2 w-16 flex flex-col items-center gap-1 text-slate-400 rounded-lg hover:bg-slate-700 hover:text-white transition-colors" title="Protocol Colour Legend">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
-                <span class="text-[9px] leading-tight text-center">Legend</span>
-            </button>
-        </div>
 
         <!-- Draw Tools Panel -->
-        <div id="draw-panel" class="hidden absolute top-24 left-1/2 -translate-x-1/2 z-30 bg-slate-900 p-2 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 text-slate-200 select-none">
+        <div id="draw-panel" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-slate-900 p-2 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 text-slate-200 select-none">
             <div class="flex items-center gap-1">
                 <button onclick="setDrawTool('select')" id="btn-draw-select" title="Select / Move (Esc)" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/></svg></button>
                 <button onclick="setDrawTool('rect')" id="btn-draw-rect" title="Rectangle" class="draw-tool p-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/></svg></button>
@@ -290,22 +299,9 @@
             <span id="pb-status" class="text-[11px] text-slate-300 font-mono truncate" style="min-width:230px;max-width:430px;">Live — send a packet to begin</span>
         </div>
 
-        <!-- Floating Ping Tool (Top Right) -->
-        <div id="floating-ping" class="absolute top-4 right-4 w-72 bg-white dark:bg-slate-800 rounded-lg shadow-2xl z-30 flex flex-col border border-slate-200 dark:border-slate-700 p-3">
-            <div id="ping-header" class="flex justify-between items-center mb-2" style="cursor:move">
-                <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ping Tool</h3>
-            </div>
-            <div class="flex space-x-2">
-                <select id="ping-source" class="w-1/3 px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
-                    <option value="">Source</option>
-                </select>
-                <input type="text" id="ping-target" placeholder="Dest IP or Domain" class="w-2/3 px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
-            </div>
-            <button onclick="executePing()" class="w-full mt-2 py-1.5 bg-slate-800 text-white rounded text-xs font-semibold hover:bg-slate-700 transition">Send Ping</button>
-        </div>
         
         <!-- Floating Properties Panel -->
-        <div id="floating-properties" class="hidden absolute top-28 right-4 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-2xl z-30 flex flex-col border border-slate-200 dark:border-slate-700 max-h-[calc(100vh-8rem)]">
+        <div id="floating-properties" class="hidden absolute top-4 right-4 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-2xl z-30 flex flex-col border border-slate-200 dark:border-slate-700 max-h-[calc(100vh-8rem)]">
             <div id="prop-header" class="px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center rounded-t-lg cursor-move select-none">
                 <h2 id="prop-title" class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider pointer-events-none">Properties</h2>
                 <button onclick="closeProperties()" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer" title="Close Properties">
@@ -451,7 +447,7 @@
                             <li>Laptops connect wirelessly (set the SSID and password in their settings to match an AP) and can also be cabled to a switch</li>
                             <li>Switches support VLANs, trunking and STP; routers run RIPv2 with static route support</li>
                             <li>Devices have Cisco style CLIs with tab completion, opened from their settings panel</li>
-                            <li>Use the <b>Ping Tool</b>, <b>Packet Sniffer</b> and packet animations to trace traffic</li>
+                            <li>Ping from a device (open a PC's Command Prompt or a switch/router CLI and type <b>ping</b>), then use the <b>Packet Sniffer</b> and packet animations to trace traffic</li>
                             <li>Work is autosaved to your browser every 30 seconds and offered back on reload</li>
                         </ul>
                     </div>
@@ -1781,10 +1777,9 @@
                 if (dev.cli.pendingAuth) dev.cli.history.push('Password: ');
                 else dev.cli.history.push(`${dev.cli.prompt} ${input}`);
                 
-                if (input && !dev.cli.pendingAuth) {
+                if ((input || dev.cli.pendingConfirm || dev.cli.pendingCopy) && !dev.cli.pendingAuth) {
                     // Add to command history for up/down arrows
-                    dev.cli.cmdHistory.push(input);
-                    dev.cli.cmdIndex = dev.cli.cmdHistory.length;
+                    if (input) { dev.cli.cmdHistory.push(input); dev.cli.cmdIndex = dev.cli.cmdHistory.length; }
                     
                     processCLICommand(dev, input);
                 }
@@ -1859,9 +1854,10 @@
         }
 
         const processCLICommandInner = (dev, input) => {
-            if (dev.cli && !dev.cli.pendingAuth && !dev.cli.pendingCopy && !dev.cli.remoteSession && !dev.cli.ftpSession) input = expandCliAbbrev(input);
+            if (dev.cli && !dev.cli.pendingAuth && !dev.cli.pendingCopy && !dev.cli.pendingConfirm && !dev.cli.remoteSession && !dev.cli.ftpSession) input = expandCliAbbrev(input);
             const args = input.trim().toLowerCase().split(/\s+/);
-            if (args.length === 0 || args[0] === '') return;
+            // An empty line only matters as the answer to a [confirm] or [default] prompt
+            if ((args.length === 0 || args[0] === '') && !(dev.cli.pendingConfirm || dev.cli.pendingCopy)) return;
             const cmd = args[0];
 
             const print = (msg) => dev.cli.history.push(msg);
@@ -1883,10 +1879,37 @@
                 return;
             }
             if (dev.cli.ftpSession) { handleFileSessionInput(dev, input); return; }
+            if (dev.cli.pendingConfirm) {
+                const pc = dev.cli.pendingConfirm, a = input.trim().toLowerCase();
+                if (pc.kind === 'reload' && pc.stage === 'save') {
+                    if (/^y(es)?$/.test(a)) { dev.startupConfig = configFileText(dev); print('Building configuration...'); print('[OK]'); }
+                    else if (!/^no?$/.test(a)) { print("% Please answer 'yes' or 'no'."); print('System configuration has been modified. Save? [yes/no]:'); return; }
+                    pc.stage = 'confirm'; print('Proceed with reload? [confirm]'); return;
+                }
+                dev.cli.pendingConfirm = null;
+                const yes = a === '' || /^y/.test(a);
+                if (!yes) { if (pc.kind === 'reload') print(''); return; }
+                if (pc.kind === 'reload') { doReload(dev); return; }
+                if (pc.kind === 'erase') { dev.startupConfig = null; print('[OK]'); print('Erase of nvram: complete'); consoleLog(dev, 7, 'SYS-7-NV_BLOCK_INIT: Initialized the geometry of nvram'); try { doAutosave(); } catch (e) {} return; }
+                if (pc.kind === 'run-start') { dev.startupConfig = configFileText(dev); print('Building configuration...'); print('[OK]'); try { doAutosave(); } catch (e) {} return; }
+                if (pc.kind === 'start-run') {
+                    const r = applyConfigText(dev, dev.startupConfig);
+                    print(''); print(`${dev.startupConfig.length} bytes copied in 0.2 secs`);
+                    r.errors.slice(0, 8).forEach(e => print(`% Line not accepted: ${e}`));
+                    consoleLog(dev, 5, 'SYS-5-CONFIG_I: Configured from memory by console');
+                    return;
+                }
+                return;
+            }
             if (dev.cli.pendingCopy) {
                 const pcopy = dev.cli.pendingCopy;
                 if (pcopy.stage === 'host') { pcopy.host = input.trim(); pcopy.stage = 'file'; dev.cli.history.push(`${pcopy.op === 'put' ? 'Destination' : 'Source'} filename [${pcopy.defaultFile}]?`); return; }
-                if (pcopy.stage === 'file') { pcopy.file = input.trim() || pcopy.defaultFile; dev.cli.pendingCopy = null; executeCopy(dev, pcopy); return; }
+                if (pcopy.stage === 'file') {
+                    pcopy.file = input.trim() || pcopy.defaultFile;
+                    if (pcopy.op === 'get') { pcopy.stage = 'dst'; dev.cli.history.push(`Destination filename [${/^start/.test(pcopy.dst) ? 'startup-config' : 'running-config'}]?`); return; }
+                    dev.cli.pendingCopy = null; executeCopy(dev, pcopy); return;
+                }
+                if (pcopy.stage === 'dst') { dev.cli.pendingCopy = null; executeCopy(dev, pcopy); return; }
                 dev.cli.pendingCopy = null; return;
             }
             if (dev.cli.pendingAuth) {
@@ -1919,10 +1942,33 @@
                 return;
             }
 
+            if ((dev.type === 'Router' || dev.type === 'Switch') && (((cmd === 'write' || cmd === 'wr') && args[1] === 'erase') || (cmd === 'erase' && /^(startup-config|nvram:?)$/.test(args[1] || '')))) {
+                if (dev.cli.mode !== 'priv') { print('% Invalid input detected.'); return; }
+                print('Erasing the nvram filesystem will remove all configuration files! Continue? [confirm]');
+                dev.cli.pendingConfirm = { kind: 'erase' }; return;
+            }
+            if ((dev.type === 'Router' || dev.type === 'Switch') && cmd === 'reload') {
+                if (dev.cli.mode !== 'priv') { print('% Invalid input detected.'); return; }
+                if (dev.startupConfig !== configFileText(dev)) { dev.cli.pendingConfirm = { kind: 'reload', stage: 'save' }; print('System configuration has been modified. Save? [yes/no]:'); return; }
+                dev.cli.pendingConfirm = { kind: 'reload', stage: 'confirm' }; print('Proceed with reload? [confirm]'); return;
+            }
+            if ((dev.type === 'Router' || dev.type === 'Switch') && cmd === 'show' && (args[1] === 'startup-config' || (args[1] === 'startup' && args[2] === 'config'))) {
+                if (!dev.startupConfig) { print('startup-config is not present'); return; }
+                print(`Using ${dev.startupConfig.length} out of 65536 bytes`);
+                dev.startupConfig.split('\n').forEach(l => print(l));
+                return;
+            }
             if ((dev.type === 'Router' || dev.type === 'Switch') && (cmd === 'write' || cmd === 'wr')) {
                 print('Building configuration...');
+                dev.startupConfig = configFileText(dev);
                 try { doAutosave(); } catch (e) {}
                 print('[OK]');
+                return;
+            }
+            if (cmd === 'ping' && (dev.type === 'Router' || dev.type === 'Switch') && (dev.cli.mode === 'user' || dev.cli.mode === 'priv')) {
+                if (!args[1]) { print('% Incomplete command.'); return; }
+                dev.cli.isRunning = true;
+                iosPing(dev, args[1]).finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; try { renderCLI(dev.id); } catch (e) {} } });
                 return;
             }
             if (cmd === 'copy' && (dev.type === 'Router' || dev.type === 'Switch') && args[1] && args[2]) {
@@ -1930,9 +1976,14 @@
                 const isTftp = x => x === 'tftp:' || x === 'tftp';
                 const isCfgRun = x => ['running-config', 'run'].includes(x);
                 const isCfgStart = x => ['startup-config', 'start', 'nvram:'].includes(x);
-                if (isCfgRun(args[1]) && isCfgStart(args[2])) { print('Destination filename [startup-config]?'); print('Building configuration...'); try { doAutosave(); } catch (e) {} print('[OK]'); return; }
-                if (isCfg(args[1]) && isTftp(args[2])) { dev.cli.pendingCopy = { op: 'put', proto: 'tftp', src: args[1], stage: 'host', defaultFile: `${dev.name}-confg` }; print('Address or name of remote host []?'); return; }
-                if (isTftp(args[1]) && isCfg(args[2])) { dev.cli.pendingCopy = { op: 'get', proto: 'tftp', dst: args[2], stage: 'host', defaultFile: `${dev.name}-confg` }; print('Address or name of remote host []?'); return; }
+                if (isCfgRun(args[1]) && isCfgStart(args[2])) { print('Destination filename [startup-config]?'); dev.cli.pendingConfirm = { kind: 'run-start' }; return; }
+                if (isCfgStart(args[1]) && isCfgRun(args[2])) {
+                    if (!dev.startupConfig) { print('%Error opening nvram:/startup-config (No such file or directory)'); return; }
+                    print('Destination filename [running-config]?'); dev.cli.pendingConfirm = { kind: 'start-run' }; return;
+                }
+                if (isCfgStart(args[1]) && isTftp(args[2]) && !dev.startupConfig) { print('%Error opening nvram:/startup-config (No such file or directory)'); return; }
+                if (isCfg(args[1]) && isTftp(args[2])) { dev.cli.pendingCopy = { op: 'put', proto: 'tftp', src: args[1], stage: 'host', defaultFile: `${dev.name.toLowerCase()}-confg` }; print('Address or name of remote host []?'); return; }
+                if (isTftp(args[1]) && isCfg(args[2])) { dev.cli.pendingCopy = { op: 'get', proto: 'tftp', dst: args[2], stage: 'host', defaultFile: `${dev.name.toLowerCase()}-confg` }; print('Address or name of remote host []?'); return; }
                 print('%Invalid input detected'); return;
             }
             if (cmd === 'clear' || cmd === 'cls') {
@@ -2639,7 +2690,7 @@
                     if (dev.type === 'Switch' && (args[1] === 'interfaces' || args[1] === 'int' || args[1] === 'interface') && (args[2] === 'status' || args[2] === 'stat')) {
                         if (/^err/.test(args[3] || '')) {
                             print('Port      Name               Status       Reason               Err-disabled Vlans');
-                            dev.ports.filter(p => p.errDisabled).forEach(p => print(`${swPortName(p).padEnd(9)} ${''.padEnd(18)} ${'err-disabled'.padEnd(12)} ${p.errDisabled}`));
+                            dev.ports.filter(p => p.errDisabled).forEach(p => print(`${swPortName(p).padEnd(9)} ${String(p.description || '').slice(0, 18).padEnd(18)} ${'err-disabled'.padEnd(12)} ${p.errDisabled}`));
                             return;
                         }
                         print('Port      Name               Status       Vlan       Duplex  Speed Type');
@@ -2649,7 +2700,7 @@
                             let vlanCol = isTrunkPort(dev, p) ? 'trunk' : String(p.vlan || 1);
                             const speed = p.media === 'fiber' ? 'a-1000' : 'a-100';
                             const type = p.media === 'fiber' ? '1000BaseSX' : '10/100BaseTX';
-                            print(`${swPortName(p).padEnd(9)} ${''.padEnd(18)} ${status.padEnd(12)} ${vlanCol.padEnd(10)} a-full  ${speed.padEnd(5)} ${type}`);
+                            print(`${swPortName(p).padEnd(9)} ${String(p.description || '').slice(0, 18).padEnd(18)} ${status.padEnd(12)} ${vlanCol.padEnd(10)} a-full  ${speed.padEnd(5)} ${type}`);
                         });
                         return;
                     }
@@ -2960,6 +3011,8 @@
                 if (cmd === 'no' && args[1] === 'logging' && (args[2] === 'host' || /^(\d{1,3}\.){3}\d{1,3}$/.test(args[2] || ''))) { dev.loggingHost = null; return; }
                 if (cmd === 'service' && args[1] === 'timestamps') { dev.serviceTimestamps = true; return; }
                 if (cmd === 'no' && args[1] === 'service' && args[2] === 'timestamps') { dev.serviceTimestamps = false; return; }
+                if (cmd === 'ip' && args[1] === 'default-gateway' && dev.type === 'Switch') { if (!args[2]) { print('% Incomplete command.'); return; } dev.defaultGateway = args[2]; return; }
+                if (cmd === 'no' && args[1] === 'ip' && args[2] === 'default-gateway' && dev.type === 'Switch') { dev.defaultGateway = null; return; }
                 if (cmd === 'no' && args[1] === 'ip' && (args[2] === 'domain-lookup' || (args[2] === 'domain' && args[3] === 'lookup'))) { dev.domainLookup = false; return; }
                 if (cmd === 'ip' && (args[1] === 'domain-lookup' || (args[1] === 'domain' && args[2] === 'lookup'))) { dev.domainLookup = true; return; }
                 if (cmd === 'logging' && args[1] === 'console') {
@@ -3459,6 +3512,8 @@
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel(); // Sync GUI
                     return;
                 }
+                if (cmd === 'description') { const txt = input.trim().replace(/^\S+\s*/, ''); if (!txt) { print('% Incomplete command.'); return; } iface.description = txt.slice(0, 240); return; }
+                if (cmd === 'no' && args[1] === 'description') { delete iface.description; return; }
                 if (cmd === 'shutdown' || cmd === 'shut') {
                     iface.adminState = 'down';
                     iface.errDisabled = null; // shutdown clears err-disable (the port is now administratively down)
@@ -3865,9 +3920,97 @@
             if (dev.type === 'Router') {
                 const egIp = (Object.values(dev.interfaces).find(i => i.ip && i.ip !== '0.0.0.0') || {}).ip || '0.0.0.0';
                 try { dev.routePacket({ payload: { type: 'UDP', sourceIp: egIp, targetIp: destIp, sourcePort: sp, destPort, data } }); } catch (e) {}
+            } else if (dev.type === 'Switch' && dev.svis && Object.values(dev.svis).some(s => s.ip && s.ip !== '0.0.0.0' && s.adminState !== 'down')) {
+                switchOriginateUdp(dev, destIp, destPort, data, sp);
             } else if (dev.ip && dev.ip !== '0.0.0.0') {
                 udpSend(dev, destIp, destPort, data, sp);
             }
+        }
+        // ---- IOS ping from a router or switch ----
+        function ownIps(dev) {
+            if (dev.type === 'Router') return Object.values(dev.interfaces || {}).map(i => i.ip).filter(ip => ip && ip !== '0.0.0.0');
+            return [...Object.values(dev.svis || {}).map(s => s.ip), ...(dev.ports || []).filter(p => p.routed).map(p => p.ip)].filter(ip => ip && ip !== '0.0.0.0');
+        }
+        function routerSourceIpFor(r, targetIp) {
+            let best = null, bestPrefix = -1;
+            (r.routingTable || []).forEach(rt => { if (isSameSubnet(targetIp, rt.network, rt.mask)) { const pl = getPrefixLength(rt.mask); if (pl > bestPrefix) { bestPrefix = pl; best = rt; } } });
+            const up = Object.values(r.interfaces).filter(i => i.ip && i.ip !== '0.0.0.0');
+            if (best) {
+                const direct = r.interfaces[best.interface];
+                if (direct && direct.ip && direct.ip !== '0.0.0.0') return direct.ip;
+                const viaNh = best.nextHop && up.find(i => isSameSubnet(best.nextHop, getNetwork(i.ip, i.subnet), i.subnet));
+                if (viaNh) return viaNh.ip;
+            }
+            return (up[0] || {}).ip || null;
+        }
+        // Send one echo request; resolves with the round-trip time in ms, or null on timeout
+        async function iosPingOnce(dev, targetIp) {
+            const t0 = Date.now();
+            const wait = waitForEvent(`icmp_reply_${dev.id}`, 2000, e => e.detail.from === targetIp);
+            if (dev.type === 'Router') {
+                const src = routerSourceIpFor(dev, targetIp);
+                if (!src) return null;
+                try { dev.routePacket({ payload: { type: 'ICMP_REQ', sourceIp: src, targetIp } }); } catch (e) {}
+            } else {
+                const svis = Object.values(dev.svis || {}).filter(s => s.ip && s.ip !== '0.0.0.0' && s.adminState !== 'down');
+                if (!svis.length) return null;
+                const inSubnet = (ip, s) => isSameSubnet(ip, getNetwork(s.ip, s.subnet), s.subnet);
+                let svi = svis.find(s => inSubnet(targetIp, s)), nextHop = targetIp;
+                if (!svi && (dev.l3 || dev.ipRouting) && typeof dev.routeSviPacket === 'function') {
+                    dev.routeSviPacket({ sourceMac: dev.mac, payload: { type: 'ICMP_REQ', sourceIp: svis[0].ip, targetIp } });
+                } else {
+                    if (!svi && dev.defaultGateway) { svi = svis.find(s => inSubnet(dev.defaultGateway, s)); nextHop = dev.defaultGateway; }
+                    if (!svi) return null;
+                    dev.arpCache = dev.arpCache || {};
+                    let mac = dev.arpCache[nextHop];
+                    if (!mac) { dev.sendArpIntoVlan(svi.ip, nextHop, svi.vlan); await waitForEvent(`switch_arp_${dev.id}`, 1800, e => e.detail.ip === nextHop); mac = dev.arpCache[nextHop]; }
+                    if (!mac) { await wait; return null; }
+                    dev.forwardUnicastIntoVlan({ sourceMac: dev.mac, destMac: mac, payload: { type: 'ICMP_REQ', sourceIp: svi.ip, targetIp } }, svi.vlan, mac);
+                }
+            }
+            const ev = await wait;
+            return ev ? Math.max(1, Date.now() - t0) : null;
+        }
+        async function iosPing(dev, target) {
+            const say = (m) => dev.cli.history.push(m);
+            const draw = () => { try { renderCLI(dev.id); } catch (e) {} };
+            if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(target)) {
+                if (dev.domainLookup !== false) say(`Translating "${target}"...domain server (255.255.255.255)`);
+                say('% Unrecognized host or address, or protocol not running.'); return;
+            }
+            say('Type escape sequence to abort.');
+            say(`Sending 5, 100-byte ICMP Echos to ${target}, timeout is 2 seconds:`);
+            const lineIdx = dev.cli.history.length; say('');
+            const rtts = []; let marks = '';
+            for (let i = 0; i < 5; i++) {
+                if (devices[dev.id] !== dev) return;
+                const rtt = ownIps(dev).includes(target) ? 1 : await iosPingOnce(dev, target);
+                marks += rtt != null ? '!' : '.'; if (rtt != null) rtts.push(rtt);
+                if (dev.cli.history[lineIdx] !== undefined) dev.cli.history[lineIdx] = marks; else say(marks);
+                draw();
+            }
+            const n = rtts.length;
+            say(`Success rate is ${n * 20} percent (${n}/5)${n ? `, round-trip min/avg/max = ${Math.min(...rtts)}/${Math.round(rtts.reduce((a, b) => a + b, 0) / n)}/${Math.max(...rtts)} ms` : ''}`);
+            draw();
+        }
+        // A switch sources management traffic (TFTP, syslog, SNMP traps) from an SVI
+        function switchOriginateUdp(dev, destIp, destPort, data, sp) {
+            const svis = Object.values(dev.svis).filter(s => s.ip && s.ip !== '0.0.0.0' && s.adminState !== 'down');
+            const inSubnet = (ip, s) => isSameSubnet(ip, getNetwork(s.ip, s.subnet), s.subnet);
+            let svi = svis.find(s => inSubnet(destIp, s)), nextHop = destIp;
+            if (!svi && (dev.l3 || dev.ipRouting) && typeof dev.routeSviPacket === 'function') {
+                dev.routeSviPacket({ sourceMac: dev.mac, payload: { type: 'UDP', sourceIp: svis[0].ip, targetIp: destIp, sourcePort: sp, destPort, data } });
+                return;
+            }
+            if (!svi && dev.defaultGateway) { svi = svis.find(s => inSubnet(dev.defaultGateway, s)); nextHop = dev.defaultGateway; }
+            if (!svi) { log(`[${dev.name}] Cannot reach ${destIp}: no SVI in that subnet and no ip default-gateway.`, 'warning'); return; }
+            const payload = { type: 'UDP', sourceIp: svi.ip, targetIp: destIp, sourcePort: sp, destPort, data };
+            (async () => {
+                dev.arpCache = dev.arpCache || {};
+                let mac = dev.arpCache[nextHop];
+                if (!mac) { dev.sendArpIntoVlan(svi.ip, nextHop, svi.vlan); await waitForEvent(`switch_arp_${dev.id}`, 6000, e => e.detail.ip === nextHop); mac = dev.arpCache[nextHop]; }
+                if (mac) dev.forwardUnicastIntoVlan({ sourceMac: dev.mac, destMac: mac, payload }, svi.vlan, mac);
+            })();
         }
         function deviceSyslog(dev, sev, msg) {
             if (!dev.loggingHost) return;
@@ -4163,6 +4306,131 @@
             for (let i = 0; i < pw.length; i++) out += (pw.charCodeAt(i) ^ CISCO7_XLAT.charCodeAt((salt + i) % CISCO7_XLAT.length)).toString(16).toUpperCase().padStart(2, '0');
             return out;
         }
+        function cisco7Decode(h) {
+            h = String(h || ''); const salt = parseInt(h.slice(0, 2), 10) || 0; let out = '';
+            for (let i = 2, j = 0; i + 1 < h.length; i += 2, j++) out += String.fromCharCode(parseInt(h.substr(i, 2), 16) ^ CISCO7_XLAT.charCodeAt((salt + j) % CISCO7_XLAT.length));
+            return out;
+        }
+        // A configuration as it is stored in NVRAM or a TFTP file (show run without its screen header)
+        function configFileText(dev) {
+            return generateRunningConfig(dev).split('\n').filter((l, i) => !(i < 4 && /^(Building configuration\.\.\.|Current configuration.*|)$/.test(l))).join('\n');
+        }
+        // Apply configuration text line by line, as IOS does for copy tftp/startup-config running-config
+        // and at boot. Indented lines are sub-mode commands; unindented lines return to global config.
+        function applyConfigText(dev, text) {
+            const saved = { history: dev.cli.history, mode: dev.cli.mode, rs: dev.cli.remoteSession, pc: dev.cli.pendingCopy, pf: dev.cli.pendingConfirm };
+            const hist = []; dev.cli.history = hist; dev.cli.remoteSession = null; dev.cli.pendingCopy = null; dev.cli.pendingConfirm = null;
+            const errors = []; let applied = 0;
+            const toConf = () => { dev.cli.mode = 'conf'; dev.cli.prompt = `${dev.name}(config)#`; dev.cli.currentInterface = null; dev.cli.rangePorts = null; dev.cli.poCtx = null; };
+            toConf();
+            String(text || '').split(/\r?\n/).forEach(raw => {
+                const t = raw.trim();
+                if (!t || t.startsWith('!') || /^(Building configuration|Current configuration|Using \d+ out of|version\b|end$)/.test(t)) return;
+                const line = t.replace(/\b(password|secret) 7 ([0-9A-Fa-f]{4,})\b/, (m, k, h) => `${k} ${cisco7Decode(h)}`);
+                if (!/^\s/.test(raw)) toConf();
+                const b = hist.length;
+                try { processCLICommandInner(dev, line); } catch (e) { hist.push('% Invalid input detected.'); }
+                const bad = hist.slice(b).find(l => /^%\s?(Invalid|Incomplete|Unknown|Ambiguous)/.test(l));
+                if (bad) errors.push(`${t}  <- ${bad}`); else applied++;
+            });
+            dev.cli.history = saved.history; dev.cli.remoteSession = saved.rs; dev.cli.pendingCopy = saved.pc; dev.cli.pendingConfirm = saved.pf;
+            dev.cli.mode = saved.mode === 'user' ? 'user' : 'priv';
+            dev.cli.prompt = `${dev.name}${dev.cli.mode === 'user' ? '>' : '#'}`;
+            dev.cli.currentInterface = null; dev.cli.rangePorts = null; dev.cli.poCtx = null;
+            try { flushMacTables(); refreshL3State(); if (stpEnabled) calculateSTP(); else renderLinks(); } catch (e) {}
+            scheduleNetEvents();
+            return { applied, errors };
+        }
+        // Reload: the device boots with factory defaults and then its startup-config. NVRAM (startup-config),
+        // flash files and the VLAN database (vlan.dat) survive; everything else is rebuilt.
+        function rebootDevice(old) {
+            const counters = JSON.parse(JSON.stringify(deviceCounter));
+            const d = new old.constructor(old.x, old.y);
+            Object.keys(counters).forEach(k => { deviceCounter[k] = counters[k]; });
+            d.id = old.id; d.x = old.x; d.y = old.y;
+            d.name = old.type === 'Router' ? 'Router' : 'Switch';
+            if (old.mac) d.mac = old.mac;
+            if (old.ports && d.ports) {
+                const tmpl = d.ports[0];
+                d.ports = old.ports.map(op => {
+                    const t = d.ports.find(p => p.id === op.id) || tmpl;
+                    const np = JSON.parse(JSON.stringify(t));
+                    np.id = op.id; np.connectedLink = op.connectedLink;
+                    ['mac', 'media', 'gi'].forEach(k => { if (op[k] !== undefined) np[k] = op[k]; });
+                    return np;
+                });
+            }
+            if (old.interfaces && d.interfaces) {
+                const fresh = d.interfaces, eth = Object.values(fresh).find(i => !/^Se/.test(i.id)), ser = Object.values(fresh).find(i => /^Se/.test(i.id));
+                const out = {};
+                Object.keys(old.interfaces).forEach(k => {
+                    const oi = old.interfaces[k]; if (oi.type === 'subinterface') return;
+                    const t = fresh[k] || (/^Se/.test(k) ? ser : eth) || oi;
+                    const ni = JSON.parse(JSON.stringify(t));
+                    ni.id = k; ni.connectedLink = oi.connectedLink; if (oi.mac) ni.mac = oi.mac;
+                    out[k] = ni;
+                });
+                d.interfaces = out;
+            }
+            ['startupConfig', 'tftpFiles', 'files', 'vlanDb', 'vtp'].forEach(k => { if (old[k] !== undefined) d[k] = JSON.parse(JSON.stringify(old[k])); });
+            d.cli.history = old.cli.history;
+            return d;
+        }
+        function doReload(dev) {
+            dev.cli.isRunning = true;
+            consoleLog(dev, 5, 'SYS-5-RELOAD: Reload requested by console. Reload Reason: Reload Command.');
+            try { renderCLI(dev.id); } catch (e) {}
+            setTimeout(() => {
+                if (devices[dev.id] !== dev) return;
+                const d = rebootDevice(dev);
+                devices[d.id] = d;
+                const say = (m) => d.cli.history.push(m);
+                say(''); say('System Bootstrap, Version 15.1(4)M4, RELEASE SOFTWARE (fc1)');
+                say('Initializing flash... done.'); say(`Loading "flash:${d.type === 'Router' ? 'c1900' : 'c2960'}-universalk9-mz.bin"...######## [OK]`);
+                say('Restricted Rights Legend'); say('Cisco IOS Software, Version 15.x, RELEASE SOFTWARE');
+                if (d.startupConfig) {
+                    const r = applyConfigText(d, d.startupConfig);
+                    r.errors.slice(0, 8).forEach(e => say(`% Startup-config line not accepted: ${e}`));
+                } else {
+                    say(''); say('         --- System Configuration Dialog ---'); say('');
+                    say('No startup-config found: the device has booted with its factory default configuration.');
+                    try { flushMacTables(); refreshL3State(); if (stpEnabled) calculateSTP(); else renderLinks(); } catch (e) {}
+                }
+                d.cli.mode = 'user'; d.cli.prompt = `${d.name}>`; d.cli.isRunning = false;
+                say(''); say('Press RETURN to get started!'); say('');
+                try { renderNodes(); renderLinks(); if (propertiesDeviceId === d.id) updatePropertiesPanel(true); renderCLI(d.id); } catch (e) {}
+                scheduleNetEvents(); scheduleAutosave();
+            }, 1200);
+        }
+        function tftpServing(d) { return d.tftpEnabled === true || (d.tftpEnabled === undefined && d.type !== 'WebServer'); }
+        function saveTextFile(name, text) {
+            try {
+                const blob = new Blob([String(text)], { type: 'text/plain' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+                document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            } catch (e) { log(`Could not save ${name}: ${e.message}`, 'error'); }
+        }
+        window.downloadDeviceConfig = (id, which) => {
+            const d = devices[id]; if (!d) return;
+            if (which === 'startup') { if (!d.startupConfig) { log(`[${d.name}] startup-config is not present. Save it with copy running-config startup-config.`, 'warning'); return; } saveTextFile(`${d.name}-startup-config.txt`, d.startupConfig); }
+            else saveTextFile(`${d.name.toLowerCase()}-confg.txt`, configFileText(d));
+        };
+        window.downloadServerFile = (id, name) => { const d = devices[id]; if (d && d.tftpFiles && d.tftpFiles[name] != null) saveTextFile(name.includes('.') ? name : `${name}.txt`, d.tftpFiles[name]); };
+        window.deleteServerFile = (id, name) => { const d = devices[id]; if (d && d.tftpFiles) { delete d.tftpFiles[name]; scheduleAutosave(); updatePropertiesPanel(true); } };
+        function configFilesSectionHtml(dev) {
+            const run = configFileText(dev);
+            const st = !dev.startupConfig ? '<span class="text-amber-600 dark:text-amber-400">not saved (no startup-config)</span>'
+                : (dev.startupConfig === run ? '<span class="text-green-600 dark:text-green-400">saved, matches running-config</span>' : '<span class="text-amber-600 dark:text-amber-400">saved, but running-config has unsaved changes</span>');
+            const b = 'flex-1 py-1.5 rounded text-[10px] font-semibold border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700';
+            return `<div class="pt-2 border-t mt-3">
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Configuration Files</h3>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2">Startup-config: ${st}</p>
+                        <div class="flex gap-2">
+                            <button onclick="window.downloadDeviceConfig('${dev.id}','running')" class="${b}">Download running-config</button>
+                            <button onclick="window.downloadDeviceConfig('${dev.id}','startup')" class="${b}" ${dev.startupConfig ? '' : 'disabled style="opacity:.5"'}>Download startup-config</button>
+                        </div>
+                    </div>`;
+        }
         function pwDisplay(dev, pw) { return dev.servicePwEnc ? `7 ${cisco7(pw)}` : pw; }
         function generateRunningConfig(dev) {
             const L = ['Building configuration...', '', 'Current configuration:', '!'];
@@ -4172,6 +4440,7 @@
             if (dev.users) Object.keys(dev.users).forEach(u => L.push(`username ${u}${(dev.userPriv && dev.userPriv[u]) ? ' privilege ' + dev.userPriv[u] : ''} password ${pwDisplay(dev, dev.users[u])}`));
             if (dev.domainName) L.push(`ip domain-name ${dev.domainName}`);
             if (dev.domainLookup === false) L.push('no ip domain-lookup');
+            if (dev.type === 'Switch' && dev.defaultGateway) L.push(`ip default-gateway ${dev.defaultGateway}`);
             if (dev.loggingConsole === false) L.push('no logging console');
             else if (dev.loggingConsoleLevel != null && dev.loggingConsoleLevel !== 7) L.push(`logging console ${['emergencies','alerts','critical','errors','warnings','notifications','informational','debugging'][dev.loggingConsoleLevel]}`);
             if (dev.errRecovery) {
@@ -4187,6 +4456,7 @@
             if (dev.type === 'Router') {
                 Object.values(dev.interfaces).forEach(i => {
                     L.push('!', `interface ${i.id}`);
+                    if (i.description) L.push(` description ${i.description}`);
                     if (i.type === 'subinterface' && i.vlan) L.push(` encapsulation dot1Q ${i.vlan}`);
                     if (i.encapsulation && i.encapsulation !== 'hdlc' && String(i.id).startsWith('Se')) L.push(` encapsulation ${i.encapsulation}`);
                     if (i.ip && i.ip !== '0.0.0.0') L.push(` ip address ${i.ip} ${i.subnet}`);
@@ -4223,6 +4493,7 @@
                 if (dev.stpPriority) Object.keys(dev.stpPriority).forEach(v => L.push('!', `spanning-tree vlan ${v} priority ${dev.stpPriority[v]}`));
                 (dev.ports || []).forEach(p => {
                     L.push('!', `interface ${swPortLongName(p)}`);
+                    if (p.description) L.push(` description ${p.description}`);
                     if (p.routed) {
                         L.push(' no switchport');
                         if (p.ip && p.ip !== '0.0.0.0') L.push(` ip address ${p.ip} ${p.subnet}`);
@@ -4264,19 +4535,40 @@
         }
                 async function executeCopy(dev, pcopy) {
             const say = (m) => dev.cli.history.push(m);
-            if (pcopy.proto === 'tftp') {
+            if (pcopy.proto !== 'tftp') return;
+            const url = `tftp://${pcopy.host}/${pcopy.file}`;
+            const rate = (n, t0) => { const s = Math.max(0.1, (Date.now() - t0) / 1000); return `${n} bytes copied in ${s.toFixed(3)} secs (${Math.round(n / s)} bytes/sec)`; };
+            dev.cli.isRunning = true;
+            try {
                 if (pcopy.op === 'put') {
-                    const cfg = generateRunningConfig(dev);
-                    say(`Writing ${pcopy.file} to ${pcopy.host} ...!!`);
+                    const cfg = /^start/.test(pcopy.src) ? dev.startupConfig : configFileText(dev);
+                    if (cfg == null) { say('%Error opening nvram:/startup-config (No such file or directory)'); return; }
+                    const t0 = Date.now();
                     originateUdp(dev, pcopy.host, 69, { tftp: 'WRQ', filename: pcopy.file, data: cfg });
-                    say(`[OK - ${cfg.length} bytes]`); say(''); say(`${cfg.length} bytes copied`);
+                    const ev = await waitForEvent(`udp_recv_${dev.id}`, 5000, e => e.detail.data && (e.detail.data.tftp === 'ACK' || e.detail.data.tftp === 'ERROR') && e.detail.data.filename === pcopy.file);
+                    if (ev && ev.data && ev.data.tftp === 'ACK') { say(`!!`); say(`${rate(cfg.length, t0)}`); }
+                    else if (ev && ev.data && ev.data.tftp === 'ERROR') say(`%Error opening ${url} (${ev.data.msg || 'Permission denied'})`);
+                    else say(`%Error opening ${url} (Timed out)`);
                 } else {
-                    say(`Accessing tftp://${pcopy.host}/${pcopy.file} ...`);
+                    say(`Accessing ${url}...`);
+                    const t0 = Date.now();
                     originateUdp(dev, pcopy.host, 69, { tftp: 'RRQ', filename: pcopy.file });
-                    const ev = await waitForEvent(`udp_recv_${dev.id}`, 6000, e => e.detail.data && e.detail.data.tftp === 'DATA' && e.detail.data.filename === pcopy.file);
-                    if (ev && ev.data && ev.data.data != null) { dev.loadedConfig = ev.data.data; const n = String(ev.data.data).length; say(`[OK - ${n} bytes]`); say(''); say(`${n} bytes copied`); }
-                    else say(`%Error opening tftp://${pcopy.host}/${pcopy.file} (Timed out)`);
+                    const ev = await waitForEvent(`udp_recv_${dev.id}`, 5000, e => e.detail.data && (e.detail.data.tftp === 'DATA' || e.detail.data.tftp === 'ERROR') && e.detail.data.filename === pcopy.file);
+                    if (ev && ev.data && ev.data.tftp === 'DATA' && ev.data.data != null) {
+                        const text = String(ev.data.data), n = text.length;
+                        say(`Loading ${pcopy.file} from ${pcopy.host}: !`); say(`[OK - ${n} bytes]`); say('');
+                        if (/^start/.test(pcopy.dst)) { dev.startupConfig = text; say(rate(n, t0)); try { doAutosave(); } catch (e) {} }
+                        else {
+                            say(rate(n, t0));
+                            const r = applyConfigText(dev, text);
+                            r.errors.slice(0, 8).forEach(e => say(`% Line not accepted: ${e}`));
+                            consoleLog(dev, 5, `SYS-5-CONFIG_I: Configured from ${url} by console`);
+                        }
+                    } else if (ev && ev.data && ev.data.tftp === 'ERROR') say(`%Error opening ${url} (${ev.data.msg || 'No such file or directory'})`);
+                    else say(`%Error opening ${url} (Timed out)`);
                 }
+            } finally {
+                if (devices[dev.id]) { dev.cli.isRunning = false; try { renderCLI(dev.id); } catch (e) {} }
             }
         }
 
@@ -4645,12 +4937,15 @@
                     } else if (payload.destPort === 162 && d && d.snmp === 'TRAP') {
                         this.snmpTrapBuffer = this.snmpTrapBuffer || []; this.snmpTrapBuffer.push({ time: Date.now(), from: d.from || payload.sourceIp, trap: d.trap, ifName: d.ifName });
                         log(`[${this.name}] SNMP Trap from ${payload.sourceIp}: ${d.trap} ${d.ifName || ''}`, 'warning');
-                    } else if (payload.destPort === 69 && d && d.tftp === 'WRQ') {
+                    } else if (payload.destPort === 69 && d && d.tftp === 'WRQ' && tftpServing(this)) {
                         this.tftpFiles = this.tftpFiles || {}; this.tftpFiles[d.filename] = d.data;
                         log(`[${this.name}] TFTP: received file '${d.filename}' (${String(d.data).length} bytes)`, 'success');
-                    } else if (payload.destPort === 69 && d && d.tftp === 'RRQ') {
+                        udpSend(this, payload.sourceIp, payload.sourcePort, { tftp: 'ACK', filename: d.filename }, 69);
+                        if (propertiesDeviceId === this.id) updatePropertiesPanel(true);
+                    } else if (payload.destPort === 69 && d && d.tftp === 'RRQ' && tftpServing(this)) {
                         this.tftpFiles = this.tftpFiles || {};
                         if (this.tftpFiles[d.filename] != null) udpSend(this, payload.sourceIp, payload.sourcePort, { tftp: 'DATA', filename: d.filename, data: this.tftpFiles[d.filename] }, 69);
+                        else udpSend(this, payload.sourceIp, payload.sourcePort, { tftp: 'ERROR', filename: d.filename, msg: 'No such file or directory' }, 69);
                     }
                     document.dispatchEvent(new CustomEvent(`udp_recv_${this.id}`, { detail: { from: payload.sourceIp, port: payload.destPort, sourcePort: payload.sourcePort, data: payload.data } }));
                 }
@@ -4820,6 +5115,8 @@
                 this.httpsEnabled = false;
                 this.ftpEnabled = false;                 // FTP control on TCP 21 (cleartext)
                 this.sftpEnabled = false;                // SFTP over SSH on TCP 22 (encrypted)
+                this.tftpEnabled = false;                // TFTP on UDP 69 (config backups)
+                this.tftpFiles = {};
                 this.ftpUsers = { cisco: 'cisco' };      // account shared by FTP and SFTP
                 this.files = {                           // files served over FTP / SFTP
                     'readme.txt': 'Welcome to the file server.\nDownload me over FTP (port 21) or SFTP (port 22).\n',
@@ -4982,6 +5279,14 @@
 
                 // Frames addressed to the switch's own MAC are handled at layer 3
                 if (frame.destMac === this.mac && p) {
+                    if (p.type === 'ICMP_REP' && this.svis && Object.values(this.svis).some(s => s.ip === p.targetIp)) {
+                        document.dispatchEvent(new CustomEvent(`icmp_reply_${this.id}`, { detail: { from: p.sourceIp } }));
+                        return;
+                    }
+                    if (p.type === 'UDP' && this.svis && Object.values(this.svis).some(s => s.ip === p.targetIp)) {
+                        document.dispatchEvent(new CustomEvent(`udp_recv_${this.id}`, { detail: { from: p.sourceIp, port: p.destPort, sourcePort: p.sourcePort, data: p.data } }));
+                        return;
+                    }
                     if (p.type === 'ARP_REP' && this.svis && Object.values(this.svis).some(s => s.ip === p.targetIp)) {
                         this.arpCache[p.sourceIp] = frame.sourceMac;
                         document.dispatchEvent(new CustomEvent(`switch_arp_${this.id}`, { detail: { ip: p.sourceIp, mac: frame.sourceMac } }));
@@ -5477,14 +5782,18 @@
                     } else if (payload.destPort === 162 && d && d.snmp === 'TRAP') {
                         this.snmpTrapBuffer = this.snmpTrapBuffer || []; this.snmpTrapBuffer.push({ time: Date.now(), from: d.from || payload.sourceIp, trap: d.trap, ifName: d.ifName });
                     } else if (payload.destPort === 69 && d && d.tftp === 'WRQ') {
-                        this.tftpFiles = this.tftpFiles || {}; this.tftpFiles[d.filename] = d.data;
+                        this.tftpFiles = this.tftpFiles || {}; this.tftpFiles[d.filename] = d.data; originateUdp(this, payload.sourceIp, payload.sourcePort, { tftp: 'ACK', filename: d.filename }, 69);
                     } else if (payload.destPort === 69 && d && d.tftp === 'RRQ') {
-                        this.tftpFiles = this.tftpFiles || {}; if (this.tftpFiles[d.filename] != null) originateUdp(this, payload.sourceIp, payload.sourcePort, { tftp: 'DATA', filename: d.filename, data: this.tftpFiles[d.filename] }, 69);
+                        this.tftpFiles = this.tftpFiles || {}; if (this.tftpFiles[d.filename] == null) originateUdp(this, payload.sourceIp, payload.sourcePort, { tftp: 'ERROR', filename: d.filename, msg: 'No such file or directory' }, 69); else if (this.tftpFiles[d.filename] != null) originateUdp(this, payload.sourceIp, payload.sourcePort, { tftp: 'DATA', filename: d.filename, data: this.tftpFiles[d.filename] }, 69);
                     }
                     document.dispatchEvent(new CustomEvent(`udp_recv_${this.id}`, { detail: { from: payload.sourceIp, port: payload.destPort, sourcePort: payload.sourcePort, data: payload.data } }));
                     return;
                 }
 
+                if (payload.type === 'ICMP_REP' && Object.values(this.interfaces).some(i => i.ip === payload.targetIp)) {
+                    document.dispatchEvent(new CustomEvent(`icmp_reply_${this.id}`, { detail: { from: payload.sourceIp } }));
+                    return;
+                }
                 if (payload.type === 'ICMP_REQ' && Object.values(this.interfaces).some(i => i.ip === payload.targetIp || (i.hsrp && i.hsrp.virtualIp === payload.targetIp && isHsrpActive(this, i)))) {
                     await sleep(35);
                     const macToMatch = inIface.mac || this.interfaces[inIface.parent]?.mac || inIface.mac;
@@ -7022,11 +7331,25 @@
             }
 
             const selector = document.getElementById('port-selector');
-            selector.innerHTML = `<div class="px-3 py-1.5 border-b border-slate-700 font-bold text-slate-400 text-[9px] uppercase tracking-wider bg-slate-800">Select Port</div>`;
+            selector.innerHTML = `<div class="px-3 py-1.5 border-b border-slate-700 font-bold text-slate-400 text-[9px] uppercase tracking-wider bg-slate-800">Select Port &middot; ${dev.name}</div>`;
+            // Lay ports out in a compact grid so a 26-port switch fits on screen; fibre uplinks get their own row
+            const copperPorts = availablePorts.filter(p => !p.fiber), fibrePorts = availablePorts.filter(p => p.fiber);
+            const cols = copperPorts.length > 16 ? 4 : copperPorts.length > 8 ? 3 : copperPorts.length > 4 ? 2 : 1;
+            const mkGrid = (n) => { const g = document.createElement('div'); g.style.cssText = `display:grid;grid-template-columns:repeat(${n},minmax(58px,auto));gap:2px;padding:4px;`; return g; };
+            const copperGrid = mkGrid(cols);
+            const fibreGrid = mkGrid(Math.max(1, Math.min(cols, fibrePorts.length)));
+            selector.appendChild(copperGrid);
+            if (fibrePorts.length) {
+                const lbl = document.createElement('div');
+                lbl.className = 'px-3 pt-1 text-[9px] uppercase tracking-wider text-amber-400 border-t border-slate-700';
+                lbl.textContent = 'Fibre uplinks';
+                selector.appendChild(lbl);
+                selector.appendChild(fibreGrid);
+            }
             
             availablePorts.forEach(port => {
                 const btn = document.createElement('div');
-                btn.className = 'px-4 py-2 hover:bg-blue-600 cursor-pointer transition-colors';
+                btn.className = 'px-2 py-1.5 rounded hover:bg-blue-600 cursor-pointer transition-colors whitespace-nowrap text-center';
                 if (port.fiber) {
                     btn.innerHTML = `<span style="color:#fb923c">\u25C6</span> ${port.label} <span style="color:#fbbf24;font-size:8px;text-transform:uppercase;letter-spacing:0.05em">fibre</span>`;
                 } else {
@@ -7037,12 +7360,28 @@
                     selector.classList.add('hidden');
                     callback(port.id);
                 };
-                selector.appendChild(btn);
+                (port.fiber ? fibreGrid : copperGrid).appendChild(btn);
             });
             
-            selector.style.left = `${x}px`;
-            selector.style.top = `${y}px`;
+            // Show it, measure it, then keep it fully inside the visible workspace
+            selector.style.left = '0px'; selector.style.top = '0px';
+            selector.style.maxHeight = ''; selector.style.overflowY = '';
             selector.classList.remove('hidden');
+            const W = WORKSPACE.clientWidth || window.innerWidth || 1024, H = WORKSPACE.clientHeight || window.innerHeight || 768;
+            const maxH = Math.max(120, H - 16);
+            selector.style.maxHeight = `${maxH}px`; selector.style.overflowY = 'auto';
+            const pos = clampPopup(x, y, selector.offsetWidth || 0, Math.min(selector.offsetHeight || 0, maxH), W, H);
+            selector.style.left = `${pos.left}px`;
+            selector.style.top = `${pos.top}px`;
+        }
+        // Place a popup beside the pointer, flip it to the other side near the right edge, and clamp it on screen
+        function clampPopup(x, y, w, h, W, H, m = 8) {
+            let left = x + 12;
+            if (left + w > W - m) left = x - w - 12;
+            left = Math.max(m, Math.min(left, W - w - m));
+            let top = y - 12;
+            top = Math.max(m, Math.min(top, H - h - m));
+            return { left, top };
         }
 
         function hidePortSelector() {
@@ -7501,9 +7840,7 @@
             });
         }
         const _g = (id) => document.getElementById(id);
-        makeDraggable(_g('floating-ping'), _g('ping-header'));
         makeDraggable(_g('playback-bar'), _g('pb-handle'));
-        makeDraggable(_g('bottom-toolbar'), _g('toolbar-grip'));
         makeDraggable(_g('protocol-legend'), _g('legend-header'));
         makeDraggable(_g('zoom-controls'), _g('zoom-grip'));
 
@@ -7865,8 +8202,9 @@
             return layers.join('');
         }
 
-        function updatePingDropdown() {
+        function updatePingDropdown() { // the canvas ping tool has been removed; kept as a no-op for safety
             const select = document.getElementById('ping-source');
+            if (!select) return;
             if (!select) return;
             const currentVal = select.value;
             
@@ -8193,7 +8531,6 @@
             }
             
             // Keep the floating ping tool dropdown up to date with available PCs
-            updatePingDropdown();
             updateMinimap();
             renderShapes();
         }
@@ -9240,6 +9577,7 @@
                         <label for="prop-rip" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable RIPv2 Dynamic Routing</label>
                     </div>
                     
+                    ${configFilesSectionHtml(dev)}
                     <button onclick="window.saveRouterSettings('${dev.id}')" id="btn-save-router" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition-colors shadow-sm">Save Router Config</button>
 
                     <div class="pt-2 border-t mt-4">
@@ -9356,6 +9694,7 @@
                                 </div>
                             `).join('')}
                         </div>
+                        ${configFilesSectionHtml(dev)}
                         <button onclick="window.saveSwitchSettings('${dev.id}')" id="btn-save-switch" class="w-full py-2 mt-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition-colors shadow-sm">Save Switch Config</button>
                     </div>
                     
@@ -9549,6 +9888,22 @@
                             </div>
                         </div>
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-2 leading-snug">FTP and SFTP share this account. Files on the server: <span class="font-mono text-slate-600 dark:text-slate-300">${Object.keys(dev.files || {}).join(', ') || '(none)'}</span>.<br>From a PC or laptop: <span class="font-mono">ftp ${dev.ip} ${ftpAccountOf(dev).user} ${ftpAccountOf(dev).pass}</span> or <span class="font-mono">sftp ${ftpAccountOf(dev).user}@${dev.ip} ${ftpAccountOf(dev).pass}</span></p>
+                    </div>
+
+                    <div class="pt-2 border-t mt-4">
+                        <div class="flex items-center space-x-2 mb-2 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
+                            <input type="checkbox" id="prop-tftp-en" ${dev.tftpEnabled ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <label for="prop-tftp-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable TFTP Server &middot; UDP 69 &middot; <span class="text-amber-600 dark:text-amber-400">no authentication</span></label>
+                        </div>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2 leading-snug">Back up a switch or router with <span class="font-mono">copy running-config tftp:</span> and restore with <span class="font-mono">copy tftp: running-config</span>, using server address <span class="font-mono">${dev.ip}</span>.</p>
+                        <div class="text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-1">TFTP files (${Object.keys(dev.tftpFiles || {}).length})</div>
+                        ${Object.keys(dev.tftpFiles || {}).length ? Object.keys(dev.tftpFiles).sort().map(f => `
+                        <details class="mb-1 border border-slate-200 dark:border-slate-700 rounded">
+                            <summary class="px-2 py-1 text-[11px] font-mono cursor-pointer flex items-center gap-2"><span class="flex-1 truncate">${f.replace(/</g, '&lt;')}</span><span class="text-slate-400">${String(dev.tftpFiles[f]).length} B</span>
+                                <button onclick="event.preventDefault();window.downloadServerFile('${dev.id}', ${JSON.stringify(f).replace(/"/g, '&quot;')})" class="px-1.5 rounded border border-slate-300 dark:border-slate-600 text-[10px]">Download</button>
+                                <button onclick="event.preventDefault();window.deleteServerFile('${dev.id}', ${JSON.stringify(f).replace(/"/g, '&quot;')})" class="px-1.5 rounded border border-red-300 text-red-500 text-[10px]">Delete</button></summary>
+                            <pre class="px-2 py-1 text-[10px] leading-tight max-h-48 overflow-auto bg-slate-50 dark:bg-slate-900">${String(dev.tftpFiles[f]).replace(/</g, '&lt;')}</pre>
+                        </details>`).join('') : '<p class="text-[10px] text-slate-400 italic">No files yet.</p>'}
                     </div>
 
                     ${dualHomeSectionHtml(dev)}
@@ -9843,6 +10198,7 @@
 
             dev.ftpEnabled = document.getElementById('prop-ftp-en').checked;
             dev.sftpEnabled = document.getElementById('prop-sftp-en').checked;
+            const tftpEn = document.getElementById('prop-tftp-en'); if (tftpEn) dev.tftpEnabled = tftpEn.checked;
             const ftpUser = (document.getElementById('prop-ftp-user').value || '').trim() || 'cisco';
             const ftpPass = document.getElementById('prop-ftp-pass').value || '';
             dev.ftpUsers = { [ftpUser]: ftpPass };
@@ -9977,8 +10333,11 @@
         
         window.executePing = async () => {
             if (typeof pbClearTimeline === 'function') pbClearTimeline();
-            const sourceId = document.getElementById('ping-source').value;
-            const targetInput = document.getElementById('ping-target').value.trim();
+            // Engine helper used by the automated tests; the canvas ping tool itself has been removed
+            const srcEl = document.getElementById('ping-source'), tgtEl = document.getElementById('ping-target');
+            if (!srcEl || !tgtEl) return;
+            const sourceId = srcEl.value;
+            const targetInput = tgtEl.value.trim();
             
             if (!sourceId) {
                 log(`Ping Error: Please select a source PC.`, 'error');
