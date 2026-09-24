@@ -343,7 +343,7 @@
         </div>
 
         <!-- Floating Packet Sniffer Window -->
-        <div id="floating-sniffer" class="hidden absolute bottom-20 left-1/4 w-[780px] h-[420px] bg-white dark:bg-slate-800 rounded-lg shadow-2xl z-40 flex flex-col border border-slate-300 dark:border-slate-600 overflow-hidden resize">
+        <div id="floating-sniffer" class="hidden absolute bottom-20 left-1/4 w-[920px] h-[600px] bg-white dark:bg-slate-800 rounded-lg shadow-2xl z-40 flex flex-col border border-slate-300 dark:border-slate-600 overflow-hidden resize">
             <div id="sniffer-header" class="px-4 py-2 bg-slate-800 flex justify-between items-center cursor-move select-none">
                 <span class="text-xs font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h10l2-9 4 18 2-9h4"/></svg>
@@ -352,13 +352,29 @@
                 </span>
                 <div class="flex items-center space-x-3">
                     <span class="text-[9px] text-slate-400 normal-case font-normal tracking-normal hidden sm:inline">Click a packet to inspect its layers</span>
+                    <button id="sf-pause-btn" onclick="sfTogglePause()" class="text-[10px] bg-slate-600 hover:bg-slate-500 text-white px-2 py-0.5 rounded transition">Pause</button>
                     <button onclick="clearSniffer()" class="text-[10px] bg-red-600 hover:bg-red-500 text-white px-2 py-0.5 rounded transition">Clear</button>
                     <button onclick="toggleSniffer()" class="text-slate-400 hover:text-white transition-colors" title="Close">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </button>
                 </div>
             </div>
-            <div class="flex-1 flex flex-col min-h-0">
+            <div class="flex flex-wrap items-center gap-1.5 px-2 py-1.5 bg-slate-100 dark:bg-slate-700 border-b border-slate-300 dark:border-slate-600 text-[10px]">
+                <input id="sniffer-filter-input" spellcheck="false" autocomplete="off" oninput="sfFilterInput(this)" onkeydown="if(event.key==='Enter'){sfApplyFilter();}if(event.key==='Escape'){sfClearFilter();}" placeholder="Apply a display filter ... (for example: tcp.port == 80 &amp;&amp; ip.addr == 192.168.1.10)" title="Wireshark display filter syntax. Press Enter to apply." style="min-width:240px" class="flex-1 font-mono text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 outline-none">
+                <button onclick="sfApplyFilter()" class="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">Apply</button>
+                <button onclick="sfClearFilter()" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300">&times;</button>
+                <select onchange="sfPickExample(this)" class="px-1 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 max-w-[120px]" title="Example filters">
+                    <option value="">Examples...</option><option value="icmp">icmp</option><option value="arp">arp</option><option value="dhcp">dhcp</option><option value="dns">dns</option><option value="http">http</option>
+                    <option value="tcp.flags.syn == 1 &amp;&amp; tcp.flags.ack == 0">TCP SYN only</option><option value="tcp.port == 23 || tcp.port == 21">Cleartext (Telnet/FTP)</option><option value="ssh">ssh</option><option value="syslog">syslog</option>
+                    <option value="ip.addr == 192.168.1.0/24">ip.addr in a subnet</option><option value="vlan">802.1Q tagged</option><option value="!arp &amp;&amp; !rip">hide ARP and RIP</option><option value="frame.len &gt; 200">frame.len &gt; 200</option>
+                </select>
+                <span class="w-px h-4 bg-slate-300 dark:bg-slate-600"></span>
+                <button id="sf-follow-btn" onclick="sfFollowSelected()" disabled class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 disabled:opacity-40" title="Follow the selected packet's stream (or right-click a packet)">Follow Stream</button>
+                <button onclick="sfShowStats()" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">Statistics</button>
+                <button onclick="sfExport('pcap')" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200" title="Save the displayed packets as a .pcap file that opens in Wireshark">Export .pcap</button>
+                <button onclick="sfExport('csv')" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200" title="Save the displayed packet list as CSV">CSV</button>
+            </div>
+            <div class="flex-1 flex flex-col min-h-0 relative">
                 <div id="sniffer-list" class="flex-1 min-h-0 bg-slate-50 dark:bg-slate-900 overflow-y-auto">
                     <table class="w-full text-[10px] text-left border-collapse">
                         <thead class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 sticky top-0 shadow-sm">
@@ -382,8 +398,12 @@
                         <button onclick="closeCaptureDetail()" class="text-[10px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition" title="Hide details">Hide</button>
                     </div>
                     <div id="sniffer-detail-body" class="p-2 text-[11px]"></div>
+                    <div class="px-3 py-1 text-[9px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 border-t border-slate-200 dark:border-slate-600">Packet bytes <span class="font-normal normal-case tracking-normal">(click or hover a layer above to highlight its bytes)</span></div>
+                    <pre id="sniffer-bytes" style="white-space:pre" class="m-0 px-3 py-2 font-mono text-[10.5px] leading-snug text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 overflow-x-auto"></pre>
                 </div>
+                <div id="sniffer-overlay" class="hidden absolute inset-0 z-20"></div>
             </div>
+            <div id="sniffer-status" class="px-3 py-1 text-[10px] font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 border-t border-slate-300 dark:border-slate-600">Packets: 0  ·  Displayed: 0 (0.0%)</div>
         </div>
 
         <!-- Protocol Legend -->
@@ -1822,7 +1842,7 @@
             'neighbors','remote-as','redistribute','passive-interface','auto-summary','shutdown','description','duplex',
             'speed','bandwidth','delay','encapsulation','dot1q','ppp','hdlc','frame-relay','authentication','pap','chap',
             'sent-username','map','lmi-type','broadcast','standby','priority','preempt','switchport','mode','access',
-            'trunk','native','dynamic','desirable','auto','nonegotiate','allowed','portfast','bpduguard','channel-group',
+            'trunk','native','dynamic','desirable','auto','nonegotiate','allowed','all','portfast','bpduguard','channel-group',
             'on','active','passive','port-security','maximum','violation','restrict','protect','sticky','mac-address',
             'password','login','local','transport','input','secret','name','running-config','startup-config','brief',
             'summary','associations','status','statistics','translations','detail','database','pvc','lmi','community',
@@ -3651,7 +3671,7 @@
                 if (cmd === 'password' && args[1]) { dev.vty = dev.vty || {}; dev.vty.password = input.trim().split(/\s+/).slice(1).join(' '); return; }
                 if (cmd === 'login' && args[1] === 'local') { dev.vty = dev.vty || {}; dev.vty.login = 'local'; return; }
                 if (cmd === 'login') { dev.vty = dev.vty || {}; dev.vty.login = 'password'; return; }
-                if (cmd === 'transport' && args[1] === 'input' && args[2]) { dev.vty = dev.vty || {}; dev.vty.transport = args[2]; return; }
+                if (cmd === 'transport' && args[1] === 'input' && args[2]) { dev.vty = dev.vty || {}; dev.vty.transport = args.slice(2).join(' '); return; }
                 if (cmd === 'no' && args[1] === 'login') { dev.vty = dev.vty || {}; dev.vty.login = null; return; }
                 if (cmd === 'logging' && args[1] === 'synchronous') { return; } // the console already keeps messages off the input line
                 if (cmd === 'exec-timeout' || (cmd === 'no' && (args[1] === 'exec-timeout' || args[1] === 'logging'))) { return; }
@@ -3842,14 +3862,14 @@
         }
         function deviceTelnetOpen(dev) {
             const v = dev.vty; if (!v || !v.login) return false;
-            const tp = v.transport || 'telnet';
-            if (!(tp === 'telnet' || tp === 'all')) return false;
+            const tp = String(v.transport || 'telnet');
+            if (!/\b(telnet|all)\b/.test(tp)) return false;
             return v.login === 'local' ? !!(dev.users && Object.keys(dev.users).length) : !!v.password;
         }
         function deviceSshOpen(dev) {
             const v = dev.vty; if (!v) return false;
-            const tp = v.transport || 'telnet';
-            if (!(tp === 'ssh' || tp === 'all')) return false;
+            const tp = String(v.transport || 'telnet');
+            if (!/\b(ssh|all)\b/.test(tp)) return false;
             return !!(dev.rsaKey && dev.domainName && dev.users && Object.keys(dev.users).length);
         }
         async function sendRemoteData(dev, text) {
@@ -8866,8 +8886,12 @@
             capturedPackets = {};
             selectedCaptureSeq = null;
             captureStartTime = null;
+            captureOrder = []; sfWallStart = null;
+            sfStreams = { tcp: new Map(), udp: new Map(), icmp: new Map() };
             document.getElementById('sniffer-table-body').innerHTML = '';
             closeCaptureDetail();
+            if (typeof sfCloseOverlay === 'function') sfCloseOverlay();
+            if (typeof sfUpdateStatus === 'function') sfUpdateStatus();
         };
 
         window.closeCaptureDetail = () => {
@@ -8875,6 +8899,7 @@
             if (pane) pane.classList.add('hidden');
             selectedCaptureSeq = null;
             document.querySelectorAll('#sniffer-table-body tr.capture-selected').forEach(r => r.classList.remove('capture-selected'));
+            const fb = document.getElementById('sf-follow-btn'); if (fb) fb.disabled = true;
         };
 
         // --- Packet capture helpers (Wireshark-style) ---
@@ -8942,69 +8967,570 @@
             return mask.split('.').reduce((bits, oct) => bits + ((parseInt(oct, 10) || 0).toString(2).split('1').length - 1), 0);
         }
 
+        // ===================== Wireshark-style sniffer: display filter, bytes, streams, statistics, export =====================
+        // Every captured record is kept (bounded) so the display filter can re-render the list at any time.
+        // Packet bytes are generated as real protocol encodings (with valid IPv4/ICMP/TCP/UDP checksums),
+        // which drive the hex pane and the .pcap export that opens in Wireshark itself.
+        let sfFilterText = '', sfFilterAst = null, sfPaused = false, sfWallStart = null;
+        let captureOrder = [];
+        const SF_MAX_RECORDS = 5000, SF_MAX_ROWS = 500;
+        let sfStreams = { tcp: new Map(), udp: new Map(), icmp: new Map() };
+        const SF_APP_PORTS = { 21: 'ftp', 22: 'ssh', 23: 'telnet', 25: 'smtp', 53: 'dns', 67: 'dhcp', 68: 'dhcp', 69: 'tftp', 80: 'http', 110: 'pop3', 123: 'ntp', 161: 'snmp', 162: 'snmp', 443: 'tls', 514: 'syslog', 520: 'rip' };
+
+        // ---- transport view of a record ----
+        function sfL4(rec) {
+            if (rec._l4) return rec._l4;
+            const p = rec.payload || {}, t = p.type || '';
+            let r = { kind: 'other', sport: null, dport: null, app: null, flags: {} };
+            if (t.startsWith('ARP')) r.kind = 'arp';
+            else if (t.startsWith('ICMP')) r.kind = 'icmp';
+            else if (t === 'TCP') { r.kind = 'tcp'; r.sport = p.sourcePort; r.dport = p.destPort; r.flags = p.flags || {}; }
+            else if (t === 'HTTP_GET') { r.kind = 'tcp'; r.sport = p.sourcePort || 49152; r.dport = p.destPort || 80; r.flags = { psh: true, ack: true }; r.app = 'http'; }
+            else if (t === 'HTTP_REP') { r.kind = 'tcp'; r.sport = p.sourcePort || 80; r.dport = p.destPort || 49152; r.flags = { psh: true, ack: true }; r.app = 'http'; }
+            else if (t.startsWith('DNS')) { r.kind = 'udp'; const q = t === 'DNS_REQ'; r.sport = p.sourcePort || (q ? 53001 : 53); r.dport = p.destPort || (q ? 53 : 53001); r.app = 'dns'; }
+            else if (t.startsWith('DHCP')) { r.kind = 'udp'; const srv = t === 'DHCP_OFFER' || t === 'DHCP_ACK'; r.sport = srv ? 67 : 68; r.dport = srv ? 68 : 67; r.app = 'dhcp'; }
+            else if (t === 'RIP_UPDATE') { r.kind = 'udp'; r.sport = 520; r.dport = 520; r.app = 'rip'; }
+            else if (t === 'UDP') { r.kind = 'udp'; r.sport = p.sourcePort; r.dport = p.destPort; }
+            if (!r.app && (r.kind === 'tcp' || r.kind === 'udp')) r.app = SF_APP_PORTS[r.dport] || SF_APP_PORTS[r.sport] || null;
+            rec._l4 = r;
+            return r;
+        }
+        // The application payload as text (drives Follow Stream, 'frame contains' and the byte encoding)
+        function sfPayloadText(rec) {
+            const p = rec.payload || {}, t = p.type || '';
+            if (t === 'HTTP_GET') return `GET / HTTP/1.1\r\nHost: ${p.host || p.targetIp}\r\nUser-Agent: NetSim-Browser/1.0\r\nAccept: */*\r\n\r\n`;
+            if (t === 'HTTP_REP') { const c = String(p.content || '').slice(0, 3000); return `HTTP/1.1 200 OK\r\nServer: NetSim\r\nContent-Type: text/html\r\nContent-Length: ${c.length}\r\n\r\n${c}`; }
+            const d = p.data;
+            if (d == null || d === '') return '';
+            if (typeof d === 'string') return d;
+            if (typeof d === 'object') {
+                if (d.syslog) return String(d.syslog);
+                if (d.ssh || d.blob) return `[SSH encrypted payload ${d.len != null ? d.len + ' bytes' : ''}: ${String(d.blob || '').slice(0, 40)}]`;
+                if (d.tls) return `[TLS ${d.tls}]`;
+                for (const k of ['ftp', 'smtp', 'pop3']) if (d[k] != null) return `${d[k]}${d.arg ? ' ' + d.arg : ''}${d.text ? ' ' + d.text : ''}\r\n`;
+                return Object.entries(d).filter(([k, v]) => v != null && v !== '' && typeof v !== 'object').map(([k, v]) => `${k}=${v}`).join(' ');
+            }
+            return String(d);
+        }
+
+        // ---- field extraction for the display filter ----
+        const sfNormMac = (m) => String(m || '').toLowerCase().replace(/-/g, ':');
+        function sfFields(rec) {
+            if (rec._f) return rec._f;
+            const p = rec.payload || {}, t = p.type || '', L = sfL4(rec), F = {}, protos = new Set(['eth', 'frame']);
+            const put = (k, v) => { if (v === undefined || v === null || v === '') return; (F[k] = F[k] || []).push(v); };
+            put('frame.number', rec.seq); put('frame.len', rec.length);
+            put('eth.src', sfNormMac(rec.srcMac)); put('eth.dst', sfNormMac(rec.destMac)); put('eth.addr', sfNormMac(rec.srcMac)); put('eth.addr', sfNormMac(rec.destMac));
+            if (rec.vlan) { protos.add('vlan'); put('vlan.id', rec.vlan); }
+            if (L.kind === 'arp') {
+                protos.add('arp'); put('arp.opcode', t === 'ARP_REQ' ? 1 : 2);
+                put('arp.src.proto_ipv4', p.sourceIp); put('arp.dst.proto_ipv4', p.targetIp);
+            } else if (L.kind !== 'other' || p.sourceIp || p.targetIp) {
+                protos.add('ip');
+                const src = p.sourceIp || (t.startsWith('DHCP') && !(t === 'DHCP_OFFER' || t === 'DHCP_ACK') ? '0.0.0.0' : null);
+                const dst = p.targetIp || (t.startsWith('DHCP') ? '255.255.255.255' : null);
+                put('ip.src', src); put('ip.dst', dst); put('ip.addr', src); put('ip.addr', dst);
+                put('ip.proto', L.kind === 'icmp' ? 1 : L.kind === 'tcp' ? 6 : L.kind === 'udp' ? 17 : null);
+                put('ip.ttl', p.ttl != null ? p.ttl : 64);
+            }
+            if (L.kind === 'icmp') { protos.add('icmp'); put('icmp.type', t === 'ICMP_REQ' ? 8 : 0); }
+            if (L.kind === 'tcp') {
+                protos.add('tcp');
+                put('tcp.srcport', L.sport); put('tcp.dstport', L.dport); put('tcp.port', L.sport); put('tcp.port', L.dport);
+                ['syn', 'ack', 'fin', 'rst', 'psh'].forEach(f => put(`tcp.flags.${f}`, L.flags[f] ? 1 : 0));
+                if (rec.stream && rec.stream.kind === 'tcp') put('tcp.stream', rec.stream.idx);
+            }
+            if (L.kind === 'udp') {
+                protos.add('udp');
+                put('udp.srcport', L.sport); put('udp.dstport', L.dport); put('udp.port', L.sport); put('udp.port', L.dport);
+                if (rec.stream && rec.stream.kind === 'udp') put('udp.stream', rec.stream.idx);
+            }
+            if (L.app) { protos.add(L.app); if (L.app === 'dhcp') protos.add('bootp'); }
+            if (t === 'HTTP_GET') { put('http.request', 1); put('http.host', p.host || p.targetIp); }
+            if (t === 'HTTP_REP') put('http.response', 1);
+            if (t.startsWith('DNS')) put('dns.qry.name', p.domain);
+            if (L.app === 'syslog') put('syslog.msg', sfPayloadText(rec));
+            if (L.app === 'ftp' && p.data && p.data.ftp) put('ftp.request.command', String(p.data.ftp));
+            put('_ws.col.info', rec.info || '');
+            put('_ws.col.protocol', rec.protocol || '');
+            rec._f = { F, protos, text: `${rec.info || ''} ${sfPayloadText(rec)} ${rec.fromName || ''} ${rec.toName || ''}` };
+            return rec._f;
+        }
+        // Field type table: which filter names exist and how values compare
+        const SF_FIELDS = {
+            'frame.number': 'n', 'frame.len': 'n', 'eth.src': 'mac', 'eth.dst': 'mac', 'eth.addr': 'mac', 'vlan.id': 'n',
+            'ip.src': 'ip', 'ip.dst': 'ip', 'ip.addr': 'ip', 'ip.proto': 'n', 'ip.ttl': 'n',
+            'tcp.srcport': 'n', 'tcp.dstport': 'n', 'tcp.port': 'n', 'tcp.stream': 'n',
+            'tcp.flags.syn': 'n', 'tcp.flags.ack': 'n', 'tcp.flags.fin': 'n', 'tcp.flags.rst': 'n', 'tcp.flags.psh': 'n',
+            'udp.srcport': 'n', 'udp.dstport': 'n', 'udp.port': 'n', 'udp.stream': 'n',
+            'icmp.type': 'n', 'arp.opcode': 'n', 'arp.src.proto_ipv4': 'ip', 'arp.dst.proto_ipv4': 'ip',
+            'http.request': 'n', 'http.response': 'n', 'http.host': 's', 'dns.qry.name': 's', 'syslog.msg': 's', 'ftp.request.command': 's',
+            '_ws.col.info': 's', '_ws.col.protocol': 's'
+        };
+        const SF_PROTOCOLS = ['frame', 'eth', 'vlan', 'arp', 'ip', 'icmp', 'tcp', 'udp', 'http', 'dns', 'dhcp', 'bootp', 'rip', 'ftp', 'telnet', 'ssh', 'tls', 'smtp', 'pop3', 'syslog', 'snmp', 'ntp', 'tftp'];
+
+        // ---- display filter: tokenizer + recursive-descent parser ----
+        function sfTokenize(s) {
+            const out = []; let i = 0;
+            const ops = ['==', '!=', '>=', '<=', '&&', '||', '>', '<', '!', '(', ')', '{', '}', ','];
+            while (i < s.length) {
+                const c = s[i];
+                if (/\s/.test(c)) { i++; continue; }
+                if (c === '"' || c === "'") {
+                    let j = i + 1, v = '';
+                    while (j < s.length && s[j] !== c) { if (s[j] === '\\' && j + 1 < s.length) { v += s[j + 1]; j += 2; } else v += s[j++]; }
+                    if (j >= s.length) throw new Error('Unterminated string');
+                    out.push({ k: 'str', v }); i = j + 1; continue;
+                }
+                const op = ops.find(o => s.startsWith(o, i));
+                if (op) { out.push({ k: 'op', v: op }); i += op.length; continue; }
+                let j = i; while (j < s.length && /[A-Za-z0-9_.:\/-]/.test(s[j])) j++;
+                if (j === i) throw new Error(`Unexpected character "${c}"`);
+                out.push({ k: 'word', v: s.slice(i, j) }); i = j;
+            }
+            return out;
+        }
+        function sfParseFilter(src) {
+            const toks = sfTokenize(String(src || '')); let pos = 0;
+            if (!toks.length) return null;
+            const peek = () => toks[pos], next = () => toks[pos++];
+            const isW = (t, ...ws) => t && t.k === 'word' && ws.includes(t.v.toLowerCase());
+            const isO = (t, ...os) => t && t.k === 'op' && os.includes(t.v);
+            const CMP = { '==': '==', 'eq': '==', '!=': '!=', 'ne': '!=', '>': '>', 'gt': '>', '<': '<', 'lt': '<', '>=': '>=', 'ge': '>=', '<=': '<=', 'le': '<=' };
+            function orE() { let a = andE(); while (isW(peek(), 'or') || isO(peek(), '||')) { next(); a = { t: 'or', a, b: andE() }; } return a; }
+            function andE() { let a = unE(); while (isW(peek(), 'and') || isO(peek(), '&&')) { next(); a = { t: 'and', a, b: unE() }; } return a; }
+            function unE() { if (isW(peek(), 'not') || isO(peek(), '!')) { next(); return { t: 'not', a: unE() }; } return prim(); }
+            function value() {
+                const v = next(); if (!v) throw new Error('Missing value');
+                if (v.k === 'str' || v.k === 'word') return v.v;
+                throw new Error(`Unexpected "${v.v}"`);
+            }
+            function prim() {
+                const tk = next();
+                if (!tk) throw new Error('Incomplete filter');
+                if (isO(tk, '(')) { const e = orE(); if (!isO(next(), ')')) throw new Error('Missing ")"'); return e; }
+                if (tk.k !== 'word') throw new Error(`Unexpected "${tk.v}"`);
+                const f = tk.v.toLowerCase(), isField = Object.prototype.hasOwnProperty.call(SF_FIELDS, f), isProto = SF_PROTOCOLS.includes(f);
+                if (!isField && !isProto) throw new Error(`"${tk.v}" is neither a field nor a protocol name`);
+                const nt = peek();
+                if (nt && ((nt.k === 'op' && CMP[nt.v]) || (nt.k === 'word' && CMP[nt.v.toLowerCase()]))) {
+                    const op = CMP[next().v.toLowerCase()];
+                    if (!isField) throw new Error(`"${f}" is a protocol and cannot be compared`);
+                    return { t: 'cmp', f, op, v: value() };
+                }
+                if (isW(nt, 'contains')) { next(); return { t: 'contains', f, v: value() }; }
+                if (isW(nt, 'matches') || isO(nt, '~')) { next(); const v = value(); try { new RegExp(v, 'i'); } catch (e) { throw new Error('Invalid regular expression'); } return { t: 'matches', f, v }; }
+                if (isW(nt, 'in')) {
+                    next(); if (!isO(next(), '{')) throw new Error('Expected "{" after in');
+                    const vals = []; while (peek() && !isO(peek(), '}')) { if (isO(peek(), ',')) { next(); continue; } vals.push(value()); }
+                    if (!isO(next(), '}')) throw new Error('Missing "}"'); if (!vals.length) throw new Error('Empty set');
+                    return { t: 'in', f, vals };
+                }
+                return { t: 'has', f };
+            }
+            const ast = orE();
+            if (pos < toks.length) throw new Error(`Unexpected "${toks[pos].v}"`);
+            return ast;
+        }
+        function sfEq(kind, v, lit) {
+            if (kind === 'ip') {
+                const s = String(lit);
+                if (s.includes('/')) { const [n, b] = s.split('/'); const bits = parseInt(b, 10); if (isNaN(bits)) return false; const mk = bits === 0 ? 0 : ((0xFFFFFFFF << (32 - bits)) >>> 0); return ((fwIpInt(v) & mk) >>> 0) === ((fwIpInt(n) & mk) >>> 0); }
+                return v === s;
+            }
+            if (kind === 'mac') return v === sfNormMac(lit);
+            if (kind === 'n') { const n = /^0x/i.test(lit) ? parseInt(lit, 16) : Number(lit); return !isNaN(n) && Number(v) === n; }
+            return String(v) === String(lit);
+        }
+        function sfEval(ast, rec) {
+            if (!ast) return true;
+            const { F, protos, text } = sfFields(rec);
+            switch (ast.t) {
+                case 'and': return sfEval(ast.a, rec) && sfEval(ast.b, rec);
+                case 'or': return sfEval(ast.a, rec) || sfEval(ast.b, rec);
+                case 'not': return !sfEval(ast.a, rec);
+                case 'has': return SF_PROTOCOLS.includes(ast.f) ? protos.has(ast.f) : !!(F[ast.f] && F[ast.f].length);
+                case 'contains': {
+                    if (ast.f === 'frame' || SF_PROTOCOLS.includes(ast.f)) return (ast.f === 'frame' || protos.has(ast.f)) && text.includes(ast.v);
+                    return (F[ast.f] || []).some(v => String(v).includes(ast.v));
+                }
+                case 'matches': {
+                    const re = new RegExp(ast.v, 'i');
+                    if (ast.f === 'frame' || SF_PROTOCOLS.includes(ast.f)) return (ast.f === 'frame' || protos.has(ast.f)) && re.test(text);
+                    return (F[ast.f] || []).some(v => re.test(String(v)));
+                }
+                case 'in': { const k = SF_FIELDS[ast.f]; return (F[ast.f] || []).some(v => ast.vals.some(l => sfEq(k, v, l))); }
+                case 'cmp': {
+                    const vals = F[ast.f] || [], k = SF_FIELDS[ast.f];
+                    if (!vals.length) return false;
+                    if (ast.op === '==') return vals.some(v => sfEq(k, v, ast.v));
+                    if (ast.op === '!=') return vals.every(v => !sfEq(k, v, ast.v));
+                    const n = /^0x/i.test(ast.v) ? parseInt(ast.v, 16) : Number(ast.v);
+                    if (isNaN(n)) return false;
+                    return vals.some(v => { const x = Number(v); return ast.op === '>' ? x > n : ast.op === '<' ? x < n : ast.op === '>=' ? x >= n : x <= n; });
+                }
+            }
+            return false;
+        }
+        const sfPasses = (rec) => sfEval(sfFilterAst, rec);
+
+        // ---- packet bytes (real encodings, valid checksums) ----
+        const sfU16 = (n) => [(n >>> 8) & 255, n & 255];
+        const sfU32 = (n) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+        const sfIpB = (ip) => { const o = String(ip || '0.0.0.0').split('.').map(x => parseInt(x, 10) || 0); return o.length === 4 ? o : [0, 0, 0, 0]; };
+        const sfMacB = (m) => { const h = String(m || '').replace(/[^0-9a-f]/gi, ''); return h.length === 12 ? h.match(/../g).map(x => parseInt(x, 16)) : [0, 0, 0, 0, 0, 0]; };
+        const sfAscii = (s) => Array.from(String(s)).map(ch => { const c = ch.charCodeAt(0); return c < 256 ? c : 63; });
+        function sfCsum(arr) { let s = 0; for (let i = 0; i < arr.length; i += 2) s += (arr[i] << 8) + (i + 1 < arr.length ? arr[i + 1] : 0); while (s >> 16) s = (s & 0xffff) + (s >> 16); return (~s) & 0xffff; }
+        function sfDnsName(name) { const out = []; String(name || '').split('.').filter(Boolean).forEach(l => { out.push(Math.min(l.length, 63)); sfAscii(l.slice(0, 63)).forEach(b => out.push(b)); }); out.push(0); return out; }
+        function sfBuild(rec) {
+            const p = rec.payload || {}, t = p.type || '', L = sfL4(rec), R = {};
+            const B = [];
+            const mark = (k, fn) => { const s = B.length; fn(); R[k] = [s, B.length]; };
+            // Layer 2
+            mark('eth', () => {
+                B.push(...sfMacB(rec.destMac), ...sfMacB(rec.srcMac));
+                if (!rec.vlan) B.push(...sfU16(L.kind === 'arp' ? 0x0806 : (L.kind === 'other' && !p.sourceIp ? 0x88b5 : 0x0800)));
+                else B.push(...sfU16(0x8100));
+            });
+            if (rec.vlan) mark('vlan', () => B.push(...sfU16(rec.vlan & 0x0fff), ...sfU16(L.kind === 'arp' ? 0x0806 : 0x0800)));
+            if (L.kind === 'arp') {
+                mark('arp', () => B.push(0, 1, 8, 0, 6, 4, ...sfU16(t === 'ARP_REQ' ? 1 : 2), ...sfMacB(rec.srcMac), ...sfIpB(p.sourceIp), ...(t === 'ARP_REQ' ? [0, 0, 0, 0, 0, 0] : sfMacB(p.targetMac || rec.destMac)), ...sfIpB(p.targetIp)));
+                return { bytes: B, ranges: R };
+            }
+            if (L.kind === 'other' && !p.sourceIp) { mark('app', () => B.push(...sfAscii(t))); return { bytes: B, ranges: R }; }
+            // Layer 4 + application first, so IP knows its length
+            const src = p.sourceIp || '0.0.0.0', dst = p.targetIp || '255.255.255.255';
+            let l4 = [], app = [];
+            const text = sfPayloadText(rec);
+            if (L.kind === 'icmp') {
+                const data = sfAscii('abcdefghijklmnopqrstuvwabcdefghi');
+                const msg = [t === 'ICMP_REQ' ? 8 : 0, 0, 0, 0, ...sfU16((p.natId || 1) & 0xffff), ...sfU16(rec.seq & 0xffff), ...data];
+                const c = sfCsum(msg); msg[2] = c >>> 8; msg[3] = c & 255; l4 = msg;
+            } else {
+                if (L.app === 'dns') {
+                    const q = t === 'DNS_REQ';
+                    app = [...sfU16(rec.seq & 0xffff), ...sfU16(q ? 0x0100 : 0x8180), 0, 1, 0, q ? 0 : 1, 0, 0, 0, 0, ...sfDnsName(p.domain), 0, 1, 0, 1];
+                    if (!q) app.push(0xc0, 0x0c, 0, 1, 0, 1, ...sfU32(300), 0, 4, ...sfIpB(p.resolvedIp));
+                } else if (L.app === 'dhcp') {
+                    const srv = t === 'DHCP_OFFER' || t === 'DHCP_ACK';
+                    const cmac = sfMacB(p.clientMac || p.mac || (srv && rec.destMac !== 'FF:FF:FF:FF:FF:FF' ? rec.destMac : rec.srcMac));
+                    const yi = srv ? sfIpB(p.offeredIp || p.assignedIp || p.ip) : [0, 0, 0, 0];
+                    const mt = { DHCP_DISCOVER: 1, DHCP_OFFER: 2, DHCP_REQUEST: 3, DHCP_ACK: 5 }[t] || 1;
+                    app = [srv ? 2 : 1, 1, 6, 0, ...sfU32((rec.seq * 2654435761) >>> 0), 0, 0, 0x80, 0, 0, 0, 0, 0, ...yi, 0, 0, 0, 0, 0, 0, 0, 0, ...cmac, ...new Array(10).fill(0), ...new Array(192).fill(0), 0x63, 0x82, 0x53, 0x63, 53, 1, mt];
+                    if (t === 'DHCP_REQUEST' && p.requestedIp) app.push(50, 4, ...sfIpB(p.requestedIp));
+                    app.push(255);
+                } else if (L.app === 'rip') {
+                    app = [2, 2, 0, 0];
+                    (Array.isArray(p.routes) ? p.routes : []).slice(0, 25).forEach(r => app.push(0, 2, 0, 0, ...sfIpB(r.network || r.net || r.dest), ...sfIpB(r.mask || r.subnet || '255.255.255.0'), 0, 0, 0, 0, ...sfU32(Math.min(16, r.metric || r.hops || 1))));
+                } else app = sfAscii(text);
+                if (L.kind === 'tcp') {
+                    const fl = L.flags, fb = (fl.fin ? 1 : 0) | (fl.syn ? 2 : 0) | (fl.rst ? 4 : 0) | (fl.psh ? 8 : 0) | (fl.ack ? 16 : 0);
+                    const seg = [...sfU16(L.sport || 0), ...sfU16(L.dport || 0), ...sfU32(p.seq || 0), ...sfU32(p.ack || 0), 0x50, fb, ...sfU16(64240), 0, 0, 0, 0, ...app];
+                    const c = sfCsum([...sfIpB(src), ...sfIpB(dst), 0, 6, ...sfU16(seg.length), ...seg]); seg[16] = c >>> 8; seg[17] = c & 255; l4 = seg;
+                } else {
+                    const dg = [...sfU16(L.sport || 0), ...sfU16(L.dport || 0), ...sfU16(8 + app.length), 0, 0, ...app];
+                    let c = sfCsum([...sfIpB(src), ...sfIpB(dst), 0, 17, ...sfU16(dg.length), ...dg]); if (c === 0) c = 0xffff; dg[6] = c >>> 8; dg[7] = c & 255; l4 = dg;
+                }
+            }
+            mark('ip', () => {
+                const h = [0x45, 0, ...sfU16(20 + l4.length), ...sfU16(rec.seq & 0xffff), 0x40, 0, (p.ttl != null ? p.ttl : 64) & 255, L.kind === 'icmp' ? 1 : L.kind === 'tcp' ? 6 : 17, 0, 0, ...sfIpB(src), ...sfIpB(dst)];
+                const c = sfCsum(h); h[10] = c >>> 8; h[11] = c & 255; B.push(...h);
+            });
+            const l4Start = B.length, hdrLen = L.kind === 'icmp' ? l4.length : L.kind === 'tcp' ? 20 : 8;
+            B.push(...l4);
+            R[L.kind === 'icmp' ? 'icmp' : L.kind] = [l4Start, L.kind === 'icmp' ? B.length : l4Start + hdrLen];
+            if (L.kind !== 'icmp' && B.length > l4Start + hdrLen) R.app = [l4Start + hdrLen, B.length];
+            return { bytes: B, ranges: R };
+        }
+
+        // ---- streams (conversations) ----
+        function sfStreamOf(rec) {
+            const p = rec.payload || {}, L = sfL4(rec);
+            if (!p.sourceIp || !p.targetIp) return null;
+            if (L.kind === 'tcp' || L.kind === 'udp') {
+                const a = `${p.sourceIp}:${L.sport}`, b = `${p.targetIp}:${L.dport}`;
+                return { kind: L.kind, key: [a, b].sort().join('|'), a, b };
+            }
+            if (L.kind === 'icmp') return { kind: 'icmp', key: [p.sourceIp, p.targetIp].sort().join('|'), a: p.sourceIp, b: p.targetIp };
+            return null;
+        }
+        function sfEnrich(rec) {
+            const built = sfBuild(rec);
+            rec.bytes = built.bytes; rec.ranges = built.ranges; rec.length = built.bytes.length;
+            const st = sfStreamOf(rec);
+            if (st) {
+                const m = sfStreams[st.kind];
+                if (!m.has(st.key)) m.set(st.key, { idx: m.size, client: st.a });
+                const s = m.get(st.key);
+                rec.stream = { kind: st.kind, idx: s.idx, key: st.key, fromClient: st.a === s.client };
+            }
+            delete rec._f;
+            return rec;
+        }
+
+        // ---- list rendering ----
+        function sfRowHtml(rec) {
+            const p = rec.payload || {};
+            const srcDisp = p.sourceIp || rec.srcMac, dstDisp = p.targetIp || (rec.destMac === 'FF:FF:FF:FF:FF:FF' ? 'Broadcast' : rec.destMac);
+            const vlanTag = rec.vlan ? `<span class="text-blue-500 font-bold">[VLAN ${rec.vlan}] </span>` : '';
+            return `<td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 font-bold">${rec.seq}</td>
+                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 opacity-70">${rec.timeRel}</td>
+                <td class="px-2 py-1 font-bold border-r border-slate-200 dark:border-slate-700">${rec.protocol}</td>
+                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 truncate max-w-[110px]" title="${escapeCapture(srcDisp)}">${escapeCapture(srcDisp)}</td>
+                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 truncate max-w-[110px]" title="${escapeCapture(dstDisp)}">${escapeCapture(dstDisp)}</td>
+                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 opacity-70">${rec.length}</td>
+                <td class="px-2 py-1 truncate max-w-[300px] opacity-80" title="${escapeCapture(rec.info)}">${vlanTag}${escapeCapture(rec.info)}</td>`;
+        }
+        function sfMakeRow(rec) {
+            const tr = document.createElement('tr');
+            tr.className = `border-b border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer ${protocolStyle(rec.protocol).sniffer}`;
+            tr.dataset.seq = rec.seq;
+            tr.addEventListener('click', () => selectCapturedPacket(rec.seq));
+            tr.addEventListener('contextmenu', (e) => { e.preventDefault(); sfRowMenu(e, rec.seq); });
+            tr.innerHTML = sfRowHtml(rec);
+            if (selectedCaptureSeq === rec.seq) tr.classList.add('capture-selected');
+            return tr;
+        }
+        function sfDisplayed() { return captureOrder.map(s => capturedPackets[s]).filter(r => r && sfPasses(r)); }
+        function sfRenderTable() {
+            const tbody = document.getElementById('sniffer-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            sfDisplayed().slice(-SF_MAX_ROWS).forEach(rec => tbody.appendChild(sfMakeRow(rec)));
+            sfUpdateStatus();
+        }
+        function sfUpdateStatus() {
+            const el = document.getElementById('sniffer-status'); if (!el) return;
+            const total = captureOrder.length, shown = sfFilterAst ? sfDisplayed().length : total;
+            const pct = total ? ((shown / total) * 100).toFixed(1) : '0.0';
+            el.textContent = `Packets: ${total}  \u00b7  Displayed: ${shown} (${pct}%)${sfPaused ? '  \u00b7  CAPTURE PAUSED' : ''}${sfFilterText ? '  \u00b7  Filter: ' + sfFilterText : ''}`;
+        }
+        // ---- filter UI ----
+        function sfValidate(text) { try { sfParseFilter(text); return null; } catch (e) { return e.message; } }
+        window.sfFilterInput = (el) => {
+            const v = el.value.trim(), err = v ? sfValidate(v) : null;
+            el.style.backgroundColor = !v ? '' : (err ? '#fecaca' : '#bbf7d0');
+            el.style.color = v ? '#0f172a' : '';
+            el.title = err || (v ? 'Valid filter: press Enter to apply' : '');
+        };
+        window.sfApplyFilter = (text) => {
+            const el = document.getElementById('sniffer-filter-input');
+            const v = (text != null ? text : (el ? el.value : '')).trim();
+            if (el && text != null) { el.value = v; window.sfFilterInput(el); }
+            let ast = null;
+            if (v) { try { ast = sfParseFilter(v); } catch (e) { const st = document.getElementById('sniffer-status'); if (st) st.textContent = `Invalid filter: ${e.message}`; return false; } }
+            sfFilterText = v; sfFilterAst = ast;
+            sfRenderTable();
+            return true;
+        };
+        window.sfClearFilter = () => { const el = document.getElementById('sniffer-filter-input'); if (el) { el.value = ''; window.sfFilterInput(el); } window.sfApplyFilter(''); };
+        window.sfPickExample = (sel) => { if (sel.value) { window.sfApplyFilter(sel.value); } sel.selectedIndex = 0; };
+        window.sfTogglePause = () => {
+            sfPaused = !sfPaused;
+            const b = document.getElementById('sf-pause-btn'); if (b) b.textContent = sfPaused ? 'Resume' : 'Pause';
+            sfUpdateStatus();
+        };
+
+        // ---- row context menu (Apply as Filter / Follow Stream) ----
+        function sfCloseMenu() { const m = document.getElementById('sf-menu'); if (m) m.remove(); }
+        function sfRowMenu(e, seq) {
+            sfCloseMenu();
+            const rec = capturedPackets[seq]; if (!rec) return;
+            const p = rec.payload || {}, L = sfL4(rec), items = [];
+            if (rec.stream && rec.stream.kind !== 'icmp') items.push([`Follow ${rec.stream.kind.toUpperCase()} Stream`, () => sfFollow(seq)]);
+            if (rec.stream && rec.stream.kind === 'icmp') items.push(['Follow ICMP Conversation', () => sfFollow(seq)]);
+            if (p.sourceIp) items.push([`Apply as Filter: ip.src == ${p.sourceIp}`, () => window.sfApplyFilter(`ip.src == ${p.sourceIp}`)]);
+            if (p.targetIp) items.push([`Apply as Filter: ip.dst == ${p.targetIp}`, () => window.sfApplyFilter(`ip.dst == ${p.targetIp}`)]);
+            if (p.sourceIp && p.targetIp) items.push(['Apply as Filter: this conversation', () => window.sfApplyFilter(`ip.addr == ${p.sourceIp} && ip.addr == ${p.targetIp}`)]);
+            const pr = L.app || (L.kind !== 'other' ? L.kind : 'eth');
+            items.push([`Apply as Filter: ${pr}`, () => window.sfApplyFilter(pr)]);
+            items.push([`Exclude: !${pr}`, () => window.sfApplyFilter(sfFilterText ? `(${sfFilterText}) && !${pr}` : `!${pr}`)]);
+            const m = document.createElement('div');
+            m.id = 'sf-menu';
+            m.className = 'fixed z-[100] bg-slate-800 text-slate-100 text-[11px] rounded shadow-2xl border border-slate-600 py-1 min-w-[230px]';
+            m.style.left = `${Math.min(e.clientX, (window.innerWidth || 1200) - 250)}px`; m.style.top = `${Math.min(e.clientY, (window.innerHeight || 800) - 220)}px`;
+            items.forEach(([label, fn]) => { const b = document.createElement('div'); b.className = 'px-3 py-1 hover:bg-blue-600 cursor-pointer whitespace-nowrap'; b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); sfCloseMenu(); fn(); }; m.appendChild(b); });
+            document.body.appendChild(m);
+            setTimeout(() => document.addEventListener('click', sfCloseMenu, { once: true }), 0);
+        }
+
+        // ---- hex / bytes pane ----
+        function sfHexHtml(rec, hl) {
+            const b = rec.bytes || []; const lines = [];
+            const inHl = (i) => hl && i >= hl[0] && i < hl[1];
+            for (let off = 0; off < b.length; off += 16) {
+                let hex = '', asc = '';
+                for (let i = off; i < off + 16; i++) {
+                    if (i < b.length) {
+                        const h = b[i].toString(16).padStart(2, '0'), ch = b[i] >= 32 && b[i] < 127 ? escapeCapture(String.fromCharCode(b[i])) : '.';
+                        hex += inHl(i) ? `<span style="background:#2563eb;color:#fff">${h}</span> ` : `${h} `;
+                        asc += inHl(i) ? `<span style="background:#2563eb;color:#fff">${ch}</span>` : ch;
+                    } else hex += '   ';
+                    if (i === off + 7) hex += ' ';
+                }
+                lines.push(`<span class="text-slate-400">${off.toString(16).padStart(4, '0')}</span>  ${hex} ${asc}`);
+            }
+            return lines.join('\n');
+        }
+        function sfShowBytes(rec, key) {
+            const pane = document.getElementById('sniffer-bytes'); if (!pane) return;
+            pane.innerHTML = sfHexHtml(rec, key && rec.ranges ? (key === 'all' ? [0, rec.bytes.length] : rec.ranges[key]) : null);
+        }
+        const SF_LAYER_KEYS = [[/^Frame\b/, 'all'], [/^Ethernet II/, 'eth'], [/^802\.1Q/, 'vlan'], [/^Address Resolution/, 'arp'], [/^Internet Protocol/, 'ip'], [/^Internet Control/, 'icmp'], [/^Transmission Control/, 'tcp'], [/^User Datagram/, 'udp']];
+        function sfWireLayers(rec) {
+            const body = document.getElementById('sniffer-detail-body'); if (!body || !body.querySelectorAll) return;
+            body.querySelectorAll('details').forEach(d => {
+                const sum = d.querySelector && d.querySelector('summary'); if (!sum) return;
+                const title = (sum.textContent || '').trim();
+                const hit = SF_LAYER_KEYS.find(([re]) => re.test(title));
+                const key = hit ? hit[1] : 'app';
+                sum.addEventListener('click', () => sfShowBytes(rec, key));
+                sum.addEventListener('mouseenter', () => sfShowBytes(rec, key));
+            });
+        }
+
+        // ---- Follow Stream ----
+        function sfOverlay(html) {
+            const ov = document.getElementById('sniffer-overlay'); if (!ov) return null;
+            ov.innerHTML = html; ov.classList.remove('hidden'); return ov;
+        }
+        window.sfCloseOverlay = () => { const ov = document.getElementById('sniffer-overlay'); if (ov) { ov.classList.add('hidden'); ov.innerHTML = ''; } };
+        function sfStreamRecords(rec) { return captureOrder.map(s => capturedPackets[s]).filter(r => r && r.stream && rec.stream && r.stream.kind === rec.stream.kind && r.stream.key === rec.stream.key); }
+        function sfFollowText(rec, dir) {
+            const list = sfStreamRecords(rec);
+            // A whole-network capture sees a routed segment once per hop; show it once in the stream
+            const seen = new Map();
+            const parts = list.filter(r => dir === 'both' || (dir === 'c2s') === r.stream.fromClient).map(r => ({ r, text: r.stream.kind === 'icmp' ? `${r.payload.type === 'ICMP_REQ' ? 'Echo request' : 'Echo reply'} ${r.payload.sourceIp} -> ${r.payload.targetIp}\n` : sfPayloadText(r) })).filter(x => {
+                if (!x.text) return false;
+                if (x.r.stream.kind === 'icmp') return true;
+                const p = x.r.payload || {}, key = `${x.r.stream.fromClient}|${p.seq || ''}|${p.ack || ''}|${x.text}`, t = parseFloat(x.r.timeRel);
+                if (seen.has(key) && t - seen.get(key) < 1.0) return false;
+                seen.set(key, t); return true;
+            });
+            return { list, parts };
+        }
+        function sfFollow(seq, dir = 'both') {
+            const rec = capturedPackets[seq]; if (!rec || !rec.stream) return;
+            const { list, parts } = sfFollowText(rec, dir);
+            const k = rec.stream.kind, [a, b] = rec.stream.key.split('|');
+            const cli = sfStreams[k].get(rec.stream.key).client, srv = cli === a ? b : a;
+            const bytes = (arr) => arr.reduce((n, x) => n + x.r.length, 0);
+            const cBytes = bytes(parts.filter(x => x.r.stream.fromClient)), sBytes = bytes(parts.filter(x => !x.r.stream.fromClient));
+            const esc = (s) => escapeCapture(s);
+            const body = parts.length ? parts.map(x => `<div style="white-space:pre-wrap;word-break:break-all;padding:1px 4px;${x.r.stream.fromClient ? 'color:#9b1c1c;background:#fdecec' : 'color:#1e3a8a;background:#e8eefc'}">${esc(x.text)}</div>`).join('')
+                : `<div class="text-slate-500 italic p-2">No application data in this ${k.toUpperCase()} stream (${list.length} packets: handshake or control traffic only).</div>`;
+            const filt = k === 'icmp' ? `icmp && ip.addr == ${a} && ip.addr == ${b}` : `${k}.stream eq ${rec.stream.idx}`;
+            sfOverlay(`<div class="absolute inset-0 bg-white dark:bg-slate-800 flex flex-col z-20">
+                <div class="flex items-center justify-between px-3 py-1.5 bg-slate-800 text-slate-100 text-[11px] font-bold">Follow ${k.toUpperCase()} Stream (${esc(filt)})<button onclick="sfCloseOverlay()" class="text-slate-300 hover:text-white">Close</button></div>
+                <div class="px-3 py-1 text-[10px] text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700"><span style="color:#9b1c1c;font-weight:700">${esc(cli)}</span> &rarr; <span style="color:#1e3a8a;font-weight:700">${esc(srv)}</span> &nbsp;&middot;&nbsp; ${list.length} packets &nbsp;&middot;&nbsp; client ${cBytes} bytes, server ${sBytes} bytes</div>
+                <div class="flex-1 overflow-auto font-mono text-[11px] p-1 bg-white dark:bg-slate-900">${body}</div>
+                <div class="flex items-center gap-2 px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 text-[10px]">
+                    <select onchange="sfFollowDir(${seq}, this.value)" class="border rounded px-1 py-0.5 bg-white dark:bg-slate-700"><option value="both"${dir === 'both' ? ' selected' : ''}>Entire conversation (${cBytes + sBytes} bytes)</option><option value="c2s"${dir === 'c2s' ? ' selected' : ''}>${esc(cli)} &rarr; ${esc(srv)} (${cBytes} bytes)</option><option value="s2c"${dir === 's2c' ? ' selected' : ''}>${esc(srv)} &rarr; ${esc(cli)} (${sBytes} bytes)</option></select>
+                    <button onclick="sfApplyFilter('${filt}'); sfCloseOverlay();" class="px-2 py-0.5 rounded bg-blue-600 text-white">Filter to this stream</button>
+                    <button onclick="sfApplyFilter('!(${filt})'); sfCloseOverlay();" class="px-2 py-0.5 rounded border">Filter out this stream</button>
+                </div></div>`);
+        }
+        window.sfFollowDir = (seq, dir) => sfFollow(seq, dir);
+        window.sfFollowSelected = () => { if (selectedCaptureSeq != null) sfFollow(selectedCaptureSeq); };
+
+        // ---- Statistics ----
+        function sfStats(recs) {
+            const total = recs.length, totBytes = recs.reduce((n, r) => n + r.length, 0);
+            const hier = new Map(); const add = (path, r) => { const e = hier.get(path) || { packets: 0, bytes: 0 }; e.packets++; e.bytes += r.length; hier.set(path, e); };
+            const NAMES = { eth: 'Ethernet', vlan: '802.1Q Virtual LAN', arp: 'Address Resolution Protocol', ip: 'Internet Protocol Version 4', icmp: 'Internet Control Message Protocol', tcp: 'Transmission Control Protocol', udp: 'User Datagram Protocol', http: 'Hypertext Transfer Protocol', dns: 'Domain Name System', dhcp: 'Dynamic Host Configuration Protocol', rip: 'Routing Information Protocol', ftp: 'File Transfer Protocol', telnet: 'Telnet', ssh: 'SSH Protocol', tls: 'Transport Layer Security', smtp: 'Simple Mail Transfer Protocol', pop3: 'Post Office Protocol', syslog: 'Syslog message', snmp: 'Simple Network Management Protocol', ntp: 'Network Time Protocol', tftp: 'Trivial File Transfer Protocol', other: 'Other' };
+            recs.forEach(r => {
+                const L = sfL4(r); const path = ['eth'];
+                if (r.vlan) path.push('vlan');
+                if (L.kind === 'arp') path.push('arp');
+                else if (L.kind === 'other' && !(r.payload || {}).sourceIp) path.push('other');
+                else { path.push('ip'); if (L.kind !== 'other') path.push(L.kind); if (L.app) path.push(L.app); }
+                for (let i = 1; i <= path.length; i++) add(path.slice(0, i).join('/'), r);
+            });
+            const hierRows = Array.from(hier.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([path, e]) => { const parts = path.split('/'); const k = parts[parts.length - 1]; return { path, name: NAMES[k] || k, depth: parts.length - 1, packets: e.packets, pct: total ? (e.packets / total) * 100 : 0, bytes: e.bytes }; });
+            const conv = new Map(), ends = new Map();
+            recs.forEach(r => {
+                const p = r.payload || {}; if (!p.sourceIp || !p.targetIp) return;
+                const [a, b] = [p.sourceIp, p.targetIp].sort(fwIpIntCmp);
+                const c = conv.get(`${a}|${b}`) || { a, b, ab: 0, ba: 0, abBytes: 0, baBytes: 0, start: +r.timeRel, end: +r.timeRel };
+                if (p.sourceIp === a) { c.ab++; c.abBytes += r.length; } else { c.ba++; c.baBytes += r.length; }
+                c.end = Math.max(c.end, +r.timeRel); c.start = Math.min(c.start, +r.timeRel); conv.set(`${a}|${b}`, c);
+                [[p.sourceIp, 'tx'], [p.targetIp, 'rx']].forEach(([ip, d]) => { const e = ends.get(ip) || { ip, tx: 0, rx: 0, bytes: 0 }; e[d]++; e.bytes += r.length; ends.set(ip, e); });
+            });
+            return { total, totBytes, hierRows, conversations: Array.from(conv.values()).sort((x, y) => (y.ab + y.ba) - (x.ab + x.ba)), endpoints: Array.from(ends.values()).sort((x, y) => (y.tx + y.rx) - (x.tx + x.rx)) };
+        }
+        const fwIpIntCmp = (x, y) => fwIpInt(x) - fwIpInt(y);
+        window.sfShowStats = (tab = 'hier') => {
+            const recs = sfDisplayed(), S = sfStats(recs);
+            const th = (c) => `<th class="px-2 py-1 text-left border-b bg-slate-100 dark:bg-slate-700">${c}</th>`, td = (c, x = '') => `<td class="px-2 py-0.5 border-b border-slate-100 dark:border-slate-700 ${x}">${c}</td>`;
+            const bar = (pct) => `<div style="width:90px;height:8px;background:#e2e8f0;border-radius:3px;display:inline-block;vertical-align:middle"><div style="width:${Math.max(1, pct).toFixed(1)}%;height:8px;background:#2563eb;border-radius:3px"></div></div> ${pct.toFixed(1)}%`;
+            let table = '';
+            if (tab === 'hier') table = `<table class="w-full text-[10px]"><tr>${th('Protocol')}${th('Percent Packets')}${th('Packets')}${th('Bytes')}</tr>${S.hierRows.map(r => `<tr>${td(`<span style="padding-left:${r.depth * 14}px">${escapeCapture(r.name)}</span>`)}${td(bar(r.pct))}${td(r.packets)}${td(r.bytes)}</tr>`).join('')}</table>`;
+            if (tab === 'conv') table = `<table class="w-full text-[10px]"><tr>${th('Address A')}${th('Address B')}${th('Packets')}${th('Bytes')}${th('Packets A &rarr; B')}${th('Packets B &rarr; A')}${th('Duration (s)')}</tr>${S.conversations.map(c => `<tr>${td(c.a)}${td(c.b)}${td(c.ab + c.ba)}${td(c.abBytes + c.baBytes)}${td(c.ab)}${td(c.ba)}${td((c.end - c.start).toFixed(3))}</tr>`).join('') || `<tr>${td('No IPv4 conversations', 'text-slate-400')}</tr>`}</table>`;
+            if (tab === 'ends') table = `<table class="w-full text-[10px]"><tr>${th('Address')}${th('Packets')}${th('Bytes')}${th('Tx Packets')}${th('Rx Packets')}</tr>${S.endpoints.map(e => `<tr>${td(e.ip)}${td(e.tx + e.rx)}${td(e.bytes)}${td(e.tx)}${td(e.rx)}</tr>`).join('') || `<tr>${td('No IPv4 endpoints', 'text-slate-400')}</tr>`}</table>`;
+            const tabBtn = (k, l) => `<button onclick="sfShowStats('${k}')" class="px-2 py-0.5 rounded ${tab === k ? 'bg-blue-600 text-white' : 'border'}">${l}</button>`;
+            sfOverlay(`<div class="absolute inset-0 bg-white dark:bg-slate-800 flex flex-col z-20">
+                <div class="flex items-center justify-between px-3 py-1.5 bg-slate-800 text-slate-100 text-[11px] font-bold">Statistics${sfFilterText ? ' (display filter: ' + escapeCapture(sfFilterText) + ')' : ''}<button onclick="sfCloseOverlay()" class="text-slate-300 hover:text-white">Close</button></div>
+                <div class="flex gap-2 px-3 py-1.5 text-[10px] border-b border-slate-200 dark:border-slate-700">${tabBtn('hier', 'Protocol Hierarchy')}${tabBtn('conv', 'Conversations')}${tabBtn('ends', 'Endpoints')}<span class="ml-auto text-slate-500">${S.total} packets, ${S.totBytes} bytes</span></div>
+                <div class="flex-1 overflow-auto p-2 text-slate-700 dark:text-slate-200">${table}</div></div>`);
+        };
+
+        // ---- Export ----
+        function sfPcap(recs) {
+            const hdr = [0xd4, 0xc3, 0xb2, 0xa1, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0, 0, 1, 0, 0, 0];
+            const le32 = (n) => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+            const out = [...hdr], base = sfWallStart || Date.now();
+            recs.forEach(r => {
+                const totalUs = base * 1000 + Math.round(parseFloat(r.timeRel) * 1e6), sec = Math.floor(totalUs / 1e6), usec = totalUs % 1e6;
+                const b = r.bytes || [];
+                out.push(...le32(sec), ...le32(usec), ...le32(b.length), ...le32(b.length), ...b);
+            });
+            return new Uint8Array(out);
+        }
+        function sfCsv(recs) {
+            const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+            return ['"No.","Time","Source","Destination","Protocol","Length","Info"', ...recs.map(r => { const p = r.payload || {}; return [r.seq, r.timeRel, p.sourceIp || r.srcMac, p.targetIp || (r.destMac === 'FF:FF:FF:FF:FF:FF' ? 'Broadcast' : r.destMac), r.protocol, r.length, r.info].map(q).join(','); })].join('\n');
+        }
+        window.sfExport = (kind) => {
+            const recs = sfDisplayed();
+            if (!recs.length) { const st = document.getElementById('sniffer-status'); if (st) st.textContent = 'Nothing to export: no packets are displayed.'; return; }
+            const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            if (kind === 'csv') { saveTextFile(`capture-${stamp}.csv`, sfCsv(recs)); return; }
+            try {
+                const data = sfPcap(recs), blob = new Blob([data], { type: 'application/vnd.tcpdump.pcap' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `capture-${stamp}.pcap`;
+                document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            } catch (e) { log(`Could not export capture: ${e.message}`, 'error'); }
+        };
+
         function addPacketToSniffer(frame, fromDev, toDev, linkId) {
             if (snifferWindow.classList.contains('hidden')) return; // Not capturing while closed
+            if (sfPaused) return;                                     // capture paused
             if (snifferLinkFilter && linkId !== snifferLinkFilter) return; // per-link capture: ignore other links
-            // Wireshark-style: log each packet a single time, at the point it is first seen,
-            // rather than once for every cable it crosses.
+            // Wireshark-style: log each packet a single time, at the point it is first seen
             if (frame.captureId !== undefined) {
                 if (capturedIds.has(frame.captureId)) return;
                 capturedIds.add(frame.captureId);
             }
-            if (captureStartTime === null) captureStartTime = performance.now();
-
+            if (captureStartTime === null) { captureStartTime = performance.now(); sfWallStart = Date.now(); }
             snifferPacketCount++;
             const seq = snifferPacketCount;
-            const proto = frame.payload.type;
-            const colorClass = protocolStyle(proto).sniffer;
-            let info = snifferInfoLine(frame);
-            const timeRel = ((performance.now() - captureStartTime) / 1000).toFixed(6);
-
-            // Store the full record so the detail pane can rebuild the encapsulation on demand
-            capturedPackets[seq] = {
-                seq, timeRel, protocol: proto,
-                srcMac: frame.sourceMac, destMac: frame.destMac,
-                srcIp: frame.payload.sourceIp, destIp: frame.payload.targetIp,
-                vlan: frame.vlan || null,
-                payload: { ...frame.payload },
-                fromName: fromDev ? fromDev.name : '', toName: toDev ? toDev.name : '',
-                length: packetLength(frame)
+            const rec = {
+                seq, timeRel: ((performance.now() - captureStartTime) / 1000).toFixed(6), protocol: frame.payload.type,
+                srcMac: frame.sourceMac, destMac: frame.destMac, srcIp: frame.payload.sourceIp, destIp: frame.payload.targetIp,
+                vlan: frame.vlan || null, payload: JSON.parse(JSON.stringify(frame.payload || {})),
+                fromName: fromDev ? fromDev.name : '', toName: toDev ? toDev.name : '', info: snifferInfoLine(frame)
             };
-
-            const tbody = document.getElementById('sniffer-table-body');
-            const tr = document.createElement('tr');
-            tr.className = `border-b border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer ${colorClass}`;
-            tr.dataset.seq = seq;
-            tr.addEventListener('click', () => selectCapturedPacket(seq));
-
-            const srcDisp = frame.payload.sourceIp || frame.sourceMac;
-            const dstDisp = frame.payload.targetIp || (frame.destMac === 'FF:FF:FF:FF:FF:FF' ? 'Broadcast' : frame.destMac);
-            const vlanTag = frame.vlan ? `<span class="text-blue-500 font-bold">[VLAN ${frame.vlan}] </span>` : '';
-
-            tr.innerHTML = `
-                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 font-bold">${seq}</td>
-                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 opacity-70">${timeRel}</td>
-                <td class="px-2 py-1 font-bold border-r border-slate-200 dark:border-slate-700">${proto}</td>
-                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 truncate max-w-[110px]" title="${srcDisp}">${srcDisp}</td>
-                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 truncate max-w-[110px]" title="${dstDisp}">${dstDisp}</td>
-                <td class="px-2 py-1 border-r border-slate-200 dark:border-slate-700 opacity-70">${capturedPackets[seq].length}</td>
-                <td class="px-2 py-1 truncate max-w-[260px] opacity-80" title="${escapeCapture(info)}">${vlanTag}${escapeCapture(info)}</td>
-            `;
-
-            tbody.appendChild(tr);
-
-            // Keep only the last 200 rows to prevent DOM lag; drop matching records too
-            while (tbody.children.length > 200) {
-                const gone = tbody.firstChild;
-                if (gone && gone.dataset && gone.dataset.seq) delete capturedPackets[gone.dataset.seq];
-                tbody.removeChild(gone);
+            sfEnrich(rec);
+            capturedPackets[seq] = rec;
+            captureOrder.push(seq);
+            while (captureOrder.length > SF_MAX_RECORDS) delete capturedPackets[captureOrder.shift()];
+            if (sfPasses(rec)) {
+                const tbody = document.getElementById('sniffer-table-body');
+                tbody.appendChild(sfMakeRow(rec));
+                while (tbody.children.length > SF_MAX_ROWS) tbody.removeChild(tbody.firstChild);
+                if (selectedCaptureSeq === null) { const list = document.getElementById('sniffer-list'); if (list) list.scrollTop = list.scrollHeight; }
             }
-
-            // Auto scroll unless the user is inspecting a packet
-            if (selectedCaptureSeq === null) {
-                const list = document.getElementById('sniffer-list');
-                if (list) list.scrollTop = list.scrollHeight;
-            }
+            sfUpdateStatus();
         }
 
         function selectCapturedPacket(seq) {
@@ -9021,6 +9547,8 @@
             if (title) title.textContent = `Packet ${seq} Details  -  ${rec.protocol}`;
             if (body) body.innerHTML = buildEncapsulation(rec);
             if (pane) pane.classList.remove('hidden');
+            sfWireLayers(rec); sfShowBytes(rec, null);
+            const fb = document.getElementById('sf-follow-btn'); if (fb) fb.disabled = !rec.stream;
         }
 
         function layerBlock(title, rows) {
@@ -9045,7 +9573,7 @@
                 : (proto.startsWith('HTTP') ? 'eth:ip:tcp:http'
                 : (proto.startsWith('DNS') ? 'eth:ip:udp:dns'
                 : (proto.startsWith('DHCP') ? 'eth:ip:udp:dhcp'
-                : (proto === 'RIP_UPDATE' ? 'eth:ip:udp:rip' : 'eth:ip')))));
+                : (proto === 'RIP_UPDATE' ? 'eth:ip:udp:rip' : (() => { const L = sfL4(rec); return ['eth', rec.vlan ? 'vlan' : null, 'ip', L.kind !== 'other' ? L.kind : null, L.app].filter(Boolean).join(':'); })())))));
 
             // Frame (physical capture record)
             layers.push(layerBlock(`Frame ${rec.seq}: ${rec.length} bytes on the wire`, [
@@ -9185,13 +9713,13 @@
                     ['Acknowledgment number', String(p.ack != null ? p.ack : 0)],
                     ['Flags', flagStr]
                 ]));
-                if (p.data != null && p.data !== '') layers.push(layerBlock('Application data', [['Payload', escapeCapture(String(p.data).slice(0, 300)) + (String(p.data).length > 300 ? ' ...' : '')]]));
+                if (p.data != null && p.data !== '') layers.push(layerBlock('Application data', [['Payload', escapeCapture(sfPayloadText(rec).slice(0, 300)) + (sfPayloadText(rec).length > 300 ? ' ...' : '')]]));
             } else if (proto === 'UDP') {
                 layers.push(layerBlock('User Datagram Protocol', [
                     ['Source port', portLabel(p.sourcePort)],
                     ['Destination port', portLabel(p.destPort)]
                 ]));
-                if (p.data != null && p.data !== '') layers.push(layerBlock('Application data', [['Payload', escapeCapture(String(p.data).slice(0, 300)) + (String(p.data).length > 300 ? ' ...' : '')]]));
+                if (p.data != null && p.data !== '') layers.push(layerBlock('Application data', [['Payload', escapeCapture(sfPayloadText(rec).slice(0, 300)) + (sfPayloadText(rec).length > 300 ? ' ...' : '')]]));
             }
 
             return layers.join('');
