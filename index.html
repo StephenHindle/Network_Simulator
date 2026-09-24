@@ -169,6 +169,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">ISP</span>
                     </div>
+                    <div draggable="true" ondragstart="handleDragStart(event, 'Firewall')" ontouchend="palTapItem(event, 'Firewall')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add ISP Router">
+                        <svg class="mb-1" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M2 15h20M8 4v5M16 9v6M8 15v5"/></svg>
+                        <span class="text-[10px] font-bold uppercase tracking-wide">Firewall</span>
+                    </div>
                     <div draggable="true" ondragstart="handleDragStart(event, 'WLC')" ontouchend="palTapItem(event, 'WLC')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Wireless LAN Controller">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 17h.01"/><path d="M11 17h6"/><path d="M12 9a5 5 0 0 1 5 5"/><path d="M12 5a9 9 0 0 1 9 9"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">WLC</span>
@@ -523,6 +527,7 @@
         };
         
         const DEVICE_ICONS = {
+            'Firewall': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M2 15h20M8 4v5M16 9v6M8 15v5"/></svg>`,
             'PC': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="8" x="5" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 18h2"/><path d="M12 18h6"/></svg>`,
             'Laptop': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>`,
             'Server': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>`,
@@ -1004,7 +1009,7 @@
             devices = {};
             for (const id in (data.devices || {})) {
                 const d = data.devices[id];
-                const Cls = (d.l3 && d.type === 'Switch') ? L3Switch : (d.isISP && d.type === 'Router') ? ISPRouter : (d.isWlc && d.type === 'WebServer') ? WirelessController : deviceClassFor(d.type);
+                const Cls = (d.l3 && d.type === 'Switch') ? L3Switch : (d.isFirewall && d.type === 'Router') ? FirewallAppliance : (d.isISP && d.type === 'Router') ? ISPRouter : (d.isWlc && d.type === 'WebServer') ? WirelessController : deviceClassFor(d.type);
                 if (!Cls) { log(`Skipped unknown device type "${d.type}" while loading.`, 'warning'); continue; }
                 const instance = new Cls(d.x, d.y);
                 Object.assign(instance, d);
@@ -1172,7 +1177,7 @@
             if (!srcId) return;
             const src = devices[srcId];
             if (!src) return;
-            const Cls = (src.l3 && src.type === 'Switch') ? L3Switch : (src.isISP && src.type === 'Router') ? ISPRouter : (src.isWlc && src.type === 'WebServer') ? WirelessController : deviceClassFor(src.type);
+            const Cls = (src.l3 && src.type === 'Switch') ? L3Switch : (src.isFirewall && src.type === 'Router') ? FirewallAppliance : (src.isISP && src.type === 'Router') ? ISPRouter : (src.isWlc && src.type === 'WebServer') ? WirelessController : deviceClassFor(src.type);
             if (!Cls) return;
             pushUndo();
 
@@ -1965,6 +1970,12 @@
                 print('[OK]');
                 return;
             }
+            if (dev.isFirewall && !['enable', 'disable', 'exit', 'logout', 'ping', 'end'].includes(cmd) && !(cmd === 'show' && ['ip', 'arp', 'interfaces', 'version', 'logging', 'clock'].includes(args[1]))) {
+                const urls = Object.values(dev.interfaces).filter(i => i.ip !== '0.0.0.0' && ((dev.fw.access || {})[i.id] || []).some(a => a === 'https' || a === 'http')).map(i => `https://${i.ip}`);
+                print(`% ${dev.name} is a firewall appliance configured from its web interface${urls.length ? ': ' + urls.join(' or ') : ''}.`);
+                print('% Available here: ping, show ip route, show ip interface brief, show arp.');
+                return;
+            }
             if (cmd === 'ping' && (dev.type === 'Router' || dev.type === 'Switch') && (dev.cli.mode === 'user' || dev.cli.mode === 'priv')) {
                 if (!args[1]) { print('% Incomplete command.'); return; }
                 dev.cli.isRunning = true;
@@ -2068,6 +2079,11 @@
                             print(`  ${ip.padEnd(21)} ${mac.replace(/:/g,'-').toLowerCase().padEnd(21)} dynamic`);
                         });
                     }
+                    return;
+                }
+                if (cmd === 'nmap') {
+                    dev.cli.isRunning = true;
+                    runNmap(dev, input.trim().split(/\s+/)).finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'ping') {
@@ -4662,7 +4678,7 @@
             const _httpSrcPort = 49152 + Math.floor(Math.random() * 16000);
             transmit({
                 sourceMac: dev.mac, destMac: targetMac,
-                payload: { type: 'HTTP_GET', sourceIp: dev.ip, targetIp: targetIp, sourcePort: _httpSrcPort, destPort: 80 }
+                payload: { type: 'HTTP_GET', sourceIp: dev.ip, targetIp: targetIp, sourcePort: _httpSrcPort, destPort: 80, host: target }
             }, dev.id, 1);
 
             const httpReplied = await waitForEvent(`http_replied_${dev.id}`, 10000);
@@ -4771,7 +4787,7 @@
             const _httpSrcPort = 49152 + Math.floor(Math.random() * 16000);
             transmit({
                 sourceMac: dev.mac, destMac: targetMac,
-                payload: { type: 'HTTP_GET', sourceIp: dev.ip, targetIp: targetIp, sourcePort: _httpSrcPort, destPort: 80 }
+                payload: { type: 'HTTP_GET', sourceIp: dev.ip, targetIp: targetIp, sourcePort: _httpSrcPort, destPort: 80, host: target }
             }, dev.id, 1);
 
             const httpReplied = await waitForEvent(`http_replied_${dev.id}`, 10000);
@@ -5981,6 +5997,981 @@
             }
         }
 
+        // ===================== Firewall appliance (NGFW) =====================
+        // A FirewallAppliance is a Router underneath (type stays 'Router' so cabling, ARP, routing,
+        // console feedback and ping all apply; isFirewall marks it, as isISP does for the ISP router).
+        // Transit packets are inspected before routing: sessions -> quarantine -> IPS -> local-in ->
+        // VIP (port forwarding) -> route lookup -> zone policy -> web filter -> session + NAT.
+        // Configuration lives in dev.fw (plain JSON, saved with the topology). Runtime state
+        // (sessions, counters, logs, admin logins) is non-enumerable and never serialised.
+        const FW_SERVICES = {
+            ALL: { proto: 'any' }, HTTP: { proto: 'tcp', ports: '80' }, HTTPS: { proto: 'tcp', ports: '443' },
+            DNS: { proto: 'udp', ports: '53' }, PING: { proto: 'icmp' }, SSH: { proto: 'tcp', ports: '22' },
+            TELNET: { proto: 'tcp', ports: '23' }, FTP: { proto: 'tcp', ports: '21' }, SMTP: { proto: 'tcp', ports: '25' },
+            POP3: { proto: 'tcp', ports: '110' }, NTP: { proto: 'udp', ports: '123' }, SNMP: { proto: 'udp', ports: '161-162' },
+            SYSLOG: { proto: 'udp', ports: '514' }, TFTP: { proto: 'udp', ports: '69' }, RDP: { proto: 'tcp', ports: '3389' }
+        };
+        const FW_WEB_CATEGORIES = {
+            'Social Networking': ['facebook.com', 'instagram.com', 'x.com', 'twitter.com', 'tiktok.com', 'snapchat.com', 'social.test'],
+            'Gambling': ['bet365.com', 'sportsbet.com.au', 'pokerstars.com', 'casino.test', 'bet.test'],
+            'Games': ['steampowered.com', 'roblox.com', 'miniclip.com', 'games.test'],
+            'Streaming Media': ['youtube.com', 'netflix.com', 'twitch.tv', 'stream.test'],
+            'Malicious Websites': ['malware.test', 'evil.test', 'botnet.test'],
+            'Phishing': ['phishing.test', 'login-verify.test', 'secure-bank-update.test']
+        };
+        const FW_IPS_SIGS = {
+            3001: { name: 'TCP.Port.Scan', desc: 'One source probed many ports on a host', sev: 'high' },
+            3002: { name: 'ICMP.Ping.Sweep', desc: 'One source pinged many hosts', sev: 'medium' },
+            3003: { name: 'Login.Brute.Force', desc: 'Repeated connections to a login service (SSH/Telnet/FTP)', sev: 'high' },
+            3004: { name: 'Cleartext.Credential.Protocol', desc: 'Telnet or FTP session (credentials sent in clear text)', sev: 'low' },
+            3005: { name: 'ICMP.Flood', desc: 'High rate of ICMP echo requests from one source', sev: 'medium' }
+        };
+        const FW_SEV_CEF = { low: 3, medium: 5, high: 8, critical: 10 };
+        function fwDefaultConfig() {
+            return {
+                zones: { port1: 'inside', port2: 'outside', port3: 'dmz', port4: '' },
+                access: { port1: ['https', 'ping'], port2: [], port3: [], port4: [] },
+                routes: [],
+                addresses: [],
+                addrGroups: [],
+                services: [],
+                svcGroups: [],
+                policies: [],
+                vips: [],
+                webFilter: { categories: { 'Malicious Websites': 'block', 'Phishing': 'block' }, urls: [] },
+                ips: { enabled: true, sigs: { 3001: 'block', 3002: 'monitor', 3003: 'block', 3004: 'monitor', 3005: 'monitor' }, quarantineSecs: 60 },
+                admins: [{ user: 'admin', pass: 'admin', role: 'super_admin' }],
+                logging: { syslogEnabled: false, syslogServer: '', logImplicitDeny: true, logLocalIn: true },
+                nextId: 1
+            };
+        }
+        function fwRt(fw) {
+            if (!Object.prototype.hasOwnProperty.call(fw, '_fwrt')) {
+                Object.defineProperty(fw, '_fwrt', { enumerable: false, configurable: true, writable: true, value: {
+                    fwd: new Map(), rev: new Map(), sessions: new Map(), nextSid: 1, natPort: 30000,
+                    ips: {}, quarantine: new Map(), hits: {}, logs: [], logSeq: 1,
+                    counters: { accepted: 0, denied: 0, threats: { low: 0, medium: 0, high: 0, critical: 0 }, webBlocked: 0, bytes: 0 },
+                    tokens: {}, loginFails: {}, bootTime: Date.now()
+                } });
+            }
+            return fw._fwrt;
+        }
+        // ---- matching helpers ----
+        const fwIpInt = (ip) => String(ip).split('.').reduce((a, o) => ((a << 8) >>> 0) + (parseInt(o, 10) || 0), 0) >>> 0;
+        function fwAddrValueMatch(value, ip) {
+            const v = String(value || '').trim(); const x = fwIpInt(ip);
+            if (!v) return false;
+            if (v.includes('-')) { const [a, b] = v.split('-').map(s => fwIpInt(s.trim())); return x >= Math.min(a, b) && x <= Math.max(a, b); }
+            if (v.includes('/')) {
+                const [net, m] = v.split('/');
+                const bits = /^\d+$/.test(m) ? parseInt(m, 10) : maskBits(m);
+                const mk = bits === 0 ? 0 : ((0xFFFFFFFF << (32 - bits)) >>> 0);
+                return ((x & mk) >>> 0) === ((fwIpInt(net) & mk) >>> 0);
+            }
+            return fwIpInt(v) === x;
+        }
+        function fwAddrIn(cfg, names, ip, depth = 0) {
+            if (!names || !names.length) return false;
+            return names.some(n => {
+                if (n === 'all') return true;
+                const a = (cfg.addresses || []).find(o => o.name === n);
+                if (a) return fwAddrValueMatch(a.value, ip);
+                const g = depth < 5 && (cfg.addrGroups || []).find(o => o.name === n);
+                return !!g && fwAddrIn(cfg, g.members || [], ip, depth + 1);
+            });
+        }
+        function fwPortsMatch(spec, port) {
+            if (!spec) return true;
+            return String(spec).split(',').some(r => { const m = r.trim().match(/^(\d+)(?:-(\d+))?$/); if (!m) return false; const lo = +m[1], hi = m[2] ? +m[2] : lo; return port >= lo && port <= hi; });
+        }
+        function fwSvcDef(cfg, name) { return FW_SERVICES[name] || (cfg.services || []).find(s => s.name === name) || null; }
+        function fwSvcIn(cfg, names, proto, port, depth = 0) {
+            if (!names || !names.length) return false;
+            return names.some(n => {
+                const s = fwSvcDef(cfg, n);
+                if (s) {
+                    if (s.proto === 'any') return true;
+                    if (s.proto !== proto) return false;
+                    return proto === 'icmp' || fwPortsMatch(s.ports, port);
+                }
+                const g = depth < 5 && (cfg.svcGroups || []).find(o => o.name === n);
+                return !!g && fwSvcIn(cfg, g.members || [], proto, port, depth + 1);
+            });
+        }
+        // A flow as (proto, src, sport, dst, dport). ICMP uses the NAT identifier in place of ports.
+        function fwTuple(p) {
+            const proto = aclPkt(p).protocol;
+            if (proto === 'icmp') {
+                const id = p.natId != null ? p.natId : 0;
+                return p.type === 'ICMP_REP' ? { proto, src: p.sourceIp, sport: 0, dst: p.targetIp, dport: id } : { proto, src: p.sourceIp, sport: id, dst: p.targetIp, dport: 0 };
+            }
+            return { proto, src: p.sourceIp, sport: p.sourcePort != null ? p.sourcePort : 0, dst: p.targetIp, dport: p.destPort != null ? p.destPort : (p.type === 'HTTP_GET' ? 80 : 0) };
+        }
+        const fwKey = (t) => `${t.proto}|${t.src}|${t.sport}|${t.dst}|${t.dport}`;
+        const fwRevT = (t) => ({ proto: t.proto, src: t.dst, sport: t.dport, dst: t.src, dport: t.sport });
+        function fwEgress(fw, dstIp) {
+            let best = null, bestPrefix = -1;
+            (fw.routingTable || []).forEach(r => { if (isSameSubnet(dstIp, r.network, r.mask)) { const pl = getPrefixLength(r.mask); if (pl > bestPrefix) { bestPrefix = pl; best = r; } } });
+            if (!best) return null;
+            if (fw.interfaces[best.interface]) return best.interface;
+            const nh = best.nextHop;
+            const i = Object.values(fw.interfaces).find(x => x.ip && x.ip !== '0.0.0.0' && nh && isSameSubnet(nh, getNetwork(x.ip, x.subnet), x.subnet));
+            return i ? i.id : null;
+        }
+        function fwZone(fw, ifId) { return (fw.fw.zones && fw.fw.zones[ifId]) || ''; }
+        function fwMatchPolicy(fw, inZone, outZone, src, dst, proto, dport) {
+            const cfg = fw.fw;
+            for (const pol of cfg.policies || []) {
+                if (pol.enabled === false) continue;
+                if (pol.srcZone !== 'any' && pol.srcZone !== inZone) continue;
+                if (pol.dstZone !== 'any' && pol.dstZone !== outZone) continue;
+                if (!fwAddrIn(cfg, pol.srcAddr, src) || !fwAddrIn(cfg, pol.dstAddr, dst) || !fwSvcIn(cfg, pol.service, proto, dport)) continue;
+                return pol;
+            }
+            return null;
+        }
+        function fwWebCheck(fw, host) {
+            const h = String(host || '').toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+            if (!h) return { action: 'allow', host: h };
+            const wf = fw.fw.webFilter || {};
+            const hostMatch = (pat) => { pat = String(pat || '').toLowerCase().trim(); if (!pat) return false; if (pat.startsWith('*.')) { const b = pat.slice(2); return h === b || h.endsWith('.' + b); } return h === pat || h.endsWith('.' + pat); };
+            const u = (wf.urls || []).find(x => hostMatch(x.pattern));
+            if (u) return { action: u.action === 'allow' ? 'allow' : 'block', host: h, match: `URL filter: ${u.pattern}` };
+            for (const [cat, list] of Object.entries(FW_WEB_CATEGORIES)) {
+                if (list.some(d => h === d || h.endsWith('.' + d))) {
+                    const act = (wf.categories || {})[cat] || 'allow';
+                    return { action: act === 'block' ? 'block' : (act === 'monitor' ? 'monitor' : 'allow'), host: h, category: cat, match: `Category: ${cat}` };
+                }
+            }
+            return { action: 'allow', host: h };
+        }
+        function fwFindVip(fw, t) {
+            return (fw.fw.vips || []).find(v => v.enabled !== false && v.extIp === t.dst && (v.proto === 'any' || v.proto === t.proto) && (!v.extPort || t.proto === 'icmp' || +v.extPort === t.dport)) || null;
+        }
+        const fwBytes = (p) => 60 + (p.content ? String(p.content).length : 0) + (p.data ? JSON.stringify(p.data).length : 0);
+
+        // ---- logging (CEF over syslog) ----
+        function cefEsc(v, header) {
+            v = String(v == null ? '' : v);
+            return header ? v.replace(/\\/g, '\\\\').replace(/\|/g, '\\|') : v.replace(/\\/g, '\\\\').replace(/=/g, '\\=').replace(/\r?\n/g, '\\n');
+        }
+        function fwCefTime(ms) {
+            const d = new Date(ms), p2 = (n) => String(n).padStart(2, '0');
+            return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${p2(d.getDate())} ${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+        }
+        // e: { type, sub, sigId, name, sev (0-10), action, src, spt, dst, dpt, proto, inIf, outIf, policy, srcZone, dstZone, msg, user, extra }
+        function fwLog(fw, e) {
+            const rt = fwRt(fw); const now = Date.now();
+            e.seq = rt.logSeq++; e.time = now;
+            const ext = {
+                rt: fwCefTime(now), dvchost: fw.name, cat: `${e.type}${e.sub ? '/' + e.sub : ''}`, act: e.action,
+                src: e.src, spt: e.spt, dst: e.dst, dpt: e.dpt, proto: e.proto ? String(e.proto).toUpperCase() : undefined,
+                deviceInboundInterface: e.inIf, deviceOutboundInterface: e.outIf,
+                cs1Label: e.policy != null ? 'PolicyID' : undefined, cs1: e.policy,
+                cs2Label: e.srcZone ? 'SourceZone' : undefined, cs2: e.srcZone,
+                cs3Label: e.dstZone ? 'DestinationZone' : undefined, cs3: e.dstZone,
+                suser: e.user, msg: e.msg
+            };
+            Object.assign(ext, e.extra || {});
+            const extStr = Object.entries(ext).filter(([k, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => `${k}=${cefEsc(v)}`).join(' ');
+            e.cef = `CEF:0|NetSim|NGFW|1.0|${e.sigId}|${cefEsc(e.name, true)}|${e.sev}|${extStr}`;
+            rt.logs.push(e); if (rt.logs.length > 1000) rt.logs.splice(0, rt.logs.length - 1000);
+            const L = fw.fw.logging || {};
+            if (L.syslogEnabled && L.syslogServer) {
+                const sysSev = e.sev >= 9 ? 2 : e.sev >= 7 ? 3 : e.sev >= 4 ? 4 : 6;
+                const d = new Date(now), p2 = (n) => String(n).padStart(2, '0');
+                const hdr = `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${String(d.getDate()).padStart(2, ' ')} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+                try { originateUdp(fw, L.syslogServer, 514, { syslog: `<${23 * 8 + sysSev}>${hdr} ${fw.name} ${e.cef}`, from: fw.name, sev: sysSev, format: 'cef' }); } catch (err) {}
+            }
+            return e;
+        }
+        function fwTrafficLog(fw, action, t, extra) {
+            return fwLog(fw, Object.assign({ type: 'traffic', sub: extra.sub || 'forward', sigId: action === 'accept' ? 1000 : (extra.sub === 'local' ? 1002 : 1001),
+                name: action === 'accept' ? 'Traffic allowed' : (extra.sub === 'local' ? 'Local-in traffic denied' : 'Traffic denied'),
+                sev: action === 'accept' ? 3 : 5, action, src: t.src, spt: t.proto === 'icmp' ? undefined : t.sport, dst: t.dst, dpt: t.proto === 'icmp' ? undefined : t.dport, proto: t.proto }, extra));
+        }
+        function fwAdminLog(fw, sigId, name, sev, action, user, src, msg) {
+            return fwLog(fw, { type: 'event', sub: 'admin', sigId, name, sev, action, user, src, msg });
+        }
+
+        // ---- IPS ----
+        function fwIpsInspect(fw, t, p, now) {
+            const cfg = fw.fw.ips || {}; if (!cfg.enabled) return null;
+            const rt = fwRt(fw);
+            const tr = rt.ips[t.src] = rt.ips[t.src] || { conns: [], pings: [], alerted: {} };
+            const prune = (arr, win) => { while (arr.length && now - arr[0].t > win) arr.shift(); };
+            const isNewConn = (t.proto === 'tcp' && p.type === 'TCP' && p.flags && p.flags.syn && !p.flags.ack) || p.type === 'HTTP_GET' || (t.proto === 'udp' && p.type === 'UDP');
+            let sig = null;
+            if (isNewConn && (t.proto === 'tcp' || t.proto === 'udp')) {
+                tr.conns.push({ t: now, dst: t.dst, port: t.dport, proto: t.proto }); prune(tr.conns, 10000);
+                const ports = new Set(tr.conns.filter(c => c.dst === t.dst).map(c => `${c.proto}/${c.port}`));
+                if (ports.size >= 8) sig = 3001;
+                if (!sig && t.proto === 'tcp' && [21, 22, 23].includes(t.dport) && tr.conns.filter(c => c.dst === t.dst && c.port === t.dport && now - c.t <= 30000).length >= 5) sig = 3003;
+                if (!sig && t.proto === 'tcp' && [21, 23].includes(t.dport)) sig = 3004;
+            }
+            if (!sig && p.type === 'ICMP_REQ') {
+                tr.pings.push({ t: now, dst: t.dst }); prune(tr.pings, 10000);
+                if (new Set(tr.pings.map(x => x.dst)).size >= 5) sig = 3002;
+                else if (tr.pings.filter(x => now - x.t <= 5000).length >= 20) sig = 3005;
+            }
+            if (!sig) return null;
+            const def = FW_IPS_SIGS[sig], action = (cfg.sigs || {})[sig] === 'block' ? 'block' : 'monitor';
+            const ak = `${sig}|${t.dst}`;
+            if (!tr.alerted[ak] || now - tr.alerted[ak] > 10000) {
+                tr.alerted[ak] = now;
+                rt.counters.threats[def.sev] = (rt.counters.threats[def.sev] || 0) + 1;
+                fwLog(fw, { type: 'threat', sub: 'ips', sigId: sig, name: def.name, sev: FW_SEV_CEF[def.sev], action: action === 'block' ? 'dropped' : 'detected',
+                    src: t.src, spt: t.proto === 'icmp' ? undefined : t.sport, dst: t.dst, dpt: t.proto === 'icmp' ? undefined : t.dport, proto: t.proto,
+                    msg: def.desc, extra: { cs4Label: 'Severity', cs4: def.sev } });
+            }
+            if (action === 'block' && (cfg.quarantineSecs || 0) > 0 && (def.sev === 'high' || def.sev === 'critical')) {
+                if (!(rt.quarantine.get(t.src) > now)) fwLog(fw, { type: 'threat', sub: 'quarantine', sigId: 3900, name: 'Attacker.Quarantined', sev: 7, action: 'quarantined', src: t.src, msg: `Source quarantined for ${cfg.quarantineSecs} seconds after ${def.name}` });
+                rt.quarantine.set(t.src, now + cfg.quarantineSecs * 1000);
+            }
+            return { sig, action };
+        }
+
+        // ---- sessions + NAT ----
+        function fwExpire(fw, now) {
+            const rt = fwRt(fw);
+            rt.sessions.forEach((s, id) => {
+                const idle = s.A.proto === 'icmp' ? 30000 : 120000;
+                if (now - s.last > idle) { rt.sessions.delete(id); rt.fwd.delete(fwKey(s.A)); rt.rev.delete(fwKey(fwRevT(s.B))); }
+            });
+        }
+        function fwCreateSession(fw, A, post, vip, pol, inIf, outIf, now) {
+            const rt = fwRt(fw);
+            const B = { proto: A.proto, src: A.src, sport: A.sport, dst: post.dst, dport: post.dport };
+            if (pol.nat) {
+                const out = fw.interfaces[outIf];
+                if (out && out.ip && out.ip !== '0.0.0.0') { B.src = out.ip; if (A.proto === 'tcp' || A.proto === 'udp' || A.proto === 'icmp') { rt.natPort = rt.natPort >= 60000 ? 30001 : rt.natPort + 1; B.sport = rt.natPort; } }
+            }
+            const s = { id: rt.nextSid++, A, B, vip: vip ? vip.name : null, policy: pol.id, inIf, outIf, inZone: fwZone(fw, inIf), outZone: fwZone(fw, outIf), start: now, last: now, pkts: 0, bytes: 0 };
+            rt.sessions.set(s.id, s); rt.fwd.set(fwKey(A), s); rt.rev.set(fwKey(fwRevT(B)), s);
+            return s;
+        }
+        function fwApply(s, dir, p) {
+            const T = dir === 'fwd' ? s.B : fwRevT(s.A);
+            p.sourceIp = T.src; p.targetIp = T.dst;
+            if (s.A.proto === 'icmp') {
+                if (p.type === 'ICMP_REQ') { if (T.sport) p.natId = T.sport; else delete p.natId; }
+                else { if (T.dport) p.natId = T.dport; else delete p.natId; }
+            } else if (s.A.proto === 'tcp' || s.A.proto === 'udp') {
+                if (p.sourcePort != null || T.sport) p.sourcePort = T.sport;
+                if (p.destPort != null || T.dport) p.destPort = T.dport;
+            }
+        }
+        function fwBlockPage(fw, host, reason) {
+            const esc = (s) => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+            return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Web Page Blocked</title><style>body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f1f5f9;color:#1e293b}.b{max-width:560px;margin:60px auto;background:#fff;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.12);overflow:hidden}.h{background:#b91c1c;color:#fff;padding:18px 22px;font-size:20px;font-weight:700}.c{padding:20px 22px;line-height:1.6}code{background:#f1f5f9;padding:2px 6px;border-radius:4px}</style></head><body><div class="b"><div class="h">&#9940; Web Page Blocked</div><div class="c"><p>Access to <code>${esc(host)}</code> has been blocked by the firewall's web filtering policy.</p><p><b>Reason:</b> ${esc(reason)}<br><b>Firewall:</b> ${esc(fw.name)}</p><p style="color:#64748b;font-size:12px">If you believe this is a mistake, contact your network administrator.</p></div></div></body></html>`;
+        }
+
+        class FirewallAppliance extends Router {
+            constructor(x, y) {
+                super(x, y);
+                deviceCounter.Router--;
+                if (!deviceCounter.Firewall) deviceCounter.Firewall = 1;
+                this.isFirewall = true;
+                this.name = `Firewall${deviceCounter.Firewall++}`;
+                this.cli.prompt = `${this.name}>`;
+                const mk = (id) => ({ id, type: 'ethernet', ip: '0.0.0.0', subnet: '0.0.0.0', mac: generateMac(), connectedLink: null, adminState: 'up' });
+                this.interfaces = { port1: mk('port1'), port2: mk('port2'), port3: mk('port3'), port4: mk('port4') };
+                this.interfaces.port1.ip = '192.168.1.99'; this.interfaces.port1.subnet = '255.255.255.0';
+                this.fw = fwDefaultConfig();
+                this.cli.history = ['% This is a firewall appliance. Manage it from a web browser at https://192.168.1.99 (default login admin / admin).'];
+            }
+            async receive(frame, inPortId) {
+                const inIface = this.interfaces[inPortId];
+                const p = frame && frame.payload;
+                if (!inIface || inIface.adminState === 'down' || !p) return;
+                if (!this.fw) this.fw = fwDefaultConfig();
+                // Layer 2 control, broadcasts and non-IP frames are handled by the router underneath
+                if (p.type === 'ARP_REQ' || p.type === 'ARP_REP' || frame.destMac !== inIface.mac || !p.targetIp || !p.sourceIp) return super.receive(frame, inPortId);
+                const rt = fwRt(this), now = Date.now();
+                fwExpire(this, now);
+                const t = fwTuple(p);
+                // 1. packets belonging to an existing session (stateful: replies are allowed automatically)
+                let s = rt.fwd.get(fwKey(t)), dir = 'fwd';
+                if (!s) { s = rt.rev.get(fwKey(t)); dir = 'rev'; }
+                if (s) {
+                    fwApply(s, dir, p); s.last = now; s.pkts++; const b = fwBytes(p); s.bytes += b; rt.counters.bytes += b;
+                    if (rt.hits[s.policy]) rt.hits[s.policy].bytes += b;
+                    await this.routePacket(frame); return;
+                }
+                // 2. quarantined attackers are dropped outright
+                if (rt.quarantine.get(t.src) > now) return;
+                // 3. intrusion prevention
+                const ips = fwIpsInspect(this, t, p, now);
+                if (ips && ips.action === 'block') return;
+                // 4. traffic for the firewall itself (management, ping)
+                const vip = fwFindVip(this, t);
+                const own = Object.values(this.interfaces).some(i => i.ip === t.dst);
+                if (own && !vip) return this.fwLocalIn(frame, inIface, t, p);
+                // 5. destination NAT (virtual IP / port forwarding)
+                const post = { dst: vip ? vip.mappedIp : t.dst, dport: vip && vip.mappedPort && t.proto !== 'icmp' ? +vip.mappedPort : t.dport };
+                // 6. route lookup decides the egress interface and zone
+                const outIf = fwEgress(this, post.dst);
+                if (!outIf) return;
+                const inZone = fwZone(this, inPortId), outZone = fwZone(this, outIf);
+                // 7. firewall policy (first match, top down; implicit deny at the end)
+                const pol = fwMatchPolicy(this, inZone, outZone, t.src, post.dst, t.proto, post.dport);
+                if (!pol || pol.action !== 'accept') {
+                    rt.counters.denied++;
+                    if (pol) { const h = rt.hits[pol.id] = rt.hits[pol.id] || { hits: 0, bytes: 0, last: 0 }; h.hits++; h.last = now; }
+                    if (pol ? pol.log !== false : (this.fw.logging || {}).logImplicitDeny !== false)
+                        fwTrafficLog(this, 'deny', t, { inIf: inPortId, outIf, srcZone: inZone, dstZone: outZone, policy: pol ? pol.id : 0, msg: pol ? `Denied by policy ${pol.id} (${pol.name || 'unnamed'})` : 'Denied by implicit deny policy' });
+                    return;
+                }
+                // 8. web filtering on HTTP requests
+                if (pol.webFilter && p.type === 'HTTP_GET') {
+                    const wf = fwWebCheck(this, p.host || post.dst);
+                    if (wf.action === 'block') {
+                        rt.counters.webBlocked++;
+                        fwLog(this, { type: 'utm', sub: 'webfilter', sigId: 2000, name: 'Web page blocked', sev: 5, action: 'blocked', src: t.src, spt: t.sport, dst: t.dst, dpt: t.dport, proto: 'tcp',
+                            inIf: inPortId, outIf, policy: pol.id, srcZone: inZone, dstZone: outZone, msg: wf.match, extra: { request: `http://${wf.host}/`, cs4Label: 'WebCategory', cs4: wf.category || 'Custom URL' } });
+                        await sleep(35);
+                        transmit({ sourceMac: inIface.mac, destMac: frame.sourceMac, payload: { type: 'HTTP_REP', sourceIp: t.dst, targetIp: t.src, content: fwBlockPage(this, wf.host, wf.match), sourcePort: t.dport, destPort: t.sport } }, this.id, inPortId);
+                        return;
+                    }
+                    if (wf.action === 'monitor') fwLog(this, { type: 'utm', sub: 'webfilter', sigId: 2001, name: 'Web page monitored', sev: 2, action: 'passthrough', src: t.src, dst: t.dst, dpt: t.dport, proto: 'tcp', policy: pol.id, msg: wf.match, extra: { request: `http://${wf.host}/`, cs4Label: 'WebCategory', cs4: wf.category } });
+                }
+                // 9. new session, source NAT, forward
+                rt.counters.accepted++;
+                const h = rt.hits[pol.id] = rt.hits[pol.id] || { hits: 0, bytes: 0, last: 0 }; h.hits++; h.last = now;
+                s = fwCreateSession(this, t, post, vip, pol, inPortId, outIf, now);
+                if (pol.log !== false) {
+                    const x = {};
+                    if (s.B.src !== t.src) { x.sourceTranslatedAddress = s.B.src; if (t.proto !== 'icmp') x.sourceTranslatedPort = s.B.sport; }
+                    if (s.B.dst !== t.dst) { x.destinationTranslatedAddress = s.B.dst; if (t.proto !== 'icmp') x.destinationTranslatedPort = s.B.dport; }
+                    x.cn1Label = 'SessionID'; x.cn1 = s.id;
+                    fwTrafficLog(this, 'accept', t, { inIf: inPortId, outIf, srcZone: inZone, dstZone: outZone, policy: pol.id, msg: `Allowed by policy ${pol.id} (${pol.name || 'unnamed'})`, extra: x });
+                }
+                fwApply(s, 'fwd', p); s.pkts++; const b = fwBytes(p); s.bytes += b; h.bytes += b; rt.counters.bytes += b;
+                await this.routePacket(frame);
+            }
+            async fwLocalIn(frame, inIface, t, p) {
+                const acc = (this.fw.access || {})[inIface.id] || [];
+                const deny = () => { if ((this.fw.logging || {}).logLocalIn !== false) fwTrafficLog(this, 'deny', t, { sub: 'local', inIf: inIface.id, srcZone: fwZone(this, inIface.id), msg: `Administrative access not permitted on ${inIface.id}` }); };
+                if (p.type === 'ICMP_REQ') { if (acc.includes('ping')) return super.receive(frame, inIface.id); return deny(); }
+                if (p.type === 'ICMP_REP') return super.receive(frame, inIface.id);
+                if (p.type === 'HTTP_GET') {
+                    if (!acc.includes('https') && !acc.includes('http')) return deny();
+                    await sleep(35);
+                    transmit({ sourceMac: inIface.mac, destMac: frame.sourceMac, payload: { type: 'HTTP_REP', sourceIp: t.dst, targetIp: t.src, content: generateFirewallGui(this, t.dst), sourcePort: p.destPort || 443, destPort: p.sourcePort } }, this.id, inIface.id);
+                    return;
+                }
+                // TCP handshakes to the management ports (curl https://, nmap) are answered when access is enabled
+                if (p.type === 'TCP') {
+                    const mgmt = (t.dport === 443 && acc.includes('https')) || (t.dport === 80 && acc.includes('http'));
+                    if (!mgmt) return deny();
+                    if (p.flags && p.flags.syn && !p.flags.ack) transmit({ sourceMac: inIface.mac, destMac: frame.sourceMac, payload: tcpSeg(t.dst, t.src, t.dport, t.sport, { syn: true, ack: true }, 3000, (p.seq || 0) + 1) }, this.id, inIface.id);
+                    return;
+                }
+                // Replies to traffic the firewall itself originated (syslog, pings) and routing protocols
+                if (p.type === 'UDP' || p.type === 'DNS_REP') return super.receive(frame, inIface.id);
+                return deny();
+            }
+            updateConnectedRoutes() {
+                if (this.fw) this.staticRoutes = (this.fw.routes || []).filter(r => r.network && r.mask && r.gateway).map(r => ({ network: getNetwork(r.network, r.mask), mask: r.mask, nextHop: r.gateway, interface: null, ad: 10 }));
+                return super.updateConnectedRoutes();
+            }
+        }
+        // ---- Firewall web GUI ----
+        // The page served over HTTP is a login screen plus this single-page app. Nothing about the
+        // configuration is in the page itself: after login, all data comes from fwRpc() through
+        // postMessage, and every change is validated, role-checked and audit-logged by the appliance.
+        // fwGuiClient runs inside the browser iframe and must not reference anything outside itself.
+        function fwGuiClient(BOOT) {
+            let token = null, S = null, page = 'dashboard', reqSeq = 0, modalOpen = false, logTab = 'all', logQuery = '', showCef = false;
+            const pending = {};
+            const $ = (id) => document.getElementById(id);
+            const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            window.addEventListener('message', (e) => { const d = e.data; if (d && d.__fwReply && pending[d.reqId]) { pending[d.reqId](d); delete pending[d.reqId]; } });
+            function rpc(op, args) {
+                return new Promise(res => {
+                    const id = ++reqSeq; pending[id] = res;
+                    parent.postMessage({ __fw: true, ip: BOOT.ip, token, op, args: args || {}, reqId: id }, '*');
+                    setTimeout(() => { if (pending[id]) { delete pending[id]; res({ ok: false, error: 'No response from the firewall.' }); } }, 5000);
+                });
+            }
+            const RO = () => S && S.role !== 'super_admin';
+            const fmtBytes = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : b > 1024 ? (b / 1024).toFixed(1) + ' KB' : (b || 0) + ' B';
+            const fmtAge = (ms) => { const s = Math.floor(ms / 1000); return s >= 3600 ? Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm' : s >= 60 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : s + 's'; };
+            const fmtTime = (ms) => { const d = new Date(ms); return d.toLocaleTimeString('en-AU', { hour12: false }); };
+            const badge = (txt, cls) => `<span class="bd ${cls}">${esc(txt)}</span>`;
+            const actBadge = (a) => badge(a, /accept|allow|passthrough|detected|success/.test(a) ? 'g' : /deny|block|drop|quarant|fail|lock/.test(a) ? 'r' : 'b');
+            const btn = (label, onclick, cls = '') => RO() && !/nav|ro-ok/.test(cls) ? '' : `<button class="btn ${cls}" onclick="${onclick}">${esc(label)}</button>`;
+            function toast(msg, bad) { const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(t._h); t._h = setTimeout(() => t.className = 'toast', 3200); }
+
+            // ---------- login ----------
+            function showLogin(msg) {
+                document.body.innerHTML = `<div class="login"><div class="lbox"><div class="lhead"><div class="logo">&#128737;</div><div><div class="lt">${esc(BOOT.name)}</div><div class="ls">NetSim NGFW &middot; Secure Management</div></div></div>
+                    <div class="lbody"><label>Username</label><input id="lu" autocomplete="off" value="admin"><label>Password</label><input id="lp" type="password" autocomplete="off">
+                    <div id="lerr" class="lerr">${esc(msg || '')}</div><button class="btn pri wide" id="lbtn">Login</button>
+                    <div class="lnote">Connected to https://${esc(BOOT.ip)}. All administrative activity is logged.</div></div></div></div><div id="toast" class="toast"></div>`;
+                const go = async () => {
+                    $('lbtn').disabled = true;
+                    const r = await rpc('login', { user: $('lu').value.trim(), pass: $('lp').value });
+                    if (r.ok) { token = r.token; await refresh(); render(); startPoll(); }
+                    else { $('lbtn').disabled = false; $('lerr').textContent = r.error || 'Login failed.'; $('lp').value = ''; $('lp').focus(); }
+                };
+                $('lbtn').onclick = go; $('lp').onkeydown = (e) => { if (e.key === 'Enter') go(); }; $('lp').focus();
+            }
+            async function refresh() {
+                const r = await rpc('state');
+                if (!r.ok) { if (r.relogin) { token = null; showLogin(r.error); } return false; }
+                S = r.data; return true;
+            }
+            async function apply(kind, data, okMsg) {
+                const r = await rpc('apply', { kind, data });
+                if (!r.ok) { toast(r.error || 'Change rejected.', true); if (r.relogin) { token = null; showLogin(r.error); } return false; }
+                S = r.data; closeModal(); render(); toast(okMsg || 'Configuration saved.'); return true;
+            }
+            window.fwApply = apply;
+            let pollT = null;
+            function startPoll() {
+                clearInterval(pollT);
+                pollT = setInterval(async () => {
+                    if (!token || modalOpen) return;
+                    if (!['dashboard', 'sessions', 'logs', 'ips'].includes(page)) return;
+                    if (await refresh()) renderMain();
+                }, 2000);
+            }
+
+            // ---------- shell ----------
+            const NAV = [
+                ['Dashboard', [['dashboard', 'Status'], ['sessions', 'Sessions']]],
+                ['Network', [['interfaces', 'Interfaces'], ['routes', 'Static Routes']]],
+                ['Policy & Objects', [['policies', 'Firewall Policy'], ['addresses', 'Addresses'], ['services', 'Services'], ['vips', 'Virtual IPs']]],
+                ['Security Profiles', [['webfilter', 'Web Filter'], ['ips', 'Intrusion Prevention']]],
+                ['Log & Report', [['logs', 'Log Viewer'], ['logsettings', 'Log Settings']]],
+                ['System', [['admins', 'Administrators'], ['settings', 'Settings']]]
+            ];
+            function render() {
+                document.body.innerHTML = `<div class="top"><div class="logo">&#128737;</div><b>${esc(S.name)}</b><span class="mdl">NetSim NGFW 1.0</span>
+                    <span class="usr">${esc(S.user)} &middot; ${S.role === 'super_admin' ? 'Super Admin' : 'Read Only'}</span><button class="btn nav" onclick="fwLogout()">Logout</button></div>
+                    <div class="wrap"><div class="side">${NAV.map(([sec, items]) => `<div class="sec">${esc(sec)}</div>` + items.map(([id, label]) => `<div class="nv${page === id ? ' on' : ''}" onclick="fwGo('${id}')">${esc(label)}</div>`).join('')).join('')}</div>
+                    <div class="main" id="main"></div></div><div id="modal" class="mbg"></div><div id="toast" class="toast"></div>`;
+                renderMain();
+            }
+            window.fwGo = (p) => { page = p; render(); };
+            window.fwLogout = async () => { await rpc('logout'); token = null; clearInterval(pollT); showLogin('You have logged out.'); };
+            const head = (title, sub, actions) => `<div class="ph"><div><h2>${esc(title)}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div><div>${actions || ''}</div></div>${RO() ? '<div class="ro">Read-only administrator: changes are disabled.</div>' : ''}`;
+            const table = (cols, rows, empty) => `<table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.join('') : `<tr><td colspan="${cols.length}" class="empty">${esc(empty || 'No entries')}</td></tr>`}</tbody></table>`;
+            function renderMain() {
+                const m = $('main'); if (!m || !S) return;
+                const fn = PAGES[page] || PAGES.dashboard; m.innerHTML = fn();
+            }
+
+            // ---------- modal forms ----------
+            function openModal(title, bodyHtml, onSave) {
+                modalOpen = true;
+                const mb = $('modal'); mb.className = 'mbg show';
+                mb.innerHTML = `<div class="mdl-box"><div class="mh">${esc(title)}<span class="x" onclick="fwCloseModal()">&times;</span></div><div class="mbody">${bodyHtml}</div><div class="mf"><button class="btn" onclick="fwCloseModal()">Cancel</button><button class="btn pri" id="msave">OK</button></div></div>`;
+                $('msave').onclick = onSave;
+            }
+            function closeModal() { modalOpen = false; const mb = $('modal'); if (mb) { mb.className = 'mbg'; mb.innerHTML = ''; } }
+            window.fwCloseModal = closeModal;
+            const field = (label, id, val, ph) => `<label>${esc(label)}</label><input id="${id}" value="${esc(val || '')}" placeholder="${esc(ph || '')}">`;
+            const select = (label, id, opts, val) => `<label>${esc(label)}</label><select id="${id}">${opts.map(o => { const [v, t] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}"${String(v) === String(val) ? ' selected' : ''}>${esc(t)}</option>`; }).join('')}</select>`;
+            const checks = (label, name, opts, vals) => `<label>${esc(label)}</label><div class="chk">${opts.map(o => `<label class="ci"><input type="checkbox" name="${name}" value="${esc(o)}"${(vals || []).includes(o) ? ' checked' : ''}> ${esc(o)}</label>`).join('')}</div>`;
+            const val = (id) => ($(id) ? $(id).value.trim() : '');
+            const checked = (name) => Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(x => x.value);
+            const zones = () => Array.from(new Set(S.interfaces.map(i => i.zone).filter(Boolean)));
+            const addrNames = () => ['all', ...S.addresses.map(a => a.name), ...S.addrGroups.map(g => g.name)];
+            const svcNames = () => [...S.predefinedServices, ...S.services.map(s => s.name), ...S.svcGroups.map(g => g.name)];
+
+            // ---------- pages ----------
+            const PAGES = {
+                dashboard() {
+                    const c = S.counters, th = c.threats;
+                    const card = (t, body) => `<div class="card"><div class="ct">${esc(t)}</div>${body}</div>`;
+                    const big = (n, l, cls) => `<div class="big ${cls || ''}">${esc(n)}</div><div class="bl">${esc(l)}</div>`;
+                    const top = S.policies.filter(p => p.hits).sort((a, b) => b.hits - a.hits).slice(0, 5);
+                    const recent = S.logs.filter(l => l.type === 'threat').slice(-5).reverse();
+                    return head('Status Dashboard', `Uptime ${fmtAge(S.uptime)} &middot; refreshed every 2 seconds`) + `<div class="grid">
+                        ${card('System Information', `<div class="kv"><span>Hostname</span><b>${esc(S.name)}</b><span>Model</span><b>NetSim NGFW 1.0</b><span>Uptime</span><b>${fmtAge(S.uptime)}</b><span>Logged in</span><b>${esc(S.user)}</b></div>`)}
+                        ${card('Active Sessions', big(S.sessions.length, 'current sessions'))}
+                        ${card('Traffic', `<div class="two">${big(c.accepted, 'sessions allowed', 'gt')}${big(c.denied, 'packets denied', 'rt')}</div><div class="bl">${fmtBytes(c.bytes)} forwarded</div>`)}
+                        ${card('Threats Detected', `<div class="sev">${['critical', 'high', 'medium', 'low'].map(s => `<div><span class="sv ${s}">${s}</span><b>${th[s] || 0}</b></div>`).join('')}</div><div class="bl">${c.webBlocked} web pages blocked &middot; ${S.quarantined.length} host(s) quarantined</div>`)}
+                        </div><div class="grid g2">
+                        ${card('Interfaces', table(['Port', 'Zone', 'IP / Mask', 'Status'], S.interfaces.map(i => `<tr><td><b>${esc(i.id)}</b></td><td>${esc(i.zone || '-')}</td><td>${i.ip && i.ip !== '0.0.0.0' ? esc(i.ip + ' / ' + i.subnet) : '<span class="mut">unset</span>'}</td><td>${i.status === 'up' ? badge('up', 'g') : i.admin === 'down' ? badge('admin down', 'gy') : badge('down', 'r')}</td></tr>`)))}
+                        ${card('Top Policies by Hits', table(['ID', 'Name', 'Action', 'Hits', 'Bytes'], top.map(p => `<tr><td>${p.id}</td><td>${esc(p.name)}</td><td>${actBadge(p.action)}</td><td>${p.hits}</td><td>${fmtBytes(p.bytes)}</td></tr>`), 'No policy has matched traffic yet'))}
+                        </div>${card('Recent Threats', table(['Time', 'Signature', 'Severity', 'Source', 'Destination', 'Action'], recent.map(l => `<tr><td>${fmtTime(l.time)}</td><td>${esc(l.name)}</td><td><span class="sv ${esc(l.extra && l.extra.cs4)}">${esc(l.extra && l.extra.cs4)}</span></td><td>${esc(l.src)}</td><td>${esc(l.dst || '')}</td><td>${actBadge(l.action)}</td></tr>`), 'No threats detected'))}`;
+                },
+                sessions() {
+                    return head('Session Monitor', 'Stateful session table (replies are matched to these sessions and allowed automatically)', btn('Clear All Sessions', "fwApply('sessions.clear',{},'Sessions cleared.')", 'warn')) +
+                        table(['ID', 'Proto', 'Source', 'Destination', 'NAT', 'Policy', 'Zones', 'Age', 'Pkts', 'Bytes'], S.sessions.map(s => `<tr><td>${s.id}</td><td>${esc(s.proto.toUpperCase())}</td><td>${esc(s.src)}</td><td>${esc(s.dst)}</td><td class="mut">${esc(s.nat || '-')}</td><td>${s.policy}</td><td>${esc(s.zones)}</td><td>${fmtAge(s.age)}</td><td>${s.pkts}</td><td>${fmtBytes(s.bytes)}</td></tr>`), 'No active sessions');
+                },
+                interfaces() {
+                    return head('Interfaces', 'Each port belongs to a zone. Administrative access controls which management services answer on that port.') +
+                        table(['Port', 'Zone', 'IP Address', 'Subnet Mask', 'Admin Access', 'Link', 'MAC', ''], S.interfaces.map(i => `<tr><td><b>${esc(i.id)}</b></td><td>${esc(i.zone || '-')}</td><td>${esc(i.ip)}</td><td>${esc(i.subnet)}</td><td>${(i.access || []).map(a => badge(a.toUpperCase(), 'b')).join(' ') || '<span class="mut">none</span>'}</td><td>${i.status === 'up' ? badge('up', 'g') : i.admin === 'down' ? badge('admin down', 'gy') : badge('down', 'r')}</td><td class="mut mono">${esc(i.mac)}</td><td>${btn('Edit', `fwEditIf('${i.id}')`)}</td></tr>`));
+                },
+                routes() {
+                    return head('Static Routes', 'Connected networks are routed automatically. Add a default route (0.0.0.0 / 0.0.0.0) towards the internet.', btn('Create New', 'fwAddRoute()', 'pri')) +
+                        table(['Destination', 'Mask', 'Gateway', ''], S.routes.map(r => `<tr><td>${esc(r.network)}</td><td>${esc(r.mask)}</td><td>${esc(r.gateway)}</td><td>${btn('Delete', `fwApply('route.del',{id:${r.id}},'Route deleted.')`, 'warn')}</td></tr>`), 'No static routes') +
+                        `<h3>Routing Table</h3>` + table(['Type', 'Network', 'Mask', 'Next Hop', 'Interface'], S.routingTable.map(r => `<tr><td>${esc(r.type)}</td><td>${esc(r.network)}</td><td>${esc(r.mask)}</td><td>${esc(r.nextHop)}</td><td>${esc(r.interface || '-')}</td></tr>`), 'Routing table is empty');
+                },
+                policies() {
+                    const rows = S.policies.map((p, idx) => `<tr class="${p.enabled === false ? 'dis' : ''}"><td>${p.id}</td><td><b>${esc(p.name)}</b></td><td>${esc(p.srcZone)} &rarr; ${esc(p.dstZone)}</td><td>${p.srcAddr.map(esc).join('<br>')}</td><td>${p.dstAddr.map(esc).join('<br>')}</td><td>${p.service.map(esc).join('<br>')}</td><td>${actBadge(p.action)}</td><td>${p.nat ? badge('NAT', 'b') : ''}${p.webFilter ? ' ' + badge('WEB', 'p') : ''}</td><td>${p.log !== false ? '&#10003;' : ''}</td><td>${p.hits}</td><td>${fmtBytes(p.bytes)}</td>
+                        <td class="acts">${btn('&uarr;'.replace('&uarr;', '↑'), `fwApply('policy.move',{id:${p.id},dir:-1},'Policy moved.')`)}${btn('↓', `fwApply('policy.move',{id:${p.id},dir:1},'Policy moved.')`)}${btn(p.enabled === false ? 'Enable' : 'Disable', `fwApply('policy.toggle',{id:${p.id}},'Policy updated.')`)}${btn('Edit', `fwEditPolicy(${p.id})`)}${btn('Delete', `fwApply('policy.del',{id:${p.id}},'Policy deleted.')`, 'warn')}</td></tr>`);
+                    rows.push(`<tr class="imp"><td>0</td><td><b>Implicit Deny</b></td><td>any &rarr; any</td><td>all</td><td>all</td><td>ALL</td><td>${badge('deny', 'r')}</td><td></td><td>${S.logging.logImplicitDeny ? '&#10003;' : ''}</td><td>${S.counters.implicitDeny || 0}</td><td></td><td></td></tr>`);
+                    return head('Firewall Policy', 'Policies are evaluated top down; the first match wins. Anything not allowed is dropped by the implicit deny.', btn('Create New', 'fwEditPolicy(0)', 'pri')) +
+                        table(['ID', 'Name', 'From → To', 'Source', 'Destination', 'Service', 'Action', 'Profiles', 'Log', 'Hits', 'Bytes', ''], rows);
+                },
+                addresses() {
+                    return head('Addresses', 'Named address objects: a host (10.1.1.10), a subnet (10.1.1.0/24) or a range (10.1.1.10-10.1.1.20).', btn('Create Address', 'fwAddAddr()', 'pri') + ' ' + btn('Create Group', "fwAddGroup('addr')")) +
+                        table(['Name', 'Value', 'Comment', 'References', ''], [`<tr class="imp"><td><b>all</b></td><td>0.0.0.0/0</td><td>Any address (built in)</td><td></td><td></td></tr>`, ...S.addresses.map(a => `<tr><td><b>${esc(a.name)}</b></td><td class="mono">${esc(a.value)}</td><td>${esc(a.comment || '')}</td><td>${a.refs}</td><td>${btn('Delete', `fwApply('addr.del',{name:${JSON.stringify(a.name).replace(/"/g, '&quot;')}},'Address deleted.')`, 'warn')}</td></tr>`)]) +
+                        `<h3>Address Groups</h3>` + table(['Name', 'Members', 'References', ''], S.addrGroups.map(g => `<tr><td><b>${esc(g.name)}</b></td><td>${g.members.map(esc).join(', ')}</td><td>${g.refs}</td><td>${btn('Delete', `fwApply('addrgrp.del',{name:${JSON.stringify(g.name).replace(/"/g, '&quot;')}},'Group deleted.')`, 'warn')}</td></tr>`), 'No address groups');
+                },
+                services() {
+                    return head('Services', 'Predefined services are built in. Create custom services for other ports.', btn('Create Service', 'fwAddSvc()', 'pri') + ' ' + btn('Create Group', "fwAddGroup('svc')")) +
+                        table(['Name', 'Protocol', 'Ports', 'Type', ''], [...S.predefinedServiceDefs.map(s => `<tr class="imp"><td><b>${esc(s.name)}</b></td><td>${esc(s.proto.toUpperCase())}</td><td>${esc(s.ports || '-')}</td><td>predefined</td><td></td></tr>`), ...S.services.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.proto.toUpperCase())}</td><td>${esc(s.ports || '-')}</td><td>custom (${s.refs} ref)</td><td>${btn('Delete', `fwApply('svc.del',{name:${JSON.stringify(s.name).replace(/"/g, '&quot;')}},'Service deleted.')`, 'warn')}</td></tr>`)]) +
+                        `<h3>Service Groups</h3>` + table(['Name', 'Members', 'References', ''], S.svcGroups.map(g => `<tr><td><b>${esc(g.name)}</b></td><td>${g.members.map(esc).join(', ')}</td><td>${g.refs}</td><td>${btn('Delete', `fwApply('svcgrp.del',{name:${JSON.stringify(g.name).replace(/"/g, '&quot;')}},'Group deleted.')`, 'warn')}</td></tr>`), 'No service groups');
+                },
+                vips() {
+                    return head('Virtual IPs (Port Forwarding)', 'Publish an inside or DMZ server: traffic to the external IP and port is translated to the mapped server. A policy must also allow it (use the mapped server address as the destination).', btn('Create New', 'fwAddVip()', 'pri')) +
+                        table(['Name', 'External IP', 'Protocol', 'External Port', 'Mapped IP', 'Mapped Port', ''], S.vips.map(v => `<tr><td><b>${esc(v.name)}</b></td><td>${esc(v.extIp)}</td><td>${esc(v.proto.toUpperCase())}</td><td>${esc(v.extPort || 'any')}</td><td>${esc(v.mappedIp)}</td><td>${esc(v.mappedPort || v.extPort || 'any')}</td><td>${btn('Delete', `fwApply('vip.del',{name:${JSON.stringify(v.name).replace(/"/g, '&quot;')}},'Virtual IP deleted.')`, 'warn')}</td></tr>`), 'No virtual IPs');
+                },
+                webfilter() {
+                    const cats = Object.keys(S.webCategories);
+                    return head('Web Filter', 'Applies to HTTP requests matched by a policy with Web Filter enabled. URL filter entries are checked first, then categories.') +
+                        table(['Category', 'Example sites', 'Action'], cats.map(c => `<tr><td><b>${esc(c)}</b></td><td class="mut">${S.webCategories[c].slice(0, 4).map(esc).join(', ')}</td><td>${RO() ? actBadge(S.webFilter.categories[c] || 'allow') : `<select onchange="fwApply('webfilter.cat',{category:${JSON.stringify(c).replace(/"/g, '&quot;')},action:this.value},'Category action updated.')">${['allow', 'monitor', 'block'].map(a => `<option${(S.webFilter.categories[c] || 'allow') === a ? ' selected' : ''}>${a}</option>`).join('')}</select>`}</td></tr>`)) +
+                        `<div class="ph"><h3>URL Filter</h3><div>${btn('Add URL', 'fwAddUrl()', 'pri')}</div></div>` + table(['Pattern', 'Action', ''], S.webFilter.urls.map(u => `<tr><td class="mono">${esc(u.pattern)}</td><td>${actBadge(u.action)}</td><td>${btn('Delete', `fwApply('webfilter.url.del',{pattern:${JSON.stringify(u.pattern).replace(/"/g, '&quot;')}},'URL entry deleted.')`, 'warn')}</td></tr>`), 'No URL filter entries');
+                },
+                ips() {
+                    const ips = S.ips;
+                    return head('Intrusion Prevention', 'Signatures inspect new connections through and to the firewall. Block drops the traffic; high-severity blocks also quarantine the attacker.', btn(ips.enabled ? 'Disable IPS' : 'Enable IPS', `fwApply('ips.set',{enabled:${!ips.enabled}},'IPS ${ips.enabled ? 'disabled' : 'enabled'}.')`, ips.enabled ? 'warn' : 'pri')) +
+                        `<div class="note">IPS is <b>${ips.enabled ? 'enabled' : 'disabled'}</b>. Quarantine period: ${RO() ? ips.quarantineSecs : `<input class="sm" id="qs" value="${ips.quarantineSecs}"> ${btn('Set', "fwApply('ips.set',{quarantineSecs:parseInt(document.getElementById('qs').value,10)},'Quarantine period saved.')")}`} seconds.</div>` +
+                        table(['ID', 'Signature', 'Description', 'Severity', 'Action'], Object.entries(ips.sigDefs).map(([id, d]) => `<tr><td>${id}</td><td><b>${esc(d.name)}</b></td><td>${esc(d.desc)}</td><td><span class="sv ${d.sev}">${d.sev}</span></td><td>${RO() ? actBadge(ips.sigs[id] || 'monitor') : `<select onchange="fwApply('ips.set',{sig:${id},action:this.value},'Signature action updated.')">${['monitor', 'block'].map(a => `<option${(ips.sigs[id] || 'monitor') === a ? ' selected' : ''}>${a}</option>`).join('')}</select>`}</td></tr>`)) +
+                        `<h3>Quarantined Hosts</h3>` + table(['Source IP', 'Expires in', ''], S.quarantined.map(q => `<tr><td>${esc(q.ip)}</td><td>${fmtAge(q.remaining)}</td><td>${btn('Release', `fwApply('ips.release',{ip:'${esc(q.ip)}'},'Host released.')`)}</td></tr>`), 'No hosts quarantined');
+                },
+                logs() {
+                    const tabs = [['all', 'All'], ['traffic', 'Traffic'], ['threat', 'Threat'], ['utm', 'Web Filter'], ['event', 'Admin Events']];
+                    const q = logQuery.toLowerCase();
+                    const list = S.logs.filter(l => (logTab === 'all' || l.type === logTab) && (!q || l.cef.toLowerCase().includes(q))).slice().reverse();
+                    const rows = list.slice(0, 300).map(l => showCef ? `<tr><td class="mono cef" colspan="8">${esc(l.cef)}</td></tr>` :
+                        `<tr><td>${fmtTime(l.time)}</td><td>${esc(l.type)}${l.sub ? '/' + esc(l.sub) : ''}</td><td>${l.sev >= 7 ? badge(l.sev, 'r') : l.sev >= 4 ? badge(l.sev, 'o') : badge(l.sev, 'gy')}</td><td>${actBadge(l.action || '')}</td><td>${esc(l.src || '')}${l.spt ? ':' + l.spt : ''}</td><td>${esc(l.dst || '')}${l.dpt ? ':' + l.dpt : ''}</td><td>${esc(l.user || (l.policy != null ? 'policy ' + l.policy : ''))}</td><td>${esc(l.name)}${l.msg ? '<div class="mut">' + esc(l.msg) + '</div>' : ''}</td></tr>`);
+                    return head('Log Viewer', `${S.logs.length} log entries stored locally (newest first). Format: CEF over syslog.`, btn('Export CSV', 'fwExportLogs()', 'ro-ok') + ' ' + btn('Clear Logs', "fwApply('logs.clear',{},'Local logs cleared.')", 'warn')) +
+                        `<div class="tabs">${tabs.map(([k, t]) => `<span class="tab${logTab === k ? ' on' : ''}" onclick="fwLogTab('${k}')">${t}</span>`).join('')}<input id="lq" placeholder="Search logs (IP, port, user, signature)" value="${esc(logQuery)}" oninput="fwLogSearch(this.value)"><label class="ci"><input type="checkbox" ${showCef ? 'checked' : ''} onchange="fwToggleCef(this.checked)"> Raw CEF</label></div>` +
+                        (showCef ? table(['CEF record'], rows, 'No matching log entries') : table(['Time', 'Type', 'Sev', 'Action', 'Source', 'Destination', 'Policy / User', 'Event'], rows, 'No matching log entries'));
+                },
+                logsettings() {
+                    const L = S.logging;
+                    return head('Log Settings', 'Logs are kept locally and can be forwarded to a syslog server or SIEM in Common Event Format (CEF).') +
+                        `<div class="form">${RO() ? '' : `<label class="ci"><input type="checkbox" id="ls-en" ${L.syslogEnabled ? 'checked' : ''}> Send logs to a remote syslog server / SIEM</label>
+                        <label>Syslog server IP</label><input id="ls-ip" value="${esc(L.syslogServer)}" placeholder="192.168.1.50">
+                        <label>Transport</label><input value="UDP 514, CEF:0 with RFC 3164 syslog header (facility local7)" disabled>
+                        <label class="ci"><input type="checkbox" id="ls-imp" ${L.logImplicitDeny ? 'checked' : ''}> Log traffic dropped by the implicit deny policy</label>
+                        <label class="ci"><input type="checkbox" id="ls-li" ${L.logLocalIn ? 'checked' : ''}> Log denied management (local-in) traffic</label>
+                        <button class="btn pri" onclick="fwApply('logging.set',{syslogEnabled:document.getElementById('ls-en').checked,syslogServer:document.getElementById('ls-ip').value.trim(),logImplicitDeny:document.getElementById('ls-imp').checked,logLocalIn:document.getElementById('ls-li').checked},'Log settings saved.')">Apply</button>`}</div>
+                        <h3>Example record</h3><div class="mono cef box">${esc((S.logs[S.logs.length - 1] || {}).cef || 'CEF:0|NetSim|NGFW|1.0|1000|Traffic allowed|3|rt=... dvchost=FW src=10.1.1.10 spt=49152 dst=203.0.113.10 dpt=80 proto=TCP act=accept')}</div>
+                        <h3>CEF fields used</h3>${table(['Field', 'Meaning'], [['Signature ID', '1000 allow, 1001 deny, 1002 local-in deny, 2000/2001 web filter, 3001-3005 IPS, 3900 quarantine, 4000-4005 admin events'], ['Severity', '0-10 (3 allow, 5 deny, 8 high threat, 7 failed login)'], ['src / spt / dst / dpt / proto', 'Source and destination address, port and protocol'], ['act', 'accept, deny, blocked, dropped, detected, success, failure'], ['cat', 'traffic/forward, threat/ips, utm/webfilter, event/admin'], ['cs1 PolicyID, cs2 SourceZone, cs3 DestinationZone', 'Policy and zones'], ['sourceTranslatedAddress / Port', 'Source NAT applied'], ['suser', 'Administrator (admin events)']].map(r => `<tr><td class="mono">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`))}`;
+                },
+                admins() {
+                    return head('Administrators', 'Super Admin can change everything; Read Only can view but not change. Every login and change is written to the admin event log.', btn('Create New', 'fwAddAdmin()', 'pri')) +
+                        table(['Username', 'Profile', ''], S.admins.map(a => `<tr><td><b>${esc(a.user)}</b></td><td>${a.role === 'super_admin' ? badge('super_admin', 'p') : badge('read_only', 'gy')}</td><td>${btn('Change Password', `fwAdminPass(${JSON.stringify(a.user).replace(/"/g, '&quot;')})`)}${btn('Delete', `fwApply('admin.del',{user:${JSON.stringify(a.user).replace(/"/g, '&quot;')}},'Administrator deleted.')`, 'warn')}</td></tr>`));
+                },
+                settings() {
+                    return head('System Settings', '') + `<div class="form">${field('Hostname', 'st-host', S.name)}${RO() ? '' : `<button class="btn pri" onclick="fwApply('hostname.set',{name:document.getElementById('st-host').value.trim()},'Hostname changed.')">Apply</button>`}</div>`;
+                }
+            };
+
+            // ---------- page actions ----------
+            window.fwLogTab = (k) => { logTab = k; renderMain(); };
+            window.fwLogSearch = (v) => { logQuery = v; const pos = $('lq').selectionStart; renderMain(); const q = $('lq'); q.focus(); q.setSelectionRange(pos, pos); };
+            window.fwToggleCef = (v) => { showCef = v; renderMain(); };
+            window.fwExportLogs = () => {
+                const cols = ['time', 'type', 'sub', 'sev', 'action', 'src', 'spt', 'dst', 'dpt', 'proto', 'policy', 'user', 'name', 'msg', 'cef'];
+                const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+                const csv = [cols.join(','), ...S.logs.map(l => cols.map(c => q(c === 'time' ? new Date(l.time).toISOString() : l[c])).join(','))].join('\n');
+                const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `${S.name}-logs.csv`; document.body.appendChild(a); a.click(); a.remove();
+            };
+            window.fwEditIf = (id) => {
+                const i = S.interfaces.find(x => x.id === id);
+                openModal(`Edit Interface ${id}`, field('IP address', 'f-ip', i.ip) + field('Subnet mask', 'f-mask', i.subnet) + field('Zone', 'f-zone', i.zone, 'inside, outside, dmz ...') +
+                    `<div class="hint">Existing zones: ${zones().map(esc).join(', ') || 'none'}</div>` + checks('Administrative access', 'f-acc', ['https', 'http', 'ping'], i.access) + select('Status', 'f-adm', [['up', 'Up'], ['down', 'Administratively down']], i.admin),
+                    () => apply('iface.set', { id, ip: val('f-ip'), subnet: val('f-mask'), zone: val('f-zone'), access: checked('f-acc'), admin: val('f-adm') }, `Interface ${id} saved.`));
+            };
+            window.fwAddRoute = () => openModal('New Static Route', field('Destination network', 'f-net', '0.0.0.0') + field('Subnet mask', 'f-mask', '0.0.0.0') + field('Gateway', 'f-gw', '', 'next-hop router IP'),
+                () => apply('route.add', { network: val('f-net'), mask: val('f-mask'), gateway: val('f-gw') }, 'Route added.'));
+            window.fwEditPolicy = (id) => {
+                const p = S.policies.find(x => x.id === id) || { name: '', srcZone: zones()[0] || 'any', dstZone: zones()[1] || 'any', srcAddr: ['all'], dstAddr: ['all'], service: ['ALL'], action: 'accept', nat: false, webFilter: false, log: true };
+                const zs = ['any', ...zones()];
+                openModal(id ? `Edit Policy ${id}` : 'New Firewall Policy', field('Name', 'f-name', p.name, 'LAN-to-Internet') + `<div class="two">${select('Incoming zone', 'f-sz', zs, p.srcZone)}${select('Outgoing zone', 'f-dz', zs, p.dstZone)}</div>` +
+                    `<div class="two">${checks('Source', 'f-sa', addrNames(), p.srcAddr)}${checks('Destination', 'f-da', addrNames(), p.dstAddr)}</div>` + checks('Service', 'f-sv', svcNames(), p.service) +
+                    `<div class="two">${select('Action', 'f-act', [['accept', 'ACCEPT'], ['deny', 'DENY']], p.action)}${select('Log traffic', 'f-log', [['yes', 'Log all sessions'], ['no', 'Do not log']], p.log !== false ? 'yes' : 'no')}</div>` +
+                    `<label class="ci"><input type="checkbox" id="f-nat" ${p.nat ? 'checked' : ''}> NAT: translate the source to the outgoing interface address</label><label class="ci"><input type="checkbox" id="f-wf" ${p.webFilter ? 'checked' : ''}> Apply the Web Filter profile</label>`,
+                    () => apply(id ? 'policy.edit' : 'policy.add', { id, name: val('f-name'), srcZone: val('f-sz'), dstZone: val('f-dz'), srcAddr: checked('f-sa'), dstAddr: checked('f-da'), service: checked('f-sv'), action: val('f-act'), log: val('f-log') === 'yes', nat: $('f-nat').checked, webFilter: $('f-wf').checked }, id ? `Policy ${id} saved.` : 'Policy created.'));
+            };
+            window.fwAddAddr = () => openModal('New Address', field('Name', 'f-name', '', 'Web-Server') + field('Value', 'f-val', '', '10.1.1.10, 10.1.1.0/24 or 10.1.1.10-10.1.1.20') + field('Comment', 'f-cm', ''),
+                () => apply('addr.add', { name: val('f-name'), value: val('f-val'), comment: val('f-cm') }, 'Address created.'));
+            window.fwAddGroup = (kind) => openModal(kind === 'addr' ? 'New Address Group' : 'New Service Group', field('Name', 'f-name', '') + checks('Members', 'f-mem', kind === 'addr' ? [...S.addresses.map(a => a.name)] : [...S.predefinedServices.filter(s => s !== 'ALL'), ...S.services.map(s => s.name)], []),
+                () => apply(kind === 'addr' ? 'addrgrp.add' : 'svcgrp.add', { name: val('f-name'), members: checked('f-mem') }, 'Group created.'));
+            window.fwAddSvc = () => openModal('New Service', field('Name', 'f-name', '', 'Web-Alt') + select('Protocol', 'f-pr', [['tcp', 'TCP'], ['udp', 'UDP'], ['icmp', 'ICMP']], 'tcp') + field('Destination port(s)', 'f-pt', '', '8080 or 8000-8100'),
+                () => apply('svc.add', { name: val('f-name'), proto: val('f-pr'), ports: val('f-pt') }, 'Service created.'));
+            window.fwAddVip = () => openModal('New Virtual IP', field('Name', 'f-name', '', 'DMZ-Web') + select('External IP (firewall interface)', 'f-ext', S.interfaces.filter(i => i.ip && i.ip !== '0.0.0.0').map(i => [i.ip, `${i.ip} (${i.id}${i.zone ? ', ' + i.zone : ''})`]), '') +
+                select('Protocol', 'f-pr', [['tcp', 'TCP'], ['udp', 'UDP'], ['any', 'Any (1-to-1)']], 'tcp') + field('External port', 'f-ep', '80') + field('Mapped (internal) IP', 'f-mi', '', '172.16.0.10') + field('Mapped port', 'f-mp', '', 'leave blank to keep the same port'),
+                () => apply('vip.add', { name: val('f-name'), extIp: val('f-ext'), proto: val('f-pr'), extPort: val('f-ep'), mappedIp: val('f-mi'), mappedPort: val('f-mp') }, 'Virtual IP created.'));
+            window.fwAddUrl = () => openModal('New URL Filter Entry', field('Domain pattern', 'f-pat', '', 'example.com or *.example.com') + select('Action', 'f-act', [['block', 'Block'], ['allow', 'Allow (exempt)']], 'block'),
+                () => apply('webfilter.url.add', { pattern: val('f-pat'), action: val('f-act') }, 'URL entry added.'));
+            window.fwAddAdmin = () => openModal('New Administrator', field('Username', 'f-u', '') + `<label>Password</label><input id="f-p" type="password">` + select('Profile', 'f-r', [['super_admin', 'super_admin (full access)'], ['read_only', 'read_only (view only)']], 'read_only'),
+                () => apply('admin.add', { user: val('f-u'), pass: $('f-p').value, role: val('f-r') }, 'Administrator created.'));
+            window.fwAdminPass = (u) => openModal(`Change Password: ${u}`, `<label>New password</label><input id="f-p" type="password">`, () => apply('admin.pass', { user: u, pass: $('f-p').value }, 'Password changed.'));
+
+            const st = document.createElement('style');
+            st.textContent = `*{box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif}body{margin:0;background:#eef2f6;color:#1e293b;font-size:12.5px}
+            .top{background:#12344d;color:#fff;display:flex;align-items:center;gap:10px;padding:8px 14px;position:sticky;top:0;z-index:5}.top .logo{font-size:20px}.top b{font-size:15px}.mdl{opacity:.7;font-size:11px}.usr{margin-left:auto;font-size:11px;opacity:.9}
+            .wrap{display:flex;min-height:calc(100vh - 42px)}.side{width:170px;background:#1c2b3a;color:#cbd5e1;padding:6px 0;flex-shrink:0}.sec{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7c93a8;padding:10px 14px 4px}
+            .nv{padding:6px 14px 6px 22px;cursor:pointer}.nv:hover{background:#26394d;color:#fff}.nv.on{background:#2f7d95;color:#fff;font-weight:600}
+            .main{flex:1;padding:14px 18px;overflow:auto}.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin:4px 0 10px}h2{margin:0;font-size:17px}h3{font-size:13px;margin:16px 0 6px}.sub{color:#64748b;font-size:11.5px;margin-top:3px;max-width:720px}
+            table{width:100%;border-collapse:collapse;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.06);margin-bottom:6px}th{background:#f1f5f9;text-align:left;font-size:11px;color:#475569;padding:6px 8px;border-bottom:1px solid #e2e8f0}td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+            tr.dis td{opacity:.45}tr.imp td{background:#f8fafc;color:#64748b}.empty{text-align:center;color:#94a3b8;padding:14px}.mut{color:#94a3b8;font-size:11px}.mono{font-family:Consolas,monospace;font-size:11px}.cef{word-break:break-all;font-size:10.5px}
+            .btn{border:1px solid #cbd5e1;background:#fff;border-radius:5px;padding:4px 10px;font-size:11.5px;cursor:pointer;margin:1px}.btn:hover{background:#f1f5f9}.btn.pri{background:#2f7d95;border-color:#2f7d95;color:#fff}.btn.warn{color:#b91c1c;border-color:#fecaca}.btn.nav{background:transparent;color:#fff;border-color:#5a7a92}.btn.wide{width:100%;padding:8px;margin-top:10px}
+            .bd{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10.5px;font-weight:600}.bd.g{background:#dcfce7;color:#166534}.bd.r{background:#fee2e2;color:#991b1b}.bd.b{background:#dbeafe;color:#1e40af}.bd.p{background:#ede9fe;color:#5b21b6}.bd.gy{background:#e2e8f0;color:#475569}.bd.o{background:#ffedd5;color:#9a3412}
+            .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px}.grid.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}.card{background:#fff;border-radius:7px;padding:10px 12px;box-shadow:0 1px 2px rgba(0,0,0,.07)}.ct{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+            .big{font-size:26px;font-weight:700}.big.gt{color:#15803d}.big.rt{color:#b91c1c}.bl{color:#64748b;font-size:11px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px}.kv span{color:#64748b}
+            .sev{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:4px}.sev div{text-align:center}.sev b{display:block;font-size:18px}.sv{padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;color:#fff;background:#64748b}.sv.critical{background:#7f1d1d}.sv.high{background:#dc2626}.sv.medium{background:#ea580c}.sv.low{background:#ca8a04}
+            .tabs{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}.tab{padding:4px 10px;border-radius:5px;background:#e2e8f0;cursor:pointer}.tab.on{background:#2f7d95;color:#fff}.tabs input[type=text],#lq{flex:1;min-width:180px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:5px}
+            .ro{background:#fef9c3;border:1px solid #fde68a;color:#854d0e;padding:6px 10px;border-radius:5px;margin-bottom:8px}.note{background:#fff;padding:8px 10px;border-radius:6px;margin-bottom:8px}.box{background:#fff;padding:8px;border-radius:6px}.hint{color:#64748b;font-size:11px;margin-top:2px}
+            .form{background:#fff;border-radius:7px;padding:12px;max-width:560px}label{display:block;font-size:11px;font-weight:600;color:#475569;margin:8px 0 3px}input,select{width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:5px;font-size:12px}input.sm{width:70px;display:inline-block}label.ci{display:flex;gap:6px;align-items:center;font-weight:400;color:#1e293b}label.ci input{width:auto}
+            .chk{max-height:130px;overflow:auto;border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;background:#f8fafc}.acts{white-space:nowrap}
+            .mbg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:20;align-items:flex-start;justify-content:center;padding-top:40px}.mbg.show{display:flex}.mdl-box{background:#fff;border-radius:8px;width:560px;max-width:94vw;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+            .mh{padding:10px 14px;font-weight:700;border-bottom:1px solid #e2e8f0;display:flex}.mh .x{margin-left:auto;cursor:pointer;font-size:18px;line-height:1}.mbody{padding:4px 14px 12px;overflow:auto}.mf{padding:8px 14px;border-top:1px solid #e2e8f0;text-align:right}
+            .toast{position:fixed;bottom:16px;right:16px;background:#166534;color:#fff;padding:8px 14px;border-radius:6px;opacity:0;transition:opacity .2s;z-index:30;pointer-events:none}.toast.show{opacity:1}.toast.bad{background:#b91c1c}
+            .login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#12344d,#2f7d95)}.lbox{width:340px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35)}.lhead{display:flex;gap:10px;align-items:center;background:#12344d;color:#fff;padding:14px 16px}.lhead .logo{font-size:28px}.lt{font-weight:700;font-size:15px}.ls{font-size:11px;opacity:.75}.lbody{padding:6px 16px 16px}.lerr{color:#b91c1c;min-height:16px;margin-top:8px;font-size:11.5px}.lnote{color:#94a3b8;font-size:10.5px;margin-top:10px;text-align:center}`;
+            document.head.appendChild(st);
+            showLogin('');
+        }
+        function generateFirewallGui(fw, mgmtIp) {
+            const boot = JSON.stringify({ ip: mgmtIp, name: fw.name }).replace(/</g, '\\u003c');
+            return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + String(fw.name).replace(/[<>&]/g, '') + ' - NGFW</title></head><body>'
+                + '<script>(' + fwGuiClient.toString() + ')(' + boot + ');<' + '/script></body></html>';
+        }
+        // ---- Firewall management RPC (the appliance side of the web GUI) ----
+        const fwValidIp = (s) => /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(String(s || '')) && String(s).split('.').every(o => +o <= 255);
+        const fwValidMask = (s) => fwValidIp(s) && /^1*0*$/.test(String(s).split('.').map(o => (+o).toString(2).padStart(8, '0')).join(''));
+        const fwValidName = (s) => /^[A-Za-z0-9][A-Za-z0-9_.-]{0,34}$/.test(String(s || ''));
+        function fwState(fw, sess) {
+            const rt = fwRt(fw), cfg = fw.fw, now = Date.now();
+            fwExpire(fw, now);
+            const refs = (name) => (cfg.policies || []).filter(p => [...p.srcAddr, ...p.dstAddr, ...p.service].includes(name)).length
+                + (cfg.addrGroups || []).filter(g => (g.members || []).includes(name)).length + (cfg.svcGroups || []).filter(g => (g.members || []).includes(name)).length;
+            const ifs = Object.values(fw.interfaces).map(i => ({ id: i.id, ip: i.ip, subnet: i.subnet, mac: i.mac, zone: fwZone(fw, i.id), access: (cfg.access || {})[i.id] || [], admin: i.adminState, status: ifOperState(fw, i) === 'up' ? 'up' : 'down' }));
+            const sessions = Array.from(rt.sessions.values()).map(s => ({
+                id: s.id, proto: s.A.proto, src: s.A.proto === 'icmp' ? s.A.src : `${s.A.src}:${s.A.sport}`, dst: s.A.proto === 'icmp' ? s.A.dst : `${s.A.dst}:${s.A.dport}`,
+                nat: [s.B.src !== s.A.src ? `SNAT ${s.B.src}${s.A.proto !== 'icmp' ? ':' + s.B.sport : ''}` : '', s.B.dst !== s.A.dst ? `DNAT ${s.B.dst}${s.A.proto !== 'icmp' ? ':' + s.B.dport : ''}` : ''].filter(Boolean).join(' '),
+                policy: s.policy, zones: `${s.inZone || '-'} → ${s.outZone || '-'}`, age: now - s.start, pkts: s.pkts, bytes: s.bytes }));
+            return {
+                name: fw.name, user: sess.user, role: sess.role, uptime: now - rt.bootTime,
+                interfaces: ifs, routes: cfg.routes || [], routingTable: (fw.routingTable || []).map(r => ({ type: r.type, network: r.network, mask: r.mask, nextHop: r.nextHop, interface: r.interface })),
+                addresses: (cfg.addresses || []).map(a => Object.assign({}, a, { refs: refs(a.name) })), addrGroups: (cfg.addrGroups || []).map(g => Object.assign({}, g, { refs: refs(g.name) })),
+                services: (cfg.services || []).map(s => Object.assign({}, s, { refs: refs(s.name) })), svcGroups: (cfg.svcGroups || []).map(g => Object.assign({}, g, { refs: refs(g.name) })),
+                predefinedServices: Object.keys(FW_SERVICES), predefinedServiceDefs: Object.entries(FW_SERVICES).map(([name, d]) => ({ name, proto: d.proto, ports: d.ports || '' })),
+                policies: (cfg.policies || []).map(p => Object.assign({}, p, { hits: (rt.hits[p.id] || {}).hits || 0, bytes: (rt.hits[p.id] || {}).bytes || 0 })),
+                vips: cfg.vips || [], webFilter: cfg.webFilter, webCategories: FW_WEB_CATEGORIES,
+                ips: Object.assign({}, cfg.ips, { sigDefs: FW_IPS_SIGS }),
+                quarantined: Array.from(rt.quarantine.entries()).filter(([ip, until]) => until > now).map(([ip, until]) => ({ ip, remaining: until - now })),
+                admins: (cfg.admins || []).map(a => ({ user: a.user, role: a.role })), logging: cfg.logging,
+                sessions, counters: Object.assign({}, rt.counters, { implicitDeny: rt.logs.filter(l => l.type === 'traffic' && l.policy === 0).length }),
+                logs: rt.logs.slice(-500)
+            };
+        }
+        function fwApplyChange(fw, kind, a, sess) {
+            const cfg = fw.fw;
+            const inUse = (name) => (cfg.policies || []).some(p => [...p.srcAddr, ...p.dstAddr, ...p.service].includes(name)) || (cfg.addrGroups || []).some(g => g.members.includes(name)) || (cfg.svcGroups || []).some(g => g.members.includes(name));
+            const nameTaken = (n) => n === 'all' || FW_SERVICES[n] || [cfg.addresses, cfg.addrGroups, cfg.services, cfg.svcGroups, cfg.vips].some(list => (list || []).some(o => o.name === n));
+            const fail = (m) => { throw new Error(m); };
+            switch (kind) {
+                case 'iface.set': {
+                    const i = fw.interfaces[a.id]; if (!i) fail('No such interface.');
+                    const ip = a.ip || '0.0.0.0', mask = a.subnet || '0.0.0.0';
+                    if (ip !== '0.0.0.0' && (!fwValidIp(ip) || !fwValidMask(mask) || mask === '0.0.0.0')) fail('Enter a valid IP address and subnet mask.');
+                    if (ip !== '0.0.0.0') { const clash = l3OverlapCheck(fw, i, ip, mask); if (clash) fail(`${getNetwork(ip, mask)} overlaps with ${clash}.`); }
+                    if (a.zone && !/^[A-Za-z0-9_-]{1,20}$/.test(a.zone)) fail('Zone names use letters, digits, - and _ only.');
+                    i.ip = ip; i.subnet = mask; i.adminState = a.admin === 'down' ? 'down' : 'up';
+                    cfg.zones[a.id] = a.zone || ''; cfg.access[a.id] = (a.access || []).filter(x => ['https', 'http', 'ping'].includes(x));
+                    return `interface ${a.id}: ip ${ip}/${mask}, zone ${a.zone || 'none'}, access ${(cfg.access[a.id] || []).join('/') || 'none'}, ${i.adminState}`;
+                }
+                case 'route.add': {
+                    if (!fwValidIp(a.network) || !fwValidMask(a.mask) || !fwValidIp(a.gateway)) fail('Enter a valid destination, mask and gateway.');
+                    const r = { id: cfg.nextId++, network: getNetwork(a.network, a.mask), mask: a.mask, gateway: a.gateway };
+                    cfg.routes.push(r); return `static route ${r.network}/${r.mask} via ${r.gateway}`;
+                }
+                case 'route.del': { const n = cfg.routes.length; cfg.routes = cfg.routes.filter(r => r.id !== a.id); if (n === cfg.routes.length) fail('No such route.'); return `deleted static route ${a.id}`; }
+                case 'addr.add': {
+                    if (!fwValidName(a.name)) fail('Names must start with a letter or digit (max 35 characters).'); if (nameTaken(a.name)) fail(`The name "${a.name}" is already in use.`);
+                    const v = String(a.value || '').replace(/\s+/g, '');
+                    const ok = fwValidIp(v) || (/^[\d.]+\/\d{1,2}$/.test(v) && fwValidIp(v.split('/')[0]) && +v.split('/')[1] <= 32) || (/^[\d.]+-[\d.]+$/.test(v) && v.split('-').every(fwValidIp));
+                    if (!ok) fail('Enter a host (10.1.1.10), subnet (10.1.1.0/24) or range (10.1.1.10-10.1.1.20).');
+                    cfg.addresses.push({ name: a.name, value: v, comment: a.comment || '' }); return `address ${a.name} = ${v}`;
+                }
+                case 'addr.del': case 'svc.del': case 'addrgrp.del': case 'svcgrp.del': case 'vip.del': {
+                    const list = { 'addr.del': 'addresses', 'svc.del': 'services', 'addrgrp.del': 'addrGroups', 'svcgrp.del': 'svcGroups', 'vip.del': 'vips' }[kind];
+                    if (kind !== 'vip.del' && inUse(a.name)) fail(`"${a.name}" is used by a policy or group. Remove those references first.`);
+                    const n = cfg[list].length; cfg[list] = cfg[list].filter(o => o.name !== a.name); if (n === cfg[list].length) fail('No such object.');
+                    return `deleted ${list} ${a.name}`;
+                }
+                case 'addrgrp.add': case 'svcgrp.add': {
+                    if (!fwValidName(a.name)) fail('Enter a valid group name.'); if (nameTaken(a.name)) fail(`The name "${a.name}" is already in use.`);
+                    if (!a.members || !a.members.length) fail('Choose at least one member.');
+                    const list = kind === 'addrgrp.add' ? 'addrGroups' : 'svcGroups'; cfg[list].push({ name: a.name, members: a.members.slice() });
+                    return `${list} ${a.name} = ${a.members.join(', ')}`;
+                }
+                case 'svc.add': {
+                    if (!fwValidName(a.name)) fail('Enter a valid service name.'); if (nameTaken(a.name)) fail(`The name "${a.name}" is already in use.`);
+                    if (!['tcp', 'udp', 'icmp'].includes(a.proto)) fail('Choose TCP, UDP or ICMP.');
+                    if (a.proto !== 'icmp' && !/^\d{1,5}(-\d{1,5})?(,\d{1,5}(-\d{1,5})?)*$/.test(String(a.ports || '').replace(/\s/g, ''))) fail('Enter a port (8080) or range (8000-8100).');
+                    cfg.services.push({ name: a.name, proto: a.proto, ports: a.proto === 'icmp' ? '' : String(a.ports).replace(/\s/g, '') }); return `service ${a.name} ${a.proto} ${a.ports || ''}`;
+                }
+                case 'policy.add': case 'policy.edit': {
+                    const zs = ['any', ...Object.values(cfg.zones).filter(Boolean)];
+                    if (!zs.includes(a.srcZone) || !zs.includes(a.dstZone)) fail('Choose valid incoming and outgoing zones.');
+                    const known = (n) => n === 'all' || nameTaken(n);
+                    if (!a.srcAddr || !a.srcAddr.length || !a.dstAddr || !a.dstAddr.length || !a.service || !a.service.length) fail('Choose at least one source, destination and service.');
+                    if (![...a.srcAddr, ...a.dstAddr, ...a.service].every(known)) fail('A selected object no longer exists.');
+                    const p = { name: String(a.name || '').slice(0, 40), srcZone: a.srcZone, dstZone: a.dstZone, srcAddr: a.srcAddr.slice(), dstAddr: a.dstAddr.slice(), service: a.service.slice(), action: a.action === 'deny' ? 'deny' : 'accept', nat: !!a.nat, webFilter: !!a.webFilter, log: a.log !== false };
+                    if (kind === 'policy.add') { p.id = cfg.nextId++; p.enabled = true; cfg.policies.push(p); }
+                    else { const old = cfg.policies.find(x => x.id === a.id); if (!old) fail('No such policy.'); Object.assign(old, p); p.id = old.id; }
+                    return `policy ${p.id} "${p.name}": ${p.srcZone}->${p.dstZone} src ${p.srcAddr} dst ${p.dstAddr} svc ${p.service} ${p.action}${p.nat ? ' nat' : ''}${p.webFilter ? ' webfilter' : ''}`;
+                }
+                case 'policy.del': { const n = cfg.policies.length; cfg.policies = cfg.policies.filter(p => p.id !== a.id); if (n === cfg.policies.length) fail('No such policy.'); return `deleted policy ${a.id}`; }
+                case 'policy.toggle': { const p = cfg.policies.find(x => x.id === a.id); if (!p) fail('No such policy.'); p.enabled = p.enabled === false; return `policy ${a.id} ${p.enabled ? 'enabled' : 'disabled'}`; }
+                case 'policy.move': {
+                    const i = cfg.policies.findIndex(x => x.id === a.id), j = i + (a.dir < 0 ? -1 : 1);
+                    if (i < 0) fail('No such policy.'); if (j < 0 || j >= cfg.policies.length) return null;
+                    [cfg.policies[i], cfg.policies[j]] = [cfg.policies[j], cfg.policies[i]]; return `moved policy ${a.id} ${a.dir < 0 ? 'up' : 'down'}`;
+                }
+                case 'vip.add': {
+                    if (!fwValidName(a.name)) fail('Enter a valid name.'); if (nameTaken(a.name)) fail(`The name "${a.name}" is already in use.`);
+                    if (!fwValidIp(a.extIp) || !fwValidIp(a.mappedIp)) fail('Enter valid external and mapped IP addresses.');
+                    if (!['tcp', 'udp', 'any'].includes(a.proto)) fail('Choose a protocol.');
+                    if (a.proto !== 'any' && !/^\d{1,5}$/.test(String(a.extPort || ''))) fail('Enter the external port.');
+                    if (a.mappedPort && !/^\d{1,5}$/.test(String(a.mappedPort))) fail('The mapped port must be a number.');
+                    cfg.vips.push({ name: a.name, extIp: a.extIp, proto: a.proto, extPort: a.proto === 'any' ? '' : String(a.extPort), mappedIp: a.mappedIp, mappedPort: a.proto === 'any' ? '' : String(a.mappedPort || a.extPort), enabled: true });
+                    return `virtual IP ${a.name}: ${a.extIp}:${a.extPort || '*'} -> ${a.mappedIp}:${a.mappedPort || a.extPort || '*'}`;
+                }
+                case 'webfilter.cat': { if (!FW_WEB_CATEGORIES[a.category] || !['allow', 'monitor', 'block'].includes(a.action)) fail('Invalid category action.'); cfg.webFilter.categories[a.category] = a.action; return `web filter category ${a.category} = ${a.action}`; }
+                case 'webfilter.url.add': {
+                    const pat = String(a.pattern || '').trim().toLowerCase();
+                    if (!/^(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(pat)) fail('Enter a domain such as example.com or *.example.com.');
+                    cfg.webFilter.urls = cfg.webFilter.urls.filter(u => u.pattern !== pat); cfg.webFilter.urls.push({ pattern: pat, action: a.action === 'allow' ? 'allow' : 'block' });
+                    return `URL filter ${pat} = ${a.action}`;
+                }
+                case 'webfilter.url.del': { cfg.webFilter.urls = cfg.webFilter.urls.filter(u => u.pattern !== a.pattern); return `deleted URL filter ${a.pattern}`; }
+                case 'ips.set': {
+                    if (a.enabled !== undefined) cfg.ips.enabled = !!a.enabled;
+                    if (a.sig !== undefined) { if (!FW_IPS_SIGS[a.sig] || !['monitor', 'block'].includes(a.action)) fail('Invalid signature action.'); cfg.ips.sigs[a.sig] = a.action; }
+                    if (a.quarantineSecs !== undefined) { const n = parseInt(a.quarantineSecs, 10); if (isNaN(n) || n < 0 || n > 3600) fail('Quarantine must be 0 to 3600 seconds.'); cfg.ips.quarantineSecs = n; }
+                    return `IPS ${a.enabled !== undefined ? (a.enabled ? 'enabled' : 'disabled') : a.sig !== undefined ? `signature ${a.sig} = ${a.action}` : `quarantine ${cfg.ips.quarantineSecs}s`}`;
+                }
+                case 'ips.release': { fwRt(fw).quarantine.delete(a.ip); return `released quarantined host ${a.ip}`; }
+                case 'admin.add': {
+                    if (!/^[A-Za-z0-9_.-]{1,20}$/.test(a.user || '')) fail('Enter a valid username.'); if (cfg.admins.some(x => x.user === a.user)) fail('That administrator already exists.');
+                    if (!a.pass || a.pass.length < 4) fail('Passwords must be at least 4 characters.');
+                    cfg.admins.push({ user: a.user, pass: a.pass, role: a.role === 'super_admin' ? 'super_admin' : 'read_only' }); return `administrator ${a.user} (${a.role})`;
+                }
+                case 'admin.del': {
+                    if (a.user === sess.user) fail('You cannot delete the account you are logged in with.');
+                    const target = cfg.admins.find(x => x.user === a.user); if (!target) fail('No such administrator.');
+                    if (target.role === 'super_admin' && cfg.admins.filter(x => x.role === 'super_admin').length === 1) fail('At least one super_admin must remain.');
+                    cfg.admins = cfg.admins.filter(x => x.user !== a.user); return `deleted administrator ${a.user}`;
+                }
+                case 'admin.pass': { const t = cfg.admins.find(x => x.user === a.user); if (!t) fail('No such administrator.'); if (!a.pass || a.pass.length < 4) fail('Passwords must be at least 4 characters.'); t.pass = a.pass; return `password changed for ${a.user}`; }
+                case 'logging.set': {
+                    if (a.syslogEnabled && !fwValidIp(a.syslogServer)) fail('Enter the syslog server IP address.');
+                    Object.assign(cfg.logging, { syslogEnabled: !!a.syslogEnabled, syslogServer: a.syslogServer || '', logImplicitDeny: !!a.logImplicitDeny, logLocalIn: !!a.logLocalIn });
+                    return `log settings: syslog ${cfg.logging.syslogEnabled ? cfg.logging.syslogServer : 'off'}`;
+                }
+                case 'hostname.set': {
+                    if (!/^[A-Za-z][A-Za-z0-9_-]{0,30}$/.test(a.name || '')) fail('Hostnames start with a letter and use letters, digits, - and _.');
+                    const old = fw.name; fw.name = a.name; fw.cli.prompt = fw.cli.prompt.replace(old, a.name); return `hostname ${old} -> ${a.name}`;
+                }
+                case 'sessions.clear': { const rt = fwRt(fw); const n = rt.sessions.size; rt.sessions.clear(); rt.fwd.clear(); rt.rev.clear(); return `cleared ${n} sessions`; }
+                case 'logs.clear': { fwRt(fw).logs = []; return 'cleared local logs'; }
+                default: fail('Unknown operation.');
+            }
+        }
+        // Handle one GUI request. clientIp is the address of the PC whose browser sent it.
+        function fwRpc(d, clientIp) {
+            const fw = Object.values(devices).find(x => x.isFirewall && Object.values(x.interfaces).some(i => i.ip === d.ip));
+            if (!fw) return { ok: false, error: 'Connection to the firewall was lost.', relogin: true };
+            const rt = fwRt(fw), now = Date.now(), args = d.args || {};
+            if (d.op === 'login') {
+                const lf = rt.loginFails[clientIp] = rt.loginFails[clientIp] || { n: 0, first: now, until: 0 };
+                if (lf.until > now) { fwAdminLog(fw, 4004, 'Admin login blocked', 8, 'blocked', args.user, clientIp, `Login attempt during lockout (${Math.ceil((lf.until - now) / 1000)}s remaining)`); return { ok: false, error: `Too many failed attempts. Try again in ${Math.ceil((lf.until - now) / 1000)} seconds.` }; }
+                const acct = (fw.fw.admins || []).find(a => a.user === args.user);
+                if (!acct || acct.pass !== args.pass) {
+                    if (now - lf.first > 60000) { lf.n = 0; lf.first = now; }
+                    lf.n++;
+                    fwAdminLog(fw, 4001, 'Admin login failed', 7, 'failure', args.user, clientIp, acct ? 'Wrong password' : 'Unknown user');
+                    if (lf.n >= 5) { lf.until = now + 60000; lf.n = 0; fwAdminLog(fw, 4004, 'Admin account lockout', 8, 'blocked', args.user, clientIp, '5 failed logins in 60 seconds: source locked out for 60 seconds'); return { ok: false, error: 'Too many failed attempts. Locked out for 60 seconds.' }; }
+                    return { ok: false, error: 'Login failed: incorrect username or password.' };
+                }
+                lf.n = 0;
+                const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+                rt.tokens[token] = { user: acct.user, role: acct.role, client: clientIp, since: now };
+                fwAdminLog(fw, 4000, 'Admin login successful', 3, 'success', acct.user, clientIp, `Administrator ${acct.user} (${acct.role}) logged in via HTTPS`);
+                return { ok: true, token, role: acct.role };
+            }
+            const sess = d.token && rt.tokens[d.token];
+            if (!sess || !(fw.fw.admins || []).some(a => a.user === sess.user)) return { ok: false, error: 'Your session has expired. Please log in again.', relogin: true };
+            if (d.op === 'logout') { delete rt.tokens[d.token]; fwAdminLog(fw, 4002, 'Admin logout', 2, 'logout', sess.user, clientIp, `Administrator ${sess.user} logged out`); return { ok: true }; }
+            if (d.op === 'state') return { ok: true, data: fwState(fw, sess) };
+            if (d.op === 'apply') {
+                if (sess.role !== 'super_admin') {
+                    fwAdminLog(fw, 4005, 'Admin permission denied', 6, 'denied', sess.user, clientIp, `Read-only administrator attempted ${args.kind}`);
+                    return { ok: false, error: 'Permission denied: your administrator profile is read-only.' };
+                }
+                let summary;
+                try { summary = fwApplyChange(fw, args.kind, args.data || {}, sess); }
+                catch (err) { return { ok: false, error: err.message }; }
+                if (summary) fwAdminLog(fw, 4003, 'Configuration changed', 4, 'edit', sess.user, clientIp, summary);
+                try { fw.updateConnectedRoutes(); refreshL3State(); scheduleNetEvents(); renderNodes(); renderLinks(); if (propertiesDeviceId === fw.id) updatePropertiesPanel(true); scheduleAutosave(); } catch (e) {}
+                return { ok: true, data: fwState(fw, rt.tokens[d.token] || sess) };
+            }
+            return { ok: false, error: 'Unknown request.' };
+        }
+        window.addEventListener('message', (e) => {
+            const d = e && e.data;
+            if (!d || d.__fw !== true) return;
+            const pc = (typeof activeBrowserDeviceId !== 'undefined' && activeBrowserDeviceId) ? devices[activeBrowserDeviceId] : null;
+            const reply = fwRpc(d, pc ? pc.ip : 'unknown');
+            try { e.source.postMessage(Object.assign({ __fwReply: true, reqId: d.reqId }, reply), '*'); } catch (err) {}
+        });
+        // ---- Firewall properties panel ----
+        function renderPropFirewall(dev) {
+            const cfg = dev.fw || fwDefaultConfig(), rt = fwRt(dev);
+            const rows = Object.values(dev.interfaces).map(i => {
+                const up = ifOperState(dev, i) === 'up';
+                return `<tr><td class="px-2 py-1 border-t font-semibold">${i.id}</td><td class="px-2 py-1 border-t">${fwZone(dev, i.id) || '-'}</td><td class="px-2 py-1 border-t font-mono text-[10px]">${i.ip !== '0.0.0.0' ? i.ip : '-'}</td><td class="px-2 py-1 border-t">${(cfg.access[i.id] || []).join(', ') || '-'}</td><td class="px-2 py-1 border-t ${up ? 'text-green-600' : 'text-slate-400'}">${up ? 'up' : 'down'}</td></tr>`;
+            }).join('');
+            const urls = Object.values(dev.interfaces).filter(i => i.ip !== '0.0.0.0' && (cfg.access[i.id] || []).some(a => a === 'https' || a === 'http')).map(i => `https://${i.ip}`);
+            const th = rt.counters.threats;
+            return `<div class="space-y-4">
+                <div><h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Firewall Appliance</h3>
+                    <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">Configured from its web GUI. From a PC's web browser, open ${urls.length ? urls.map(u => `<span class="font-mono font-semibold">${u}</span>`).join(' or ') : '<b>(no interface allows HTTPS management)</b>'}. Default login <span class="font-mono">admin / admin</span>.</p></div>
+                <div><table class="w-full text-[11px]"><thead><tr class="text-slate-500"><th class="text-left px-2">Port</th><th class="text-left px-2">Zone</th><th class="text-left px-2">IP</th><th class="text-left px-2">Mgmt</th><th class="text-left px-2">Link</th></tr></thead><tbody>${rows}</tbody></table></div>
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                    <div class="bg-slate-100 dark:bg-slate-800 rounded p-2"><div class="text-slate-500">Policies</div><div class="text-lg font-bold">${cfg.policies.length}</div></div>
+                    <div class="bg-slate-100 dark:bg-slate-800 rounded p-2"><div class="text-slate-500">Active sessions</div><div class="text-lg font-bold">${rt.sessions.size}</div></div>
+                    <div class="bg-slate-100 dark:bg-slate-800 rounded p-2"><div class="text-slate-500">Allowed / denied</div><div class="text-lg font-bold">${rt.counters.accepted} / ${rt.counters.denied}</div></div>
+                    <div class="bg-slate-100 dark:bg-slate-800 rounded p-2"><div class="text-slate-500">Threats (high+)</div><div class="text-lg font-bold text-red-600">${(th.high || 0) + (th.critical || 0)}</div></div>
+                </div>
+                <div class="text-[11px] text-slate-500">Logs: ${rt.logs.length} stored locally${cfg.logging.syslogEnabled ? `, sent as CEF to ${cfg.logging.syslogServer}` : ', syslog forwarding off'}.</div>
+                <button onclick="window.fwFactoryReset('${dev.id}')" class="w-full py-2 border border-red-300 text-red-600 rounded text-xs font-semibold hover:bg-red-50 dark:hover:bg-slate-800">Reset to Factory Defaults (console)</button>
+            </div>`;
+        }
+        window.fwFactoryReset = (id) => {
+            const d = devices[id]; if (!d || !d.isFirewall) return;
+            if (!confirm(`Reset ${d.name} to factory defaults? All policies, objects and administrators are erased. port1 returns to 192.168.1.99/24 with admin / admin.`)) return;
+            pushUndo();
+            d.fw = fwDefaultConfig();
+            Object.values(d.interfaces).forEach(i => { i.ip = '0.0.0.0'; i.subnet = '0.0.0.0'; i.adminState = 'up'; });
+            d.interfaces.port1.ip = '192.168.1.99'; d.interfaces.port1.subnet = '255.255.255.0';
+            const rt = fwRt(d); rt.sessions.clear(); rt.fwd.clear(); rt.rev.clear(); rt.tokens = {}; rt.quarantine.clear();
+            fwLog(d, { type: 'event', sub: 'system', sigId: 5000, name: 'Factory reset', sev: 6, action: 'reset', msg: 'Configuration reset to factory defaults from the console' });
+            d.updateConnectedRoutes(); refreshL3State(); renderNodes(); renderLinks(); updatePropertiesPanel(true); scheduleAutosave();
+            log(`[${d.name}] Reset to factory defaults.`, 'warning');
+        };
+        // ---- Syslog / SNMP trap viewer for servers ----
+        function syslogViewerHtml(dev) {
+            const buf = dev.syslogBuffer || [], traps = dev.snmpTrapBuffer || [];
+            const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+            const sevCls = (s) => s <= 3 ? 'text-red-600' : s <= 4 ? 'text-amber-600' : 'text-slate-500';
+            const rows = buf.slice(-60).reverse().map(e => `<div class="border-t border-slate-100 dark:border-slate-700 py-1"><div class="flex gap-2 text-[10px]"><span class="text-slate-400">${new Date(e.time).toLocaleTimeString('en-AU', { hour12: false })}</span><span class="font-semibold">${esc(e.from)}</span><span class="${sevCls(e.sev)}">sev ${e.sev != null ? e.sev : '-'}</span></div><div class="font-mono text-[10px] break-all leading-snug">${esc(e.msg)}</div></div>`).join('');
+            return `<div class="pt-2 border-t mt-4">
+                <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Syslog Server (UDP 514)</h3>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2 leading-snug">Receives logs sent to <span class="font-mono">${esc(dev.ip)}</span>: point a switch or router's <span class="font-mono">logging host</span>, or a firewall's syslog setting, at this address. ${buf.length} message(s) received${traps.length ? `, ${traps.length} SNMP trap(s)` : ''}.</p>
+                <div class="max-h-64 overflow-auto bg-slate-50 dark:bg-slate-900 rounded px-2">${rows || '<p class="text-[10px] text-slate-400 italic py-2">No messages yet.</p>'}</div>
+                <div class="flex gap-2 mt-2"><button onclick="window.exportSyslog('${dev.id}')" class="flex-1 py-1.5 rounded text-[10px] font-semibold border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700" ${buf.length ? '' : 'disabled style="opacity:.5"'}>Export CSV</button><button onclick="window.clearSyslog('${dev.id}')" class="flex-1 py-1.5 rounded text-[10px] font-semibold border border-red-300 text-red-500 hover:bg-red-50 dark:hover:bg-slate-800">Clear</button></div>
+            </div>`;
+        }
+        window.exportSyslog = (id) => {
+            const d = devices[id]; if (!d || !d.syslogBuffer) return;
+            const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+            saveTextFile(`${d.name}-syslog.csv`, ['received,from,severity,message', ...d.syslogBuffer.map(e => [new Date(e.time).toISOString(), e.from, e.sev, e.msg].map(q).join(','))].join('\n'));
+        };
+        window.clearSyslog = (id) => { const d = devices[id]; if (d) { d.syslogBuffer = []; d.snmpTrapBuffer = []; updatePropertiesPanel(true); } };
+        // ---- nmap (port scan and ping sweep) from a PC ----
+        async function nmapProbe(dev, mac, ip, port) {
+            const sp = 40000 + Math.floor(Math.random() * 20000);
+            const res = new Promise(resolve => {
+                let done = false;
+                const fin = (k) => { if (done) return; done = true; clearTimeout(to); document.removeEventListener(`tcp_synack_${dev.id}`, onSA); document.removeEventListener(`tcp_rst_${dev.id}`, onR); resolve(k); };
+                const onSA = (e) => { if (e.detail.srcPort === sp) fin('open'); };
+                const onR = (e) => { if (e.detail.srcPort === sp) fin('closed'); };
+                const to = setTimeout(() => fin('filtered'), 1500);
+                document.addEventListener(`tcp_synack_${dev.id}`, onSA); document.addEventListener(`tcp_rst_${dev.id}`, onR);
+            });
+            transmit({ sourceMac: dev.mac, destMac: mac, payload: tcpSeg(dev.ip, ip, sp, port, { syn: true }, 1000, 0) }, dev.id, 1);
+            const k = await res;
+            if (k === 'open') transmit({ sourceMac: dev.mac, destMac: mac, payload: tcpSeg(dev.ip, ip, sp, port, { rst: true }, 1001, 0) }, dev.id, 1);
+            return k;
+        }
+        const NMAP_PORTS = [21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 3389, 8080];
+        const NMAP_NAMES = { 20: 'ftp-data', 21: 'ftp', 22: 'ssh', 23: 'telnet', 25: 'smtp', 53: 'domain', 80: 'http', 110: 'pop3', 143: 'imap', 443: 'https', 445: 'microsoft-ds', 3389: 'ms-wbt-server', 8080: 'http-proxy' };
+        async function runNmap(dev, args) {
+            const say = (m) => { dev.cli.history.push(m); try { renderCLI(dev.id); } catch (e) {} };
+            const t0 = Date.now();
+            let ports = NMAP_PORTS, sweep = false, target = null;
+            for (let i = 1; i < args.length; i++) {
+                if (args[i] === '-sn') sweep = true;
+                else if (args[i] === '-p' && args[i + 1]) {
+                    const list = []; args[++i].split(',').forEach(r => { const m = r.match(/^(\d+)(?:-(\d+))?$/); if (m) for (let p = +m[1]; p <= +(m[2] || m[1]) && list.length < 200; p++) list.push(p); });
+                    if (list.length) ports = list;
+                } else target = args[i];
+            }
+            if (!target) { say('Usage: nmap [-p <ports>] <ip>    port scan (default: 12 common ports)'); say('       nmap -sn <network/cidr | a.b.c.d-e>    ping sweep (up to 64 hosts)'); return; }
+            if (!dev.ip || dev.ip === '0.0.0.0') { say('nmap: this host has no IP address.'); return; }
+            say('Starting Nmap 7.94 ( https://nmap.org )');
+            if (sweep) {
+                let hosts = [];
+                const cidr = target.match(/^((?:\d{1,3}\.){3}\d{1,3})\/(\d{1,2})$/), rng = target.match(/^((?:\d{1,3}\.){3})(\d{1,3})-(\d{1,3})$/);
+                if (cidr) { const bits = +cidr[2], base = fwIpInt(cidr[1]) & (bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0), n = Math.pow(2, 32 - bits); for (let k = 1; k < n - 1 && hosts.length < 64; k++) { const v = (base + k) >>> 0; hosts.push([v >>> 24, (v >>> 16) & 255, (v >>> 8) & 255, v & 255].join('.')); } }
+                else if (rng) { for (let k = +rng[2]; k <= +rng[3] && hosts.length < 64; k++) hosts.push(rng[1] + k); }
+                else if (/^(\d{1,3}\.){3}\d{1,3}$/.test(target)) hosts = [target];
+                if (!hosts.length) { say('nmap: could not parse the target. Use a.b.c.0/28 or a.b.c.1-20.'); return; }
+                const up = [];
+                for (let b = 0; b < hosts.length; b += 8) {
+                    await Promise.all(hosts.slice(b, b + 8).map(async ip => {
+                        if (ip === dev.ip) { up.push(ip); return; }
+                        const local = isSameSubnet(dev.ip, ip, dev.subnet);
+                        const nh = local ? ip : dev.gateway;
+                        if (!nh || nh === '0.0.0.0') return;
+                        let mac = dev.arpCache[nh];
+                        if (!mac) {
+                            transmit({ sourceMac: dev.mac, destMac: 'FF:FF:FF:FF:FF:FF', payload: { type: 'ARP_REQ', sourceIp: dev.ip, targetIp: nh } }, dev.id, 1);
+                            await waitForEvent(`arp_resolved_${dev.id}`, 1200, e => e.detail.ip === nh); mac = dev.arpCache[nh];
+                        }
+                        if (!mac) return;
+                        if (local) { up.push(ip); return; }
+                        const w = waitForEvent(`icmp_replied_${dev.id}`, 1500, e => e.detail.ip === ip);
+                        transmit({ sourceMac: dev.mac, destMac: mac, payload: { type: 'ICMP_REQ', sourceIp: dev.ip, targetIp: ip } }, dev.id, 1);
+                        if (await w) up.push(ip);
+                    }));
+                }
+                up.sort((a, b) => fwIpInt(a) - fwIpInt(b)).forEach(ip => { say(`Nmap scan report for ${ip}`); say('Host is up.'); });
+                say(`Nmap done: ${hosts.length} IP addresses (${up.length} host${up.length === 1 ? '' : 's'} up) scanned in ${((Date.now() - t0) / 1000).toFixed(2)} seconds`);
+                return;
+            }
+            if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(target)) { say(`Failed to resolve "${target}". Use an IP address.`); return; }
+            const { mac } = await resolveNextHopMac(dev, target);
+            if (!mac) { say('Note: Host seems down.'); say(`Nmap done: 1 IP address (0 hosts up) scanned in ${((Date.now() - t0) / 1000).toFixed(2)} seconds`); return; }
+            const results = {};
+            for (let b = 0; b < ports.length; b += 6) await Promise.all(ports.slice(b, b + 6).map(async p => { results[p] = await nmapProbe(dev, mac, target, p); }));
+            say(`Nmap scan report for ${target}`);
+            const shown = ports.filter(p => results[p] !== 'closed' || ports.length <= 12);
+            const allFiltered = ports.every(p => results[p] === 'filtered');
+            say(allFiltered ? 'Host is up (all scanned ports are filtered).' : 'Host is up.');
+            const closedHidden = ports.length - shown.length;
+            if (closedHidden) say(`Not shown: ${closedHidden} closed tcp ports`);
+            say('PORT      STATE     SERVICE');
+            shown.forEach(p => say(`${(p + '/tcp').padEnd(9)} ${results[p].padEnd(9)} ${NMAP_NAMES[p] || 'unknown'}`));
+            say('');
+            say(`Nmap done: 1 IP address (1 host up) scanned in ${((Date.now() - t0) / 1000).toFixed(2)} seconds`);
+        }
+
         // Persist a configuration posted from the browser-served GUI back onto the WLC device.
         function wlcApplyConfig(ip, config) {
             const wlc = Object.values(devices).find(d => d.isWlc && d.ip === ip);
@@ -7106,6 +8097,10 @@
                 const r = new ISPRouter(x, y);
                 devices[r.id] = r;
                 log(`Added ${r.name}`);
+            } else if (type === 'Firewall') {
+                const f = new FirewallAppliance(x, y);
+                devices[f.id] = f;
+                log(`Added ${f.name}: manage it at https://192.168.1.99 from a PC browser (admin / admin)`);
             } else if (type === 'WLC') {
                 const w = new WirelessController(x, y);
                 devices[w.id] = w;
@@ -8483,7 +9478,7 @@
                 iconDiv.className = `node-icon w-16 h-16 rounded-xl flex items-center justify-center shadow-md border ${isEndDevice(dev) ? 'bg-white dark:bg-slate-100 border-slate-300 dark:border-slate-400 text-slate-600 dark:text-slate-700' : 'bg-slate-800 border-slate-900 text-white'}`;
                 
                 // Inject SVG dynamically from our dictionary
-                iconDiv.innerHTML = (dev.isWlc ? DEVICE_ICONS['WLC'] : dev.isISP ? DEVICE_ICONS['ISPRouter'] : dev.l3 ? DEVICE_ICONS['L3Switch'] : DEVICE_ICONS[dev.type]) || DEVICE_ICONS['PC'];
+                iconDiv.innerHTML = (dev.isWlc ? DEVICE_ICONS['WLC'] : dev.isFirewall ? DEVICE_ICONS['Firewall'] : dev.isISP ? DEVICE_ICONS['ISPRouter'] : dev.l3 ? DEVICE_ICONS['L3Switch'] : DEVICE_ICONS[dev.type]) || DEVICE_ICONS['PC'];
 
                 const labelDiv = document.createElement('div');
                 labelDiv.className = 'text-[10px] font-bold mt-1 text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-800/80 px-2 py-0.5 rounded text-center shadow-sm whitespace-nowrap';
@@ -9997,13 +10992,13 @@
             } else if (dev.type === 'Laptop') {
                 html += renderPropPCBase(dev) + renderPropLaptop(dev) + renderPropARPCache(dev);
             } else if (dev.type === 'DNSServer') {
-                html += renderPropPCBase(dev) + renderPropDNSServer(dev) + renderPropARPCache(dev);
+                html += renderPropPCBase(dev) + renderPropDNSServer(dev) + renderPropARPCache(dev) + syslogViewerHtml(dev);
             } else if (dev.type === 'Server') {
-                html += renderPropDHCPServer(dev);
+                html += renderPropDHCPServer(dev) + syslogViewerHtml(dev);
             } else if (dev.type === 'WebServer') {
-                html += dev.isWlc ? renderPropWlc(dev) : renderPropWebServer(dev);
+                html += dev.isWlc ? renderPropWlc(dev) : renderPropWebServer(dev) + syslogViewerHtml(dev);
             } else if (dev.type === 'Router') {
-                html += renderPropRouter(dev);
+                html += dev.isFirewall ? renderPropFirewall(dev) : renderPropRouter(dev);
             } else if (dev.type === 'AP') {
                 html += renderPropAP(dev);
             } else if (dev.type === 'Switch') {
