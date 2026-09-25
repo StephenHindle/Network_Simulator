@@ -177,6 +177,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 17h.01"/><path d="M11 17h6"/><path d="M12 9a5 5 0 0 1 5 5"/><path d="M12 5a9 9 0 0 1 9 9"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">WLC</span>
                     </div>
+                    <div draggable="true" ondragstart="handleDragStart(event, 'SDNController')" ontouchend="palTapItem(event, 'SDNController')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add SDN Controller (OpenFlow)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>
+                        <span class="text-[10px] font-bold uppercase tracking-wide">SDN</span>
+                    </div>
                     <div draggable="true" ondragstart="handleDragStart(event, 'AP')" ontouchend="palTapItem(event, 'AP')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Access Point (lightweight)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">AP</span>
@@ -507,7 +511,7 @@
         let justDrewOrMovedShape = false; // suppress the background-click deselect right after a shape action
         let pendingCableSource = null;
         let pendingCableSourcePort = null;
-        let deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1 };
+        let deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1, SDNController: 1 };
         let currentMouseX = 0;
         let currentMouseY = 0;
         let stpEnabled = true;
@@ -558,7 +562,8 @@
             'WLC': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 17h.01"/><path d="M11 17h6"/><path d="M12 9a5 5 0 0 1 5 5"/><path d="M12 5a9 9 0 0 1 9 9"/></svg>`,
             'Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>`,
             'L3Switch': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="10" rx="2"/><path d="M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/><path d="M8 6 6 4 4 6"/><path d="M6 4v3"/><path d="m16 6 2-2 2 2"/><path d="M18 4v3"/></svg>`,
-            'ISPRouter': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`
+            'ISPRouter': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+            'SDNController': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>`
         };
 
         // Single lookup for protocol colours used by packet dots, labels, the sniffer and the legend
@@ -571,11 +576,12 @@
             'DNS':  { dot: '#8b5cf6', text: '#5b21b6', label: 'DNS',  sniffer: 'bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-200' },
             'TCP':  { dot: '#10b981', text: '#047857', label: 'TCP',  sniffer: 'bg-emerald-50 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200' },
             'UDP':  { dot: '#14b8a6', text: '#0f766e', label: 'UDP',  sniffer: 'bg-teal-50 text-teal-900 dark:bg-teal-900/30 dark:text-teal-200' },
+            'OF':   { dot: '#f59e0b', text: '#b45309', label: 'OF',   sniffer: 'bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200' },
             'OTHER':{ dot: '#a3e635', text: '#4d7c0f', label: '',     sniffer: '' }
         };
         const protocolStyle = (type) => {
             if (!type) return PROTOCOL_STYLES.OTHER;
-            for (const key of ['ARP', 'ICMP', 'RIP', 'DHCP', 'HTTP', 'DNS', 'TCP', 'UDP']) {
+            for (const key of ['ARP', 'ICMP', 'RIP', 'DHCP', 'HTTP', 'DNS', 'TCP', 'UDP', 'OF']) {
                 if (type.startsWith(key)) return PROTOCOL_STYLES[key];
             }
             return PROTOCOL_STYLES.OTHER;
@@ -923,7 +929,7 @@
             const container = document.getElementById('legend-protocols');
             if (!container) return;
             container.innerHTML = '';
-            for (const key of ['ARP', 'ICMP', 'RIP', 'DHCP', 'HTTP', 'DNS']) {
+            for (const key of ['ARP', 'ICMP', 'RIP', 'DHCP', 'HTTP', 'DNS', 'OF']) {
                 const s = PROTOCOL_STYLES[key];
                 const row = document.createElement('div');
                 row.className = 'flex items-center space-x-2';
@@ -1022,7 +1028,8 @@
         // --- State snapshots: Undo, Redo, Autosave, Hydration ---
         const deviceClassFor = (type) => ({
             'PC': PC, 'Laptop': Laptop, 'Switch': Switch, 'Router': Router, 'ISPRouter': ISPRouter,
-            'AP': AccessPoint, 'Server': Server, 'WebServer': WebServer, 'DNSServer': DNSServer, 'WLC': WirelessController
+            'AP': AccessPoint, 'Server': Server, 'WebServer': WebServer, 'DNSServer': DNSServer, 'WLC': WirelessController,
+            'SDNController': SDNController
         })[type];
 
         function hydrateState(data) {
@@ -1048,7 +1055,7 @@
             labels = data.labels || {};
             shapes = data.shapes || {};
             // Merge counters AFTER instantiation, since constructors increment them
-            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1, ...(data.deviceCounter || {}) };
+            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1, SDNController: 1, ...(data.deviceCounter || {}) };
             if (typeof data.stpEnabled === 'boolean') stpEnabled = data.stpEnabled;
             selectedDeviceId = null;
             selectedLabelId = null;
@@ -1216,6 +1223,12 @@
             if (copy.leases) copy.leases = {};
             if (copy.ports) copy.ports.forEach(p => { p.connectedLink = null; p.stpState = 'forwarding'; });
             if (copy.interfaces) Object.values(copy.interfaces).forEach(i => { i.connectedLink = null; });
+            // SDN: a duplicate has no control channel and starts with an empty flow table
+            if ('mgmtLink' in copy) copy.mgmtLink = null;
+            if ('controllerId' in copy) copy.controllerId = null;
+            if (copy.openflow) { const o = copy.openflow; copy.openflow = { enabled: o.enabled, failMode: o.failMode || 'secure', flows: [], missCount: 0, cliSwitch: o.cliSwitch, controllerIp: o.controllerIp, controllerPort: o.controllerPort, security: o.security, defaultMiss: o.defaultMiss }; }
+            if (copy.macView) copy.macView = {};
+            if (copy.stats && src.type === 'SDNController') copy.stats = { packetIn: 0, flowMod: 0, packetOut: 0 };
             if (copy.routingTable && copy.updateConnectedRoutes) { copy.routingTable = []; copy.updateConnectedRoutes(); }
 
             devices[copy.id] = copy;
@@ -1241,6 +1254,9 @@
             const devB = devices[link.target];
             if (link.isWireless) {
                 return { stroke: '#38bdf8', width: 2, dash: '5, 5' };
+            }
+            if (link.control) {
+                return { stroke: selectedLinkId === link.id ? '#d97706' : '#f59e0b', width: selectedLinkId === link.id ? 3 : 2, dash: '2, 5' };
             }
             const portState = (dev, portId) => {
                 if (!dev) return { stp: 'forwarding', admin: 'up' };
@@ -1483,7 +1499,9 @@
             
             // Ensure devices loaded from older save files have the CLI object initialized
             if (!dev.cli) {
-                 if (dev.type === 'Switch' || dev.type === 'Router') {
+                 if (dev.type === 'SDNController') {
+                     dev.cli = { mode: 'onos', prompt: 'onos>', history: [`SDN controller shell (ONOS-style CLI) on ${dev.name}.\nController address ${dev.ip}, OpenFlow listening on port ${dev.ofPort || 6653}/${dev.tls ? 'tls' : 'tcp'}.\nType 'help' for a list of commands.\n`], isRunning: false };
+                 } else if (dev.type === 'Switch' || dev.type === 'Router') {
                      const osName = dev.type === 'Switch' ? 'C2960-LANBASEK9-M' : 'C1900-UNIVERSALK9-M';
                      dev.cli = { mode: 'user', prompt: `${dev.name}>`, history: [`Welcome to Cisco IOS Software (${osName}).\n\nPress RETURN to get started.`], currentInterface: null, isRunning: false };
                  } else {
@@ -1592,6 +1610,48 @@
 
             let options = [];
 
+            const swNames = () => (dev.connectedSwitches ? dev.connectedSwitches().map(s => s.name) : []);
+            if (dev.cli.mode === 'onos') {
+                if (prevArgs.length === 0) options = ['summary', 'devices', 'ports', 'flows', 'hosts', 'apps', 'app', 'acl', 'stats', 'cfg', 'dump-flows', 'add-flow', 'del-flows', 'clear', 'help', 'logout'];
+                else if (prev1 === 'app' && prevArgs.length === 1) options = ['activate', 'deactivate'];
+                else if (prev1 === 'app' && prevArgs.length === 2) options = ['fwd', 'acl'];
+                else if (prev1 === 'acl' && prevArgs.length === 1) options = ['add', 'remove'];
+                else if (prev1 === 'acl' && prev2 === 'add') options = ['src=', 'dst=', 'proto=', 'dport='];
+                else if (prev1 === 'cfg' && prevArgs.length === 1) options = ['get', 'set'];
+                else if (prev1 === 'cfg' && prev2 === 'set' && prevArgs.length === 2) options = ['ip', 'port', 'tls', 'idle-timeout'];
+                else if (prev1 === 'stats' && prevArgs.length === 1) options = ['clear'];
+                else if (['ports', 'flows', 'dump-flows'].includes(prev1) && prevArgs.length === 1) options = swNames().map(n => n.toLowerCase());
+                else if (['add-flow', 'del-flows'].includes(prev1) && prevArgs.length === 1) options = swNames().map(n => n.toLowerCase()).concat(['all']);
+                else if (prev1 === 'add-flow' && prevArgs.length === 2) options = ['<priority=N,match-fields,actions=...>'];
+                return options.filter(opt => opt.startsWith(lastArg) || opt.startsWith('<'));
+            }
+            if (dev.cli.mode === 'conf-openflow') {
+                if (prevArgs.length === 0) options = ['switch', 'no', 'exit', 'end'];
+                else if (prev1 === 'switch' && prevArgs.length === 1) options = ['1'];
+                else if (prev1 === 'switch' && prevArgs.length === 2) options = ['pipeline'];
+                else if (prev1 === 'switch' && prev3 === 'pipeline' && prevArgs.length === 3) options = ['1'];
+                return options.filter(opt => opt.startsWith(lastArg) || opt.startsWith('<'));
+            }
+            if (dev.cli.mode === 'conf-ofswitch') {
+                const pa = prevArgs[0] === 'no' ? prevArgs.slice(1) : prevArgs;
+                if (pa.length === 0) options = ['controller', 'default-miss', 'fail-mode', 'datapath-id', 'shutdown', 'no', 'exit', 'end'];
+                else if (pa[0] === 'controller' && pa.length === 1) options = ['ipv4'];
+                else if (pa[0] === 'controller' && pa.length === 2) options = ['<A.B.C.D> (controller address)'];
+                else if (pa[0] === 'controller' && pa.length >= 3 && pa[pa.length - 1] === 'port') options = ['<1-65535>'];
+                else if (pa[0] === 'controller' && pa.length >= 3 && pa[pa.length - 1] === 'security') options = ['none', 'tls'];
+                else if (pa[0] === 'controller' && pa.length >= 3) options = ['port', 'security', 'vrf'];
+                else if (pa[0] === 'default-miss' && pa.length === 1) options = ['continue-controller', 'continue-normal', 'drop'];
+                else if (pa[0] === 'fail-mode' && pa.length === 1) options = ['secure', 'standalone'];
+                else if (pa[0] === 'datapath-id' && pa.length === 1) options = ['<0x0-0xffffffffffffffff>'];
+                return options.filter(opt => opt.startsWith(lastArg) || opt.startsWith('<'));
+            }
+            if (dev.cli.mode === 'priv' && dev.type === 'Switch' && (prev1 === 'show' || prev1 === 'sh' || prev1 === 'clear') && prev2 === 'openflow') {
+                if (prevArgs.length === 2) options = ['switch'];
+                else if (prevArgs.length === 3) options = ['1'];
+                else if (prevArgs.length === 4) options = prev1 === 'clear' ? ['flows'] : ['flows', 'controllers', 'ports', 'stats'];
+                return options.filter(opt => opt.startsWith(lastArg) || opt.startsWith('<'));
+            }
+
             if (dev.cli.mode === 'cmd') {
                 if (prevArgs.length === 0) options = ['ipconfig', 'arp', 'ping', 'curl', 'ftp', 'sftp', 'cls', 'clear', 'help'];
                 else if (prev1 === 'arp' && prevArgs.length === 1) options = ['-a'];
@@ -1616,7 +1676,7 @@
                         else if (prev2 === 'ip' && prev3 === 'bgp' && prevArgs.length === 3) options = ['summary'];
                         else if (prev2 === 'ip' && (prev3 === 'interface' || prev3 === 'int') && prevArgs.length === 3) options = ['brief'];
                     } else if (dev.type === 'Switch') {
-                        if (prevArgs.length === 1) options = ['mac', 'vlan', 'vtp', 'spanning-tree', 'etherchannel', 'port-security', 'ip', 'interfaces', 'cdp', 'lldp'];
+                        if (prevArgs.length === 1) options = ['mac', 'vlan', 'vtp', 'spanning-tree', 'etherchannel', 'port-security', 'ip', 'interfaces', 'cdp', 'lldp'].concat(dev.l3 ? [] : ['openflow']);
                         else if (prev2 === 'port-security' && prevArgs.length === 2) options = ['interface', 'address'];
                         else if (prev2 === 'spanning-tree' && prevArgs.length === 2) options = ['vlan'];
                         else if (prev2 === 'mac' && prevArgs.length === 2) options = ['address-table'];
@@ -1629,7 +1689,7 @@
                     else if ((prev3 === 'cdp' || prev3 === 'lldp') && prevArgs.length === 3) options = ['detail'];
                 }
             } else if (dev.cli.mode === 'conf') {
-                if (prevArgs.length === 0) { options = ['interface', 'ip', 'cdp', 'lldp', 'no', 'exit']; if (dev.type === 'Switch') options.push('vlan', 'vtp', 'spanning-tree'); if (dev.type === 'Router') options.push('router'); }
+                if (prevArgs.length === 0) { options = ['interface', 'ip', 'cdp', 'lldp', 'no', 'exit']; if (dev.type === 'Switch') options.push('vlan', 'vtp', 'spanning-tree'); if (dev.type === 'Switch' && !dev.l3) options.push('openflow'); if (dev.type === 'Router') options.push('router'); }
                 else if (prev1 === 'router' && dev.type === 'Router' && prevArgs.length === 1) options = ['ospf', 'eigrp', 'bgp'];
                 else if (prev1 === 'spanning-tree' && dev.type === 'Switch') {
                     if (prevArgs.length === 1) options = ['mode', 'vlan'];
@@ -1879,7 +1939,8 @@
         }
 
         const processCLICommandInner = (dev, input) => {
-            if (dev.cli && !dev.cli.pendingAuth && !dev.cli.pendingCopy && !dev.cli.pendingConfirm && !dev.cli.remoteSession && !dev.cli.ftpSession) input = expandCliAbbrev(input);
+            if (dev.type === 'SDNController') { sdnShell(dev, input, (m) => dev.cli.history.push(m)); return; }
+            if (dev.cli && !dev.cli.pendingAuth && !dev.cli.pendingCopy && !dev.cli.pendingConfirm && !dev.cli.remoteSession && !dev.cli.ftpSession && dev.cli.mode !== 'conf-openflow' && dev.cli.mode !== 'conf-ofswitch') input = expandCliAbbrev(input);
             const args = input.trim().toLowerCase().split(/\s+/);
             // An empty line only matters as the answer to a [confirm] or [default] prompt
             if ((args.length === 0 || args[0] === '') && !(dev.cli.pendingConfirm || dev.cli.pendingCopy)) return;
@@ -1990,6 +2051,14 @@
                 print('[OK]');
                 return;
             }
+            // clear mac address-table [dynamic] (privileged EXEC)
+            if (dev.type === 'Switch' && cmd === 'clear' && args[1] === 'mac' && /^address(-table)?$/.test(args[2] || '')) {
+                if (dev.cli.mode !== 'priv') { print('% Invalid input detected.'); return; }
+                dev.macTable = {}; try { scheduleMacTableRefresh(dev.id); } catch (e) {}
+                return;
+            }
+            // OpenFlow (SDN) commands on Layer 2 switches
+            if (dev.type === 'Switch' && ofSwitchCli(dev, cmd, args, input, print)) return;
             if (dev.isFirewall && !['enable', 'disable', 'exit', 'logout', 'ping', 'end'].includes(cmd) && !(cmd === 'show' && ['ip', 'arp', 'interfaces', 'version', 'logging', 'clock'].includes(args[1]))) {
                 const urls = Object.values(dev.interfaces).filter(i => i.ip !== '0.0.0.0' && ((dev.fw.access || {})[i.id] || []).some(a => a === 'https' || a === 'http')).map(i => `https://${i.ip}`);
                 print(`% ${dev.name} is a firewall appliance configured from its web interface${urls.length ? ': ' + urls.join(' or ') : ''}.`);
@@ -4408,7 +4477,8 @@
                 });
                 d.interfaces = out;
             }
-            ['startupConfig', 'tftpFiles', 'files', 'vlanDb', 'vtp'].forEach(k => { if (old[k] !== undefined) d[k] = JSON.parse(JSON.stringify(old[k])); });
+            ['startupConfig', 'tftpFiles', 'files', 'vlanDb', 'vtp', 'mgmtLink', 'controllerId'].forEach(k => { if (old[k] !== undefined && old[k] !== null) d[k] = JSON.parse(JSON.stringify(old[k])); });
+            try { _ofLastUp.delete(old.id); } catch (e) {}
             d.cli.history = old.cli.history;
             return d;
         }
@@ -4433,6 +4503,7 @@
                     try { flushMacTables(); refreshL3State(); if (stpEnabled) calculateSTP(); else renderLinks(); } catch (e) {}
                 }
                 d.cli.mode = 'user'; d.cli.prompt = `${d.name}>`; d.cli.isRunning = false;
+                try { _ofLastUp.delete(d.id); ofRecheckChannels(); } catch (e) {}
                 say(''); say('Press RETURN to get started!'); say('');
                 try { renderNodes(); renderLinks(); if (propertiesDeviceId === d.id) updatePropertiesPanel(true); renderCLI(d.id); } catch (e) {}
                 scheduleNetEvents(); scheduleAutosave();
@@ -4547,6 +4618,15 @@
                 });
                 if (dev.vpc && dev.vpc.domain != null) { L.push('!', `vpc domain ${dev.vpc.domain}`); if (dev.vpc.keepalive) L.push(` peer-keepalive destination ${dev.vpc.keepalive}`); if (dev.vpc.rolePriority != null) L.push(` role priority ${dev.vpc.rolePriority}`); }
                 if (dev.portChannels) Object.keys(dev.portChannels).forEach(n => { const po = dev.portChannels[n]; if (po.role || po.vpcId != null) { L.push('!', `interface Port-channel${n}`); if (po.role === 'peer-link') L.push(' vpc peer-link'); if (po.vpcId != null) L.push(` vpc ${po.vpcId}`); } });
+                if (!dev.l3 && dev.openflow && (dev.openflow.enabled || dev.openflow.cliSwitch || dev.openflow.controllerIp)) {
+                    const of = dev.openflow;
+                    L.push('!', 'feature openflow', '!', 'openflow', ' switch 1 pipeline 1');
+                    if (of.controllerIp) L.push(`  controller ipv4 ${of.controllerIp} port ${of.controllerPort || 6653} security ${of.security || 'none'}`);
+                    if (of.dpidSet) L.push(`  datapath-id ${ofDpidHex(of.dpid)}`);
+                    if (of.defaultMiss && of.defaultMiss !== 'continue-controller') L.push(`  default-miss ${of.defaultMiss}`);
+                    if (of.failMode === 'standalone') L.push('  fail-mode standalone');
+                    if (!of.enabled) L.push('  shutdown');
+                }
                 if (dev.svis) Object.values(dev.svis).forEach(svi => { L.push('!', `interface Vlan${svi.vlan}`); if (svi.ip && svi.ip !== '0.0.0.0') L.push(` ip address ${svi.ip} ${svi.subnet}`); if (svi.helperAddresses) svi.helperAddresses.forEach(h => L.push(` ip helper-address ${h}`)); if (svi.hsrp && svi.hsrp.virtualIp) { L.push(` standby ${svi.hsrp.group} ip ${svi.hsrp.virtualIp}`); if (svi.hsrp.priority != null && svi.hsrp.priority !== 100) L.push(` standby ${svi.hsrp.group} priority ${svi.hsrp.priority}`); if (svi.hsrp.preempt) L.push(` standby ${svi.hsrp.group} preempt`); } L.push(' no shutdown'); });
                 if (dev.l3) {
                     (dev.staticRoutes || []).forEach(sr => L.push('!', `ip route ${sr.network} ${sr.mask} ${sr.nextHop !== '0.0.0.0' ? sr.nextHop : sr.interface}`));
@@ -5262,6 +5342,15 @@
                             return; // drop the offending frame (all three actions drop the traffic)
                         }
                     }
+                }
+
+                // --- SDN / OpenFlow data-plane path ---
+                // When OpenFlow mode is on, the flow table (programmed by the controller) governs
+                // forwarding instead of autonomous MAC learning. ofReceive returns true when it has
+                // handled the frame; false means "fail-standalone" so the legacy L2 logic below runs.
+                if (this.ofEnabled && this.ofEnabled()) {
+                    const handled = await this.ofReceive(frame, inPortId, frameVlan);
+                    if (handled) return;
                 }
 
                 // Update MAC table (Strictly Per-VLAN)
@@ -7181,6 +7270,940 @@
             }
         }
 
+        // ================= Software Defined Networking (OpenFlow) =================
+        // Adds an out-of-band SDN control plane: a centralised controller programs the
+        // flow tables of OpenFlow-mode switches over a dedicated control channel
+        // (modelled on OpenFlow / TCP 6653). Data-plane switches consult their flow table
+        // first; a table-miss is escalated to the controller as a Packet-In, the controller
+        // decides (reactive L2 learning and/or a security policy), installs a Flow-Mod, and
+        // returns a Packet-Out. This mirrors how Open vSwitch behaves with Ryu/ONOS-style apps.
+
+        const ofDpidFromMac = (mac) => '00:00:' + (mac || '00:00:00:00:00:00');
+
+        // A match field is a wildcard when unset; otherwise it must equal the packet field.
+        const ofFieldMatch = (matchVal, pktVal) => {
+            if (matchVal === undefined || matchVal === null || matchVal === '' || matchVal === '*' || matchVal === 'any') return true;
+            return String(matchVal) === String(pktVal);
+        };
+
+        const aclToFlowMatch = (rule) => {
+            const m = { dl_type: (rule.dl_type && rule.dl_type !== 'any') ? rule.dl_type : 'ip' };
+            if (rule.nw_proto && rule.nw_proto !== 'any') m.nw_proto = rule.nw_proto;
+            if (rule.nw_src && rule.nw_src !== 'any') m.nw_src = rule.nw_src;
+            if (rule.nw_dst && rule.nw_dst !== 'any') m.nw_dst = rule.nw_dst;
+            if (rule.tp_dst && rule.tp_dst !== 'any' && rule.tp_dst !== '') m.tp_dst = rule.tp_dst;
+            return m;
+        };
+
+        const aclDesc = (rule) => {
+            const parts = [(rule.nw_proto && rule.nw_proto !== 'any') ? rule.nw_proto : 'ip'];
+            parts.push('src ' + ((rule.nw_src && rule.nw_src !== 'any') ? rule.nw_src : 'any'));
+            parts.push('dst ' + ((rule.nw_dst && rule.nw_dst !== 'any') ? rule.nw_dst : 'any'));
+            if (rule.tp_dst && rule.tp_dst !== 'any' && rule.tp_dst !== '') parts.push('port ' + rule.tp_dst);
+            return parts.join(' ');
+        };
+
+        // Human-readable summaries of a flow entry for the flow-table UI
+        const ofMatchSummary = (flow, dev) => {
+            const m = flow.match || {};
+            const bits = [];
+            if (m.in_port != null && m.in_port !== '*') bits.push('in=' + swPortNameById(dev, m.in_port));
+            if (m.dl_type && m.dl_type !== 'any') bits.push(m.dl_type);
+            if (m.dl_vlan != null) bits.push('vlan ' + m.dl_vlan);
+            if (m.dl_src) bits.push('src ' + m.dl_src);
+            if (m.dl_dst) bits.push('dst ' + m.dl_dst);
+            if (m.nw_proto) bits.push(m.nw_proto);
+            if (m.nw_src) bits.push('ip.src ' + m.nw_src);
+            if (m.nw_dst) bits.push('ip.dst ' + m.nw_dst);
+            if (m.tp_dst) bits.push('port ' + m.tp_dst);
+            return bits.length ? bits.join(', ') : 'any (table-miss)';
+        };
+        const ofActionsSummary = (flow, dev) => (flow.actions || []).map(a => {
+            if (a.type === 'output') return 'output:' + swPortNameById(dev, a.port);
+            if (a.type === 'flood') return 'FLOOD';
+            if (a.type === 'drop') return 'DROP';
+            if (a.type === 'controller') return 'CONTROLLER';
+            if (a.type === 'normal') return 'NORMAL';
+            return a.type;
+        }).join(', ') || 'DROP';
+
+        // ================= OpenFlow command line support =================
+        // Shared helpers for the switch IOS commands and the controller shell.
+        const OF_DEFAULT_PORT = 6653;
+        const ofDpidHex = (dpid) => '0x' + String(dpid || '').replace(/[^0-9a-f]/gi, '').padStart(16, '0').slice(-16).toLowerCase();
+        const ofOnosId = (sw) => { sw.ofInit(); return 'of:' + ofDpidHex(sw.openflow.dpid).slice(2); };
+        const ofIsIp = (s) => /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(String(s || '')) && String(s).split('.').every(o => +o <= 255);
+        const ofPm = (tok, word, min = 2) => !!tok && tok.length >= min && word.startsWith(String(tok).toLowerCase());
+        const ofOnosApp = (by) => ({ learning: 'org.onosproject.fwd', acl: 'org.onosproject.acl', static: 'org.onosproject.cli' })[by] || 'org.onosproject.core';
+
+        // Accept 3, Fa0/3, FastEthernet0/3, Gi0/1 or GigabitEthernet0/1 and return the switch port id (or null)
+        function ofResolvePort(sw, txt) {
+            const t = String(txt == null ? '' : txt).trim(); let m;
+            if (!sw || !sw.ports || !t) return null;
+            if (/^\d+$/.test(t)) return sw.ports.some(p => p.id === +t) ? +t : null;
+            if ((m = t.match(/^g(?:i|igabitethernet)?\s*0\/(\d+)$/i))) { const p = sw.ports.find(pt => pt.gi === +m[1]); return p ? p.id : null; }
+            if ((m = t.match(/^f(?:a|astethernet)?\s*0\/(\d+)$/i))) { const p = sw.ports.find(pt => pt.id === +m[1] && pt.media !== 'fiber'); return p ? p.id : null; }
+            return null;
+        }
+
+        // Why a switch's OpenFlow channel is (or is not) up. A switch with no configured controller
+        // address connects to whichever controller its management port is cabled to.
+        function ofChannelStatus(sw) {
+            if (!sw || sw.type !== 'Switch' || sw.l3) return { up: false, reason: 'OpenFlow is not supported on this device' };
+            sw.ofInit();
+            const of = sw.openflow;
+            if (!sw.mgmtLink || !links[sw.mgmtLink]) return { up: false, reason: 'no control channel cable on the management port' };
+            const ctrl = devices[sw.controllerId];
+            if (!ctrl || ctrl.type !== 'SDNController') return { up: false, reason: 'no controller at the far end of the management cable' };
+            const cport = ctrl.ofPort || OF_DEFAULT_PORT;
+            // A logical switch built from the CLI only connects to a controller it has been told about;
+            // a switch enabled from the settings panel (no CLI config) auto-connects to the cabled controller.
+            if (of.cliSwitch && !of.controllerIp) return { up: false, ctrl, reason: 'no controller configured (use: controller ipv4 <address> port 6653 security none)' };
+            if (of.controllerIp && of.controllerIp !== ctrl.ip) return { up: false, ctrl, reason: `no controller answering at ${of.controllerIp} (the cabled controller is ${ctrl.ip})` };
+            if (of.controllerPort && +of.controllerPort !== +cport) return { up: false, ctrl, reason: `controller listens on port ${cport}, switch connects to port ${of.controllerPort}` };
+            const swTls = of.security ? of.security === 'tls' : !!ctrl.tls;
+            if (swTls !== !!ctrl.tls) return { up: false, ctrl, reason: `security mismatch (switch ${swTls ? 'tls' : 'none'}, controller ${ctrl.tls ? 'tls' : 'none'})` };
+            return { up: true, ctrl, reason: '', proto: ctrl.tls ? 'tls' : 'tcp', port: cport };
+        }
+
+        // Report channel transitions on the switch console, like a real switch does
+        const _ofLastUp = new Map();
+        function ofRecheckChannels() {
+            Object.values(devices).forEach(sw => {
+                if (sw.type !== 'Switch' || sw.l3 || !sw.openflow) return;
+                const st = ofChannelStatus(sw);
+                const on = !!sw.openflow.enabled && st.up;
+                const prev = _ofLastUp.has(sw.id) ? _ofLastUp.get(sw.id) : false;
+                if (prev === on) return;
+                _ofLastUp.set(sw.id, on);
+                try {
+                    if (on) consoleLog(sw, 5, `OPENFLOW-5-CONTROLLER_CONN: Logical switch 1 connected to controller ${st.ctrl.ip}:${st.port} (${st.proto})`);
+                    else consoleLog(sw, 3, `OPENFLOW-3-CONTROLLER_DISCONN: Logical switch 1 disconnected from controller: ${sw.openflow.enabled ? st.reason : 'OpenFlow switch shut down'}${sw.openflow.enabled ? '. Fail mode ' + (sw.openflow.failMode || 'secure') : ''}`);
+                } catch (e) {}
+            });
+        }
+
+        // Flow match and actions in ovs-ofctl key=value style, using the switch's port names
+        function ofMatchKV(flow, sw) {
+            const m = flow.match || {}, out = [];
+            if (m.in_port != null && m.in_port !== '*') out.push('in_port=' + swPortNameById(sw, m.in_port));
+            if (m.dl_vlan != null) out.push('dl_vlan=' + m.dl_vlan);
+            if (m.dl_src) out.push('dl_src=' + String(m.dl_src).toLowerCase());
+            if (m.dl_dst) out.push('dl_dst=' + String(m.dl_dst).toLowerCase());
+            if (m.dl_type && m.dl_type !== 'any') out.push(m.nw_proto && m.dl_type === 'ip' ? m.nw_proto : m.dl_type);
+            else if (m.nw_proto) out.push(m.nw_proto);
+            if (m.nw_src) out.push('nw_src=' + m.nw_src);
+            if (m.nw_dst) out.push('nw_dst=' + m.nw_dst);
+            if (m.tp_src) out.push('tp_src=' + m.tp_src);
+            if (m.tp_dst) out.push('tp_dst=' + m.tp_dst);
+            return out.join(',') || 'any';
+        }
+        function ofActionsKV(flow, sw) {
+            return (flow.actions || []).map(a => a.type === 'output' ? 'output:' + swPortNameById(sw, a.port) : (a.type === 'flood' ? 'FLOOD' : a.type === 'normal' ? 'NORMAL' : a.type === 'controller' ? 'CONTROLLER:65535' : a.type === 'drop' ? 'drop' : a.type)).join(',') || 'drop';
+        }
+        function ofMissAction(of) { const dm = of.defaultMiss || 'continue-controller'; return dm === 'drop' ? 'drop' : dm === 'continue-normal' ? 'NORMAL' : 'CONTROLLER:65535'; }
+
+        // Parse an ovs-ofctl style flow spec: priority=300,in_port=Fa0/1,ip,nw_dst=10.0.0.2,actions=output:Gi0/1
+        function ofParseFlowSpec(sw, spec) {
+            const s = String(spec || '').replace(/\s+/g, '');
+            const ai = s.toLowerCase().indexOf('actions=');
+            if (ai < 0) return { err: 'missing actions= (for example actions=output:Gi0/1 or actions=drop)' };
+            const left = s.slice(0, ai).replace(/,$/, ''), right = s.slice(ai + 8);
+            const match = {}; let priority = 32768, idle = 0, hard = 0;
+            for (const part of left.split(',').filter(Boolean)) {
+                const [kRaw, ...vv] = part.split('='); const k = kRaw.toLowerCase(); const v = vv.join('=');
+                if (!v) {
+                    if (k === 'ip') match.dl_type = 'ip';
+                    else if (k === 'arp') match.dl_type = 'arp';
+                    else if (['icmp', 'tcp', 'udp'].includes(k)) { match.dl_type = 'ip'; match.nw_proto = k; }
+                    else return { err: `unknown field "${part}"` };
+                    continue;
+                }
+                if (k === 'priority') { priority = parseInt(v, 10); if (isNaN(priority) || priority < 0 || priority > 65535) return { err: 'priority must be 0 to 65535' }; }
+                else if (k === 'in_port') { const p = ofResolvePort(sw, v); if (p == null) return { err: `${sw.name} has no port "${v}"` }; match.in_port = p; }
+                else if (k === 'dl_vlan') match.dl_vlan = parseInt(v, 10);
+                else if (k === 'dl_src' || k === 'dl_dst') match[k] = v.toUpperCase();
+                else if (k === 'dl_type') match.dl_type = /^(0x0?806|arp)$/i.test(v) ? 'arp' : 'ip';
+                else if (k === 'nw_src' || k === 'nw_dst') { if (!ofIsIp(v)) return { err: `${k} needs an IPv4 address` }; match.dl_type = match.dl_type || 'ip'; match[k] = v; }
+                else if (k === 'nw_proto') { match.dl_type = 'ip'; match.nw_proto = ({ '1': 'icmp', '6': 'tcp', '17': 'udp' })[v] || v.toLowerCase(); }
+                else if (k === 'tp_src' || k === 'tp_dst') match[k] = parseInt(v, 10);
+                else if (k === 'idle_timeout') idle = parseInt(v, 10) || 0;
+                else if (k === 'hard_timeout') hard = parseInt(v, 10) || 0;
+                else return { err: `unknown field "${k}"` };
+            }
+            const actions = [];
+            for (const a of right.split(',').filter(Boolean)) {
+                const low = a.toLowerCase();
+                if (low === 'drop') actions.push({ type: 'drop' });
+                else if (low === 'flood' || low === 'all') actions.push({ type: 'flood' });
+                else if (low === 'normal') actions.push({ type: 'normal' });
+                else if (low.startsWith('controller')) actions.push({ type: 'controller' });
+                else { const pt = ofResolvePort(sw, low.startsWith('output:') ? a.slice(7) : a); if (pt == null) return { err: `${sw.name} has no port "${a.replace(/^output:/i, '')}"` }; actions.push({ type: 'output', port: pt }); }
+            }
+            if (!actions.length) return { err: 'no actions given' };
+            return { priority, match, actions, idle, hard };
+        }
+
+        // ---- Switch IOS commands (Catalyst-style OpenFlow configuration) ----
+        function ofSwitchCli(dev, cmd, args, input, print) {
+            const mode = dev.cli.mode;
+            const inOf = mode === 'conf-openflow', inOfs = mode === 'conf-ofswitch';
+            const isShow = cmd === 'show' && ofPm(args[1], 'openflow');
+            const isClear = cmd === 'clear' && ofPm(args[1], 'openflow');
+            const isGlobal = mode === 'conf' && (ofPm(cmd, 'openflow', 4) || (cmd === 'no' && ofPm(args[1], 'openflow', 4)));
+            if (!isShow && !isClear && !isGlobal && !inOf && !inOfs) return false;
+            if (dev.l3) { print('% OpenFlow is not supported on a multilayer switch. Use a Layer 2 switch.'); return true; }
+            dev.ofInit();
+            const of = dev.openflow;
+            const setMode = (m, p) => { dev.cli.mode = m; dev.cli.prompt = `${dev.name}${p}#`; };
+            const changed = () => { try { ofRecheckChannels(); } catch (e) {} if (propertiesDeviceId === dev.id) scheduleOfPanelRefresh(); };
+            const resetSwitch = () => {
+                of.enabled = false; of.cliSwitch = false; of.flows = []; of.missCount = 0;
+                delete of.controllerIp; delete of.controllerPort; delete of.security; delete of.defaultMiss; of.failMode = 'secure';
+                if (of.dpidSet) { of.dpid = ofDpidFromMac(dev.mac); of.dpidSet = false; }
+            };
+            const configured = of.enabled || of.cliSwitch || of.controllerIp;
+
+            // Exec: show / clear
+            if (isShow || isClear) {
+                if (mode !== 'priv') { print('% Invalid input detected.'); return true; }
+                let i = 2;
+                if (args[i] && (ofPm(args[i], 'switch') || args[i] === 'switchport')) {
+                    i++;
+                    if (args[i] && args[i] !== '1') { print(`% Logical switch ${args[i]} is not configured`); return true; }
+                    if (args[i] === '1') i++;
+                } else if (args[i]) { print('% Invalid input detected.'); return true; }
+                const sub = args[i] || '';
+                if (!configured) { print('% OpenFlow is not configured. In global configuration mode enter: openflow, then switch 1 pipeline 1'); return true; }
+                const st = ofChannelStatus(dev);
+                const connected = of.enabled && st.up;
+                if (isClear) {
+                    if (ofPm(sub, 'flows')) { dev.ofClearFlows(); print('Flow table of logical switch 1 cleared.'); return true; }
+                    print('% Incomplete command. Use: clear openflow switch 1 flows'); return true;
+                }
+                if (!sub) {
+                    const ctrlDesc = of.controllerIp ? `${of.controllerIp}:${of.controllerPort || OF_DEFAULT_PORT}` : (st.ctrl && !of.cliSwitch ? `${st.ctrl.ip}:${st.ctrl.ofPort || OF_DEFAULT_PORT} (auto, cabled controller)` : 'none configured');
+                    print('Logical Switch Context');
+                    print('  Id: 1');
+                    print('  Switch type: Forwarding');
+                    print('  Pipeline id: 1');
+                    print(`  Datapath-id: ${ofDpidHex(of.dpid)}`);
+                    print(`  Config state: ${of.enabled ? 'no-shutdown' : 'shutdown'}`);
+                    print(`  Working state: ${of.enabled ? 'enabled' : 'disabled'}`);
+                    print(`  Table-miss default: ${of.defaultMiss || 'continue-controller'}`);
+                    print(`  Fail mode: ${of.failMode || 'secure'}${(of.failMode || 'secure') === 'secure' ? ' (drop all traffic while the controller is unreachable)' : ' (act as a normal learning switch while the controller is unreachable)'}`);
+                    print('  Configured protocol version: OpenFlow 1.3');
+                    print(`  Controller: ${ctrlDesc}, security ${of.security || (st.ctrl && st.ctrl.tls ? 'tls' : 'none')}`);
+                    print(`  Connection state: ${connected ? 'CONNECTED' : 'NOT CONNECTED' + (of.enabled ? ' (' + (st.reason || 'switch shut down') + ')' : ' (switch shut down)')}`);
+                    print(`  Current flow count: ${of.flows.length}`);
+                    print(`  Table-miss count: ${of.missCount || 0}`);
+                    print('  OpenFlow ports: all switch ports (Fa0/1-24, Gi0/1-2)');
+                    return true;
+                }
+                if (ofPm(sub, 'flows')) {
+                    const now = Date.now();
+                    const flows = of.flows.slice().sort((a, b) => b.priority - a.priority);
+                    print('Logical Switch Id: 1');
+                    print(`Total flows: ${flows.length + 1}`);
+                    print('');
+                    flows.forEach((fl, n) => {
+                        const dur = ((now - fl.installed) / 1000).toFixed(1);
+                        print(`Flow: ${n + 1} Match: ${ofMatchKV(fl, dev)} Actions: ${ofActionsKV(fl, dev)}, Priority: ${fl.priority}, Table: 0, Cookie: 0x0, Duration: ${dur}s, Packets: ${fl.counters.packets}, Bytes: ${fl.counters.bytes}${fl.idle ? ', Idle timeout: ' + fl.idle + 's' : ''}, Source: ${fl.by}`);
+                    });
+                    print(`Flow: ${flows.length + 1} Match: any Actions: ${ofMissAction(of)}, Priority: 0, Table: 0, Cookie: 0x0, Packets: ${of.missCount || 0} (table-miss)`);
+                    return true;
+                }
+                if (ofPm(sub, 'controllers')) {
+                    const s = of.stats || {};
+                    const ip = of.controllerIp || (st.ctrl ? st.ctrl.ip : 'auto');
+                    const hasCtrl = of.controllerIp || (st.ctrl && !of.cliSwitch);
+                    print('Logical Switch Id: 1');
+                    print(`Total Controllers: ${hasCtrl ? 1 : 0}`);
+                    if (!hasCtrl) return true;
+                    print('');
+                    print('  Controller: 1');
+                    print(`    ${ip}:${of.controllerPort || (st.ctrl && st.ctrl.ofPort) || OF_DEFAULT_PORT}${of.controllerIp ? '' : ' (auto)'}`);
+                    print(`    Protocol: ${(of.security ? of.security === 'tls' : !!(st.ctrl && st.ctrl.tls)) ? 'tls' : 'tcp'}`);
+                    print('    VRF: default');
+                    print(`    Connected: ${connected ? 'Yes' : 'No'}`);
+                    print(`    Role: ${connected ? 'Master' : 'Equal'}`);
+                    print(`    Negotiated Protocol Version: ${connected ? 'OpenFlow 1.3' : 'N/A'}`);
+                    if (!connected) print(`    Last error: ${of.enabled ? st.reason : 'logical switch is shut down'}`);
+                    print(`    Packet-in messages sent: ${s.pktIn || 0}`);
+                    print(`    Flow-mod messages received: ${s.flowModRx || 0}`);
+                    print(`    Packet-out messages received: ${s.pktOutRx || 0}`);
+                    return true;
+                }
+                if (ofPm(sub, 'ports')) {
+                    print('Logical Switch Id: 1');
+                    print('Port    Interface Name       Config-State     Link-State     Features');
+                    dev.ports.forEach(p => {
+                        const link = p.connectedLink && (typeof ifOperState === 'function' ? ifOperState(dev, p) === 'up' : true);
+                        print(`${String(p.id).padStart(4)}    ${swPortLongName(p).padEnd(21)}${(p.adminState === 'down' ? 'PORT_DOWN' : 'PORT_UP').padEnd(17)}${(link ? 'LINK_UP' : 'LINK_DOWN').padEnd(15)}${p.media === 'fiber' ? '1GB-FD' : '100MB-FD'}`);
+                    });
+                    return true;
+                }
+                if (ofPm(sub, 'stats') || ofPm(sub, 'statistics')) {
+                    const s = of.stats || {};
+                    print('Logical Switch Id: 1');
+                    print(`  Active flows: ${of.flows.length}`);
+                    print(`  Flow table lookups: ${s.lookups || 0}`);
+                    print(`  Flow table matches: ${s.matches || 0}`);
+                    print(`  Table-miss packets: ${of.missCount || 0}`);
+                    print(`  Packet-in sent: ${s.pktIn || 0}`);
+                    print(`  Flow-mod received: ${s.flowModRx || 0}`);
+                    print(`  Packet-out received: ${s.pktOutRx || 0}`);
+                    return true;
+                }
+                print('% Invalid input detected. Use: show openflow switch 1 [flows | controllers | ports | stats]');
+                return true;
+            }
+
+            // Global configuration
+            if (isGlobal) {
+                if (cmd === 'no') { if (configured) { resetSwitch(); print('OpenFlow configuration removed. The switch now forwards traffic on its own.'); } changed(); return true; }
+                setMode('conf-openflow', '(config-openflow)');
+                return true;
+            }
+
+            // Sub-modes: commands of the parent modes are accepted too (IOS behaviour)
+            const fallThrough = () => {
+                const savedMode = dev.cli.mode, savedPrompt = dev.cli.prompt, b = dev.cli.history.length;
+                setMode('conf', '(config)');
+                processCLICommandInner(dev, input);
+                if (dev.cli.history.slice(b).some(l => /^%\s?(Invalid|Incomplete|Unknown|Ambiguous)/.test(l)) && dev.cli.mode === 'conf') { dev.cli.mode = savedMode; dev.cli.prompt = savedPrompt; }
+                return true;
+            };
+            const c = cmd;
+            if (ofPm(c, 'exit', 2)) { if (inOfs) setMode('conf-openflow', '(config-openflow)'); else setMode('conf', '(config)'); return true; }
+            if (ofPm(c, 'end', 3)) { setMode('priv', ''); consoleLog(dev, 5, 'SYS-5-CONFIG_I: Configured from console by console'); return true; }
+            if (c === 'do') return false;
+
+            if (inOf) {
+                const isSw = ofPm(c, 'switch') || c === 'switchport';
+                const neg = c === 'no';
+                if (isSw || (neg && (ofPm(args[1], 'switch') || args[1] === 'switchport'))) {
+                    const a = neg ? args.slice(1) : args;
+                    const id = a[1];
+                    if (!id) { print('% Incomplete command.'); return true; }
+                    if (id !== '1') { print('% Only logical switch 1 is supported on this platform.'); return true; }
+                    if (neg) { resetSwitch(); changed(); return true; }
+                    if (!of.cliSwitch && !of.enabled && !(ofPm(a[2], 'pipeline') && a[3])) { print('% Incomplete command. Use: switch 1 pipeline 1'); return true; }
+                    if (ofPm(a[2], 'pipeline') && a[3] !== '1') { print(`% Pipeline ${a[3] || ''} is not supported. Use pipeline 1.`); return true; }
+                    if (!of.enabled) { of.flows = []; of.missCount = 0; dev.macTable = {}; try { scheduleMacTableRefresh(dev.id); } catch (e) {} }
+                    of.cliSwitch = true; of.enabled = true;
+                    setMode('conf-ofswitch', '(config-openflow-switch)');
+                    changed();
+                    return true;
+                }
+                return fallThrough();
+            }
+
+            // conf-ofswitch
+            const neg = c === 'no';
+            const k = neg ? args[1] : c, a = neg ? args.slice(1) : args;
+            if (ofPm(k, 'controller', 4)) {
+                if (neg) { delete of.controllerIp; delete of.controllerPort; delete of.security; changed(); return true; }
+                if (!ofPm(a[1], 'ipv4') || !a[2]) { print('% Incomplete command. Use: controller ipv4 <address> port 6653 security none'); return true; }
+                if (!ofIsIp(a[2])) { print(`% Invalid input detected: ${a[2]} is not an IPv4 address.`); return true; }
+                let port = OF_DEFAULT_PORT, sec = 'none';
+                for (let j = 3; j < a.length; j++) {
+                    if (ofPm(a[j], 'port')) { port = parseInt(a[j + 1], 10); j++; if (isNaN(port) || port < 1 || port > 65535) { print('% Invalid port number.'); return true; } }
+                    else if (ofPm(a[j], 'vrf')) j++;
+                    else if (ofPm(a[j], 'security')) { const v = a[j + 1]; j++; if (v === 'tls' || v === 'none') sec = v; else { print('% Invalid input detected. Use: security none | tls'); return true; } }
+                    else { print('% Invalid input detected.'); return true; }
+                }
+                of.controllerIp = a[2]; of.controllerPort = port; of.security = sec;
+                changed();
+                return true;
+            }
+            if (ofPm(k, 'default-miss', 3)) {
+                if (neg) { delete of.defaultMiss; changed(); return true; }
+                const v = a[1] || '';
+                if (ofPm(v, 'continue-controller', 10) || v === 'controller') of.defaultMiss = 'continue-controller';
+                else if (ofPm(v, 'continue-normal', 10) || v === 'normal') of.defaultMiss = 'continue-normal';
+                else if (v === 'drop') of.defaultMiss = 'drop';
+                else { print('% Invalid input detected. Use: default-miss continue-controller | continue-normal | drop'); return true; }
+                changed(); return true;
+            }
+            if (ofPm(k, 'fail-mode', 3)) {
+                if (neg) { of.failMode = 'secure'; changed(); return true; }
+                if (a[1] === 'secure' || a[1] === 'standalone') { of.failMode = a[1]; changed(); return true; }
+                print('% Invalid input detected. Use: fail-mode secure | standalone'); return true;
+            }
+            if (ofPm(k, 'datapath-id', 3)) {
+                if (neg) { of.dpid = ofDpidFromMac(dev.mac); of.dpidSet = false; return true; }
+                const hex = String(a[1] || '').replace(/^0x/i, '');
+                if (!/^[0-9a-f]{1,16}$/i.test(hex)) { print('% Invalid datapath-id. Use up to 16 hex digits, such as 0x1 or 0x0000000000000abc.'); return true; }
+                of.dpid = hex.padStart(16, '0').toUpperCase().match(/../g).join(':'); of.dpidSet = true;
+                return true;
+            }
+            if (ofPm(k, 'shutdown', 4)) {
+                if (neg) { if (!of.enabled) { of.flows = []; of.missCount = 0; } of.enabled = true; }
+                else { of.enabled = false; }
+                changed(); return true;
+            }
+            return fallThrough();
+        }
+
+        // ---- Controller shell (ONOS-style CLI plus ovs-ofctl style flow commands) ----
+        function sdnShell(dev, input, print) {
+            const raw = String(input || '').trim();
+            if (!raw) return;
+            const toks = raw.split(/\s+/);
+            const cmd = toks[0].toLowerCase();
+            const sws = () => (typeof dev.connectedSwitches === 'function' ? dev.connectedSwitches() : []);
+            const findSw = (t) => {
+                if (!t) return null;
+                const low = t.toLowerCase().replace(/\s+/g, '');
+                return sws().find(s => s.name.toLowerCase().replace(/\s+/g, '') === low || ofOnosId(s) === low || ofDpidHex(s.openflow.dpid) === low) || null;
+            };
+            const targets = (t) => {
+                if (!t) return { err: 'specify a switch name, device id or all' };
+                if (t.toLowerCase() === 'all') { const up = sws().filter(s => s.ofEnabled() && ofChannelStatus(s).up); return up.length ? { list: up } : { err: 'no switches are connected' }; }
+                const s = findSw(t); if (!s) return { err: `no connected switch called "${t}" (try: devices)` };
+                if (!s.ofEnabled() || !ofChannelStatus(s).up) return { err: `${s.name} is not connected to this controller` };
+                return { list: [s] };
+            };
+            const kv = (list) => { const o = {}; list.forEach(x => { const i = x.indexOf('='); if (i > 0) o[x.slice(0, i).toLowerCase()] = x.slice(i + 1); }); return o; };
+            dev.apps = dev.apps || { learning: true, acl: true }; dev.acl = dev.acl || []; dev.stats = dev.stats || { packetIn: 0, flowMod: 0, packetOut: 0 };
+            const appName = (t) => { const l = String(t || '').toLowerCase(); if (l === 'fwd' || l === 'org.onosproject.fwd') return 'learning'; if (l === 'acl' || l === 'org.onosproject.acl') return 'acl'; return null; };
+
+            if (cmd === 'help' || cmd === '?') {
+                [
+                    'Controller commands (ONOS style):',
+                    '  summary                      Controller overview',
+                    '  devices                      OpenFlow switches and their channel state',
+                    '  ports <switch>               Port numbers and names on a switch',
+                    '  flows [<switch>]             Flow rules installed on switches',
+                    '  hosts                        Hosts learned by the forwarding app',
+                    '  apps                         Controller applications',
+                    '  app activate|deactivate fwd|acl',
+                    '  acl                          List security policy rules',
+                    '  acl add [src=IP] [dst=IP] [proto=icmp|tcp|udp] [dport=N]',
+                    '  acl remove <n>               Remove rule n',
+                    '  stats                        Packet-In, Flow-Mod and Packet-Out counters',
+                    '  cfg get                      Show controller settings',
+                    '  cfg set ip|port|tls|idle-timeout <value>',
+                    '',
+                    'Flow commands (ovs-ofctl style):',
+                    '  dump-flows <switch>          Flow table in key=value form',
+                    '  add-flow <switch|all> <spec> For example:',
+                    '      add-flow Switch1 priority=300,in_port=Fa0/1,ip,nw_dst=10.0.0.2,actions=output:Gi0/1',
+                    '      add-flow all priority=400,tcp,tp_dst=23,actions=drop',
+                    '  del-flows <switch|all>       Remove every flow on the switch',
+                    '',
+                    '  clear                        Clear the screen',
+                    '  logout                       Close the shell'
+                ].forEach(print);
+                return;
+            }
+            if (cmd === 'clear' || cmd === 'cls') { dev.cli.history = []; return; }
+            if (cmd === 'logout' || cmd === 'exit' || cmd === 'quit') { print('Connection closed.'); setTimeout(() => { try { window.closeCLI(dev.id); } catch (e) {} }, 300); return; }
+            if (cmd === 'summary') {
+                const list = sws(), up = list.filter(s => s.ofEnabled() && ofChannelStatus(s).up);
+                const flows = up.reduce((n, s) => n + s.openflow.flows.length, 0);
+                const hosts = new Set(); Object.values(dev.macView || {}).forEach(v => Object.keys(v).forEach(k => hosts.add(k.split('-').slice(1).join('-'))));
+                print(`node=${dev.ip}, version=2.7.0 (simulated), name=${dev.name}`);
+                print(`openflow=port ${dev.ofPort || OF_DEFAULT_PORT}/${dev.tls ? 'tls' : 'tcp'}, devices=${up.length} connected of ${list.length} cabled, flows=${flows}, hosts=${hosts.size}`);
+                print(`apps=${['learning', 'acl'].filter(a => dev.apps[a]).map(a => ofOnosApp(a)).join(', ') || 'none active'}, acl-rules=${dev.acl.length}`);
+                return;
+            }
+            if (cmd === 'devices') {
+                const list = sws();
+                if (!list.length) { print('No switches are cabled to this controller.'); return; }
+                list.forEach(s => {
+                    const st = ofChannelStatus(s), avail = s.ofEnabled() && st.up;
+                    print(`id=${ofOnosId(s)}, available=${avail}, role=${avail ? 'MASTER' : 'NONE'}, type=SWITCH, name=${s.name}, protocol=OF_13, channel=${st.proto || (dev.tls ? 'tls' : 'tcp')}:${dev.ip}:${dev.ofPort || OF_DEFAULT_PORT}, flows=${s.openflow.flows.length}, failMode=${s.openflow.failMode || 'secure'}${avail ? '' : ', reason=' + (s.ofEnabled() ? st.reason : 'OpenFlow is not enabled on the switch')}`);
+                });
+                return;
+            }
+            if (cmd === 'ports') {
+                const s = findSw(toks[1]); if (!s) { print(`Error: ${toks[1] ? 'no connected switch called "' + toks[1] + '"' : 'usage: ports <switch>'}`); return; }
+                print(`id=${ofOnosId(s)}, name=${s.name}`);
+                s.ports.forEach(p => { const up = p.connectedLink && p.adminState !== 'down' && !p.errDisabled; print(`  port=${p.id}, name=${swPortName(p)}, state=${up ? 'enabled' : 'disabled'}, type=${p.media === 'fiber' ? 'fiber' : 'copper'}, speed=${p.media === 'fiber' ? 1000 : 100}`); });
+                return;
+            }
+            if (cmd === 'flows' || cmd === 'dump-flows') {
+                const list = toks[1] ? [findSw(toks[1])].filter(Boolean) : sws();
+                if (toks[1] && !list.length) { print(`Error: no connected switch called "${toks[1]}"`); return; }
+                if (!list.length) { print('No switches are cabled to this controller.'); return; }
+                const now = Date.now();
+                list.forEach(s => {
+                    const fl = s.openflow.flows.slice().sort((a, b) => b.priority - a.priority);
+                    if (cmd === 'dump-flows') {
+                        print(`NXST_FLOW reply (${s.name}, ${ofOnosId(s)}):`);
+                        fl.forEach(f => print(` cookie=0x0, duration=${((now - f.installed) / 1000).toFixed(1)}s, table=0, n_packets=${f.counters.packets}, n_bytes=${f.counters.bytes}, ${f.idle ? 'idle_timeout=' + f.idle + ', ' : ''}priority=${f.priority},${ofMatchKV(f, s) === 'any' ? '' : ofMatchKV(f, s) + ' '}actions=${ofActionsKV(f, s)}`));
+                        print(` cookie=0x0, table=0, n_packets=${s.openflow.missCount || 0}, priority=0 actions=${ofMissAction(s.openflow)}`);
+                        return;
+                    }
+                    print(`deviceId=${ofOnosId(s)}, name=${s.name}, flowRuleCount=${fl.length}`);
+                    fl.forEach((f, n) => {
+                        const m = f.match || {}, sel = [];
+                        if (m.in_port != null) sel.push('IN_PORT:' + m.in_port);
+                        if (m.dl_vlan != null) sel.push('VLAN_VID:' + m.dl_vlan);
+                        if (m.dl_src) sel.push('ETH_SRC:' + m.dl_src);
+                        if (m.dl_dst) sel.push('ETH_DST:' + m.dl_dst);
+                        if (m.dl_type) sel.push('ETH_TYPE:' + (m.dl_type === 'arp' ? 'arp' : 'ipv4'));
+                        if (m.nw_proto) sel.push('IP_PROTO:' + ({ icmp: 1, tcp: 6, udp: 17 })[m.nw_proto]);
+                        if (m.nw_src) sel.push('IPV4_SRC:' + m.nw_src + '/32');
+                        if (m.nw_dst) sel.push('IPV4_DST:' + m.nw_dst + '/32');
+                        if (m.tp_dst) sel.push((m.nw_proto === 'udp' ? 'UDP_DST:' : 'TCP_DST:') + m.tp_dst);
+                        const tr = (f.actions || []).map(a => a.type === 'output' ? 'OUTPUT:' + a.port : a.type === 'flood' ? 'OUTPUT:FLOOD' : a.type === 'normal' ? 'OUTPUT:NORMAL' : a.type === 'controller' ? 'OUTPUT:CONTROLLER' : 'NOACTION');
+                        print(`    id=${n + 1}, state=ADDED, bytes=${f.counters.bytes}, packets=${f.counters.packets}, duration=${Math.floor((now - f.installed) / 1000)}, liveType=${f.idle ? 'TEMPORARY' : 'PERMANENT'}, priority=${f.priority}, tableId=0, appId=${ofOnosApp(f.by)}, selector=[${sel.join(', ')}], treatment=[immediate=[${f.actions && f.actions[0] && f.actions[0].type === 'drop' ? 'NOACTION' : tr.join(', ')}]]${f.idle ? ', idleTimeout=' + f.idle : ''}`);
+                    });
+                });
+                return;
+            }
+            if (cmd === 'hosts') {
+                const rows = new Map();
+                sws().forEach(s => Object.entries((dev.macView || {})[s.id] || {}).forEach(([key, port]) => {
+                    const vlan = key.split('-')[0], mac = key.split('-').slice(1).join('-');
+                    // Only edge ports locate a host; a port facing another switch is infrastructure
+                    const pt = s.ports.find(x => x.id == port), l = pt && pt.connectedLink && links[pt.connectedLink];
+                    const peer = l && devices[l.source === s.id ? l.target : l.source];
+                    if (!peer || peer.type === 'Switch') return;
+                    const loc = `${ofOnosId(s)}/${port}`;
+                    const r = rows.get(mac + '/' + vlan) || { mac, vlan, locs: [] }; r.locs.push(loc); rows.set(mac + '/' + vlan, r);
+                }));
+                if (!rows.size) { print('No hosts learned yet. Generate some traffic (a ping) with the fwd app active.'); return; }
+                rows.forEach(r => {
+                    const owner = Object.values(devices).find(d => d.mac === r.mac);
+                    const ip = owner && owner.ip && owner.ip !== '0.0.0.0' ? owner.ip : '';
+                    print(`id=${r.mac}/${r.vlan === '1' ? 'None' : r.vlan}, mac=${r.mac}, locations=[${r.locs.join(', ')}], vlan=${r.vlan}, ip(s)=[${ip}]${owner ? ', name=' + owner.name : ''}`);
+                });
+                return;
+            }
+            if (cmd === 'apps') {
+                print('*   0 org.onosproject.openflow   2.7.0  OpenFlow Provider Suite (required)');
+                print(`${dev.apps.learning ? '*' : ' '}   1 org.onosproject.fwd        2.7.0  Reactive Forwarding (L2 learning)`);
+                print(`${dev.apps.acl ? '*' : ' '}   2 org.onosproject.acl        2.7.0  Access Control Lists (security policy)`);
+                print('(* = active)');
+                return;
+            }
+            if (cmd === 'app') {
+                const verb = (toks[1] || '').toLowerCase(), app = appName(toks[2]);
+                if (!['activate', 'deactivate'].includes(verb) || !app) { print('Usage: app activate|deactivate fwd|acl'); return; }
+                dev.apps[app] = verb === 'activate';
+                print(`${verb === 'activate' ? 'Activated' : 'Deactivated'} ${ofOnosApp(app)}`);
+                if (app === 'acl' && dev.apps.acl) dev.acl.forEach(r => dev.pushAclProactive(r));
+                if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
+                return;
+            }
+            if (cmd === 'acl') {
+                const sub = (toks[1] || '').toLowerCase();
+                if (!sub) {
+                    if (!dev.acl.length) { print('No ACL rules. Add one with: acl add src=10.0.0.1 dst=10.0.0.2 proto=icmp'); return; }
+                    print(' #  priority  action  src              dst              proto  dport');
+                    dev.acl.forEach((r, n) => print(`${String(n + 1).padStart(2)}  ${String(r.priority || 200).padEnd(8)}  ${(r.action === 'drop' ? 'DENY' : 'ALLOW').padEnd(6)}  ${String(r.nw_src || 'any').padEnd(15)}  ${String(r.nw_dst || 'any').padEnd(15)}  ${String(r.nw_proto || 'any').padEnd(5)}  ${r.tp_dst || 'any'}`));
+                    if (!dev.apps.acl) print('Note: org.onosproject.acl is not active, so these rules are not enforced.');
+                    return;
+                }
+                if (sub === 'add') {
+                    const o = kv(toks.slice(2));
+                    const bad = Object.keys(o).find(x => !['src', 'dst', 'proto', 'dport'].includes(x));
+                    if (bad) { print(`Error: unknown field "${bad}". Use src=, dst=, proto=, dport=`); return; }
+                    if (o.src && !ofIsIp(o.src)) { print('Error: src must be an IPv4 address'); return; }
+                    if (o.dst && !ofIsIp(o.dst)) { print('Error: dst must be an IPv4 address'); return; }
+                    if (o.proto && !['icmp', 'tcp', 'udp', 'any'].includes(o.proto.toLowerCase())) { print('Error: proto must be icmp, tcp or udp'); return; }
+                    if (o.dport && !(o.proto && ['tcp', 'udp'].includes(o.proto.toLowerCase()))) { print('Error: dport needs proto=tcp or proto=udp'); return; }
+                    const rule = { priority: 200, action: 'drop', dl_type: 'ip', nw_src: o.src || 'any', nw_dst: o.dst || 'any', nw_proto: (o.proto || 'any').toLowerCase(), tp_dst: o.dport || 'any' };
+                    dev.acl.push(rule);
+                    if (dev.apps.acl) dev.pushAclProactive(rule);
+                    print(`Added rule ${dev.acl.length}: deny ${aclDesc(rule)}${dev.apps.acl ? ` (drop flow pushed to ${sws().filter(s => s.ofEnabled() && ofChannelStatus(s).up).length} switch(es))` : ' (not enforced: acl app inactive)'}`);
+                    log(`[${dev.name}] ACL rule added: deny ${aclDesc(rule)}`, 'warning');
+                    if (propertiesDeviceId === dev.id) updatePropertiesPanel(true);
+                    return;
+                }
+                if (sub === 'remove' || sub === 'rm' || sub === 'del') {
+                    const n = parseInt(toks[2], 10);
+                    if (!(n >= 1 && n <= dev.acl.length)) { print('Usage: acl remove <n> (see: acl)'); return; }
+                    const r = dev.acl.splice(n - 1, 1)[0];
+                    sws().forEach(s => { s.ofInit(); s.openflow.flows = s.openflow.flows.filter(f => !(f.by === 'acl' && JSON.stringify(f.match) === JSON.stringify(aclToFlowMatch(r)))); });
+                    print(`Removed rule ${n} and its drop flows: deny ${aclDesc(r)}`);
+                    if (propertiesDeviceId) updatePropertiesPanel(true);
+                    return;
+                }
+                print('Usage: acl | acl add [src=IP] [dst=IP] [proto=icmp|tcp|udp] [dport=N] | acl remove <n>');
+                return;
+            }
+            if (cmd === 'add-flow') {
+                const t = targets(toks[1]); if (t.err) { print('Error: ' + t.err); return; }
+                const spec = toks.slice(2).join('');
+                if (!spec) { print('Usage: add-flow <switch|all> priority=N,<match fields>,actions=<actions>'); return; }
+                for (const s of t.list) { const r = ofParseFlowSpec(s, spec); if (r.err) { print('Error: ' + r.err); return; } }
+                t.list.forEach(s => { const r = ofParseFlowSpec(s, spec); s.ofInstallFlow({ priority: r.priority, match: r.match, actions: r.actions, idle: r.idle, hard: r.hard, by: 'static' }); dev.stats.flowMod++; });
+                print(`Flow installed on ${t.list.map(s => s.name).join(', ')}`);
+                if (propertiesDeviceId) updatePropertiesPanel(true);
+                return;
+            }
+            if (cmd === 'del-flows') {
+                const t = targets(toks[1]); if (t.err) { print('Error: ' + t.err); return; }
+                t.list.forEach(s => { s.ofClearFlows(); dev.stats.flowMod++; });
+                print(`Flow table cleared on ${t.list.map(s => s.name).join(', ')}`);
+                return;
+            }
+            if (cmd === 'stats') {
+                if ((toks[1] || '').toLowerCase() === 'clear') { dev.stats = { packetIn: 0, flowMod: 0, packetOut: 0 }; print('Counters cleared.'); return; }
+                print(`Packet-In received:  ${dev.stats.packetIn}`);
+                print(`Flow-Mod sent:       ${dev.stats.flowMod}`);
+                print(`Packet-Out sent:     ${dev.stats.packetOut}`);
+                print(`Switches connected:  ${sws().filter(s => s.ofEnabled() && ofChannelStatus(s).up).length}`);
+                return;
+            }
+            if (cmd === 'cfg') {
+                const sub = (toks[1] || '').toLowerCase();
+                if (sub === 'get' || !sub) {
+                    print(`ip            ${dev.ip}`);
+                    print(`port          ${dev.ofPort || OF_DEFAULT_PORT}`);
+                    print(`tls           ${!!dev.tls}`);
+                    print(`idle-timeout  ${dev.idleTimeout != null ? dev.idleTimeout : 30}`);
+                    return;
+                }
+                if (sub === 'set') {
+                    const key = (toks[2] || '').toLowerCase(), val = toks[3];
+                    if (!val) { print('Usage: cfg set ip|port|tls|idle-timeout <value>'); return; }
+                    if (key === 'ip') { if (!ofIsIp(val)) { print('Error: not an IPv4 address'); return; } dev.ip = val; }
+                    else if (key === 'port') { const p = parseInt(val, 10); if (!(p >= 1 && p <= 65535)) { print('Error: port must be 1 to 65535'); return; } dev.ofPort = p; }
+                    else if (key === 'tls') { if (!/^(true|false|on|off)$/i.test(val)) { print('Error: tls must be true or false'); return; } dev.tls = /^(true|on)$/i.test(val); }
+                    else if (key === 'idle-timeout') { const s = parseInt(val, 10); if (!(s >= 0)) { print('Error: idle-timeout must be 0 or more seconds'); return; } dev.idleTimeout = s; }
+                    else { print(`Error: unknown setting "${key}". Use ip, port, tls or idle-timeout`); return; }
+                    print(`${key} set to ${key === 'tls' ? !!dev.tls : val}`);
+                    ofRecheckChannels();
+                    if (propertiesDeviceId) updatePropertiesPanel(true);
+                    return;
+                }
+                print('Usage: cfg get | cfg set ip|port|tls|idle-timeout <value>');
+                return;
+            }
+            print(`Command not found: ${toks[0]}. Type 'help' for a list of commands.`);
+        }
+
+        // --- Switch OpenFlow methods (added to the prototype so the class body is untouched) ---
+        Switch.prototype.ofInit = function () {
+            if (!this.openflow) this.openflow = { enabled: false, failMode: 'secure', flows: [], missCount: 0 };
+            if (!Array.isArray(this.openflow.flows)) this.openflow.flows = [];
+            if (!this.openflow.dpid) this.openflow.dpid = ofDpidFromMac(this.mac);
+            if (!this.openflow.stats) this.openflow.stats = { lookups: 0, matches: 0, pktIn: 0, flowModRx: 0, pktOutRx: 0 };
+        };
+        Switch.prototype.ofEnabled = function () { return !!(this.openflow && this.openflow.enabled); };
+        Switch.prototype.ofControllerReachable = function () { return ofChannelStatus(this).up; };
+        Switch.prototype.ofRefreshPanel = function () {
+            if (propertiesDeviceId === this.id) scheduleOfPanelRefresh();
+        };
+        Switch.prototype.ofClearFlows = function () { this.ofInit(); this.openflow.flows = []; this.openflow.missCount = 0; this.ofRefreshPanel(); };
+
+        // Distil an in-flight frame down to OpenFlow-style match fields
+        Switch.prototype.ofPacketFields = function (frame, inPortId, frameVlan) {
+            const p = frame.payload || {};
+            const t = p.type || '';
+            const f = { in_port: inPortId, dl_src: frame.sourceMac, dl_dst: frame.destMac, dl_vlan: frameVlan,
+                        dl_type: 'other', nw_proto: null, nw_src: null, nw_dst: null, tp_src: null, tp_dst: null };
+            if (t.indexOf('ARP') === 0) { f.dl_type = 'arp'; return f; }
+            f.dl_type = 'ip';
+            f.nw_src = p.sourceIp || null;
+            f.nw_dst = p.targetIp || null;
+            if (t.indexOf('ICMP') === 0) f.nw_proto = 'icmp';
+            else if (t.indexOf('DHCP') === 0) { f.nw_proto = 'udp'; f.tp_src = p.sourcePort || 68; f.tp_dst = p.destPort || 67; }
+            else if (t.indexOf('DNS') === 0) { f.nw_proto = 'udp'; f.tp_src = p.sourcePort || null; f.tp_dst = p.destPort || 53; }
+            else if (t.indexOf('RIP') === 0) { f.nw_proto = 'udp'; f.tp_src = 520; f.tp_dst = 520; }
+            else if (t.indexOf('UDP') === 0) { f.nw_proto = 'udp'; f.tp_src = p.sourcePort || null; f.tp_dst = p.destPort || null; }
+            else if (t.indexOf('HTTP') === 0) { f.nw_proto = 'tcp'; f.tp_src = p.sourcePort || null; f.tp_dst = p.destPort || 80; }
+            else if (t.indexOf('TCP') === 0) { f.nw_proto = 'tcp'; f.tp_src = p.sourcePort || null; f.tp_dst = p.destPort || null; }
+            else { f.nw_proto = p.protocol || null; f.tp_src = p.sourcePort || null; f.tp_dst = p.destPort || null; }
+            return f;
+        };
+
+        Switch.prototype.ofFlowMatches = function (flow, f) {
+            const m = flow.match || {};
+            return ofFieldMatch(m.in_port, f.in_port)
+                && ofFieldMatch(m.dl_src, f.dl_src)
+                && ofFieldMatch(m.dl_dst, f.dl_dst)
+                && (m.dl_vlan == null || ofFieldMatch(m.dl_vlan, f.dl_vlan))
+                && ofFieldMatch(m.dl_type, f.dl_type)
+                && ofFieldMatch(m.nw_proto, f.nw_proto)
+                && ofFieldMatch(m.nw_src, f.nw_src)
+                && ofFieldMatch(m.nw_dst, f.nw_dst)
+                && ofFieldMatch(m.tp_src, f.tp_src)
+                && ofFieldMatch(m.tp_dst, f.tp_dst);
+        };
+
+        // Called from Switch.receive when OpenFlow is enabled. Returns true if the frame was
+        // consumed by the SDN path; false means "fail-standalone" and the legacy L2 path runs.
+        Switch.prototype.ofReceive = async function (frame, inPortId, frameVlan) {
+            this.ofInit();
+            if (this.ofControllerReachable()) {
+                await sleep(20);
+                await this.ofDataPlane(frame, inPortId, frameVlan);
+                return true;
+            }
+            // Controller unreachable: honour the switch's configured fail mode
+            if ((this.openflow.failMode || 'secure') === 'secure') {
+                this.openflow.missCount = (this.openflow.missCount || 0) + 1; // fail-secure: drop everything
+                this.ofRefreshPanel();
+                return true;
+            }
+            return false; // fail-standalone: behave as an ordinary learning switch
+        };
+
+        Switch.prototype.ofDataPlane = async function (frame, inPortId, frameVlan) {
+            this.ofInit();
+            const f = this.ofPacketFields(frame, inPortId, frameVlan);
+            let best = null;
+            for (const fl of this.openflow.flows) {
+                if (this.ofFlowMatches(fl, f) && (!best || fl.priority > best.priority)) best = fl;
+            }
+            this.openflow.stats.lookups++;
+            if (best) {
+                this.openflow.stats.matches++;
+                best.counters.packets++;
+                best.counters.bytes += (typeof packetLength === 'function' ? packetLength(frame) : 64);
+                best.lastMatch = Date.now();
+                this.ofRefreshPanel();
+                await this.ofApplyActions(best.actions, frame, inPortId, frameVlan);
+                return;
+            }
+            this.openflow.missCount = (this.openflow.missCount || 0) + 1;
+            this.ofRefreshPanel();
+            // Table-miss behaviour (IOS: default-miss continue-controller | continue-normal | drop)
+            const miss = this.openflow.defaultMiss || 'continue-controller';
+            if (miss === 'drop') return;
+            if (miss === 'continue-normal') { this._ofNormal(frame, frameVlan, inPortId); return; }
+            await this.ofSendPacketIn(frame, inPortId, frameVlan);
+        };
+
+        Switch.prototype.ofApplyActions = async function (actions, frame, inPortId, frameVlan) {
+            for (const a of (actions || [])) {
+                if (a.type === 'drop') return;
+                else if (a.type === 'controller') await this.ofSendPacketIn(frame, inPortId, frameVlan);
+                else if (a.type === 'flood' || a.type === 'all') this._ofFlood(frame, frameVlan, inPortId);
+                else if (a.type === 'normal') this._ofNormal(frame, frameVlan, inPortId);
+                else if (a.type === 'output') this._ofOutput(a.port, frame, frameVlan, inPortId);
+            }
+        };
+
+        Switch.prototype._ofOutput = function (outPortId, frame, frameVlan, inPortId) {
+            const outPort = this.ports.find(p => p.id == outPortId);
+            if (!outPort || outPort.isMgmt || outPort.routed || !outPort.connectedLink || outPort.adminState === 'down' || outPort.errDisabled) return;
+            if (outPortId == inPortId) return;
+            if (portStpState(this, outPort, frameVlan) === 'blocking') return;
+            const outFrame = { ...frame };
+            if (isTrunkPort(this, outPort)) outFrame.vlan = frameVlan; else delete outFrame.vlan;
+            transmit(outFrame, this.id, outPort.id);
+        };
+
+        Switch.prototype._ofFlood = function (frame, frameVlan, inPortId) {
+            this.ports.forEach(p => {
+                if (p.isMgmt || p.routed || isNonRepMember(this, p)) return;
+                if (p.id == inPortId || !p.connectedLink || p.adminState === 'down' || p.errDisabled) return;
+                if (portStpState(this, p, frameVlan) !== 'forwarding') return;
+                if (isTrunkPort(this, p)) transmit({ ...frame, vlan: frameVlan }, this.id, p.id);
+                else if ((p.vlan || 1) === frameVlan) { const of = { ...frame }; delete of.vlan; transmit(of, this.id, p.id); }
+            });
+        };
+
+        // OVS "NORMAL" action: legacy learning-switch behaviour for a single frame
+        Switch.prototype._ofNormal = function (frame, frameVlan, inPortId) {
+            { const ip = this.ports.find(pt => pt.id == inPortId); this.macTable[`${frameVlan}-${frame.sourceMac}`] = { portId: ip ? logicalPortId(this, ip) : inPortId, time: Date.now(), mac: frame.sourceMac, vlan: frameVlan }; }
+            if (frame.destMac === 'FF:FF:FF:FF:FF:FF') return this._ofFlood(frame, frameVlan, inPortId);
+            const entry = this.macTable[`${frameVlan}-${frame.destMac}`];
+            if (entry && entry.portId != inPortId) this._ofOutput(entry.portId, frame, frameVlan, inPortId);
+            else this._ofFlood(frame, frameVlan, inPortId);
+        };
+
+        Switch.prototype.ofSendPacketIn = async function (frame, inPortId, frameVlan) {
+            const ctrl = devices[this.controllerId];
+            if (!ctrl || ctrl.type !== 'SDNController') return;
+            this.ofInit(); this.openflow.stats.pktIn++;
+            await this.ofControlAnim('to-controller', 'PacketIn');
+            if (typeof ctrl.handlePacketIn === 'function') ctrl.handlePacketIn(this, frame, inPortId, frameVlan);
+        };
+
+        Switch.prototype.ofControlAnim = async function (dir, label) {
+            const link = links[this.mgmtLink];
+            const ctrl = devices[this.controllerId];
+            if (!link || !ctrl) return;
+            const from = dir === 'to-controller' ? this : ctrl;
+            const to = dir === 'to-controller' ? ctrl : this;
+            await animateControl(from, to, link, label, PROTOCOL_STYLES.OF.dot);
+        };
+
+        Switch.prototype.ofInstallFlow = function (spec) {
+            this.ofInit();
+            const flow = {
+                priority: spec.priority != null ? spec.priority : 100,
+                match: spec.match || {},
+                actions: spec.actions || [{ type: 'drop' }],
+                counters: { packets: 0, bytes: 0 },
+                idle: spec.idle != null ? spec.idle : 0,
+                hard: spec.hard != null ? spec.hard : 0,
+                installed: Date.now(),
+                lastMatch: Date.now(),
+                by: spec.by || 'controller',
+                note: spec.note || ''
+            };
+            const key = flow.priority + '|' + JSON.stringify(flow.match);
+            this.openflow.flows = this.openflow.flows.filter(fl => (fl.priority + '|' + JSON.stringify(fl.match)) !== key);
+            this.openflow.flows.push(flow);
+            this.openflow.stats.flowModRx++;
+            if (this.openflow.flows.length > 200) this.openflow.flows.shift();
+            this.ofRefreshPanel();
+            return flow;
+        };
+
+        // --- SDN Controller device ---
+        class SDNController extends Device {
+            constructor(x, y) {
+                super('SDNController', x, y);
+                this.name = `Controller ${deviceCounter.SDNController - 1}`;
+                // Out-of-band management ports the control channels plug into
+                this.ports = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, connectedLink: null }));
+                this.apps = { learning: true, acl: true };  // northbound apps running on the controller
+                this.acl = [];                               // security policy rules
+                this.staticFlows = [];                       // log of manually pushed flows
+                this.macView = {};                           // learning-app state, per switch dpid
+                this.stats = { packetIn: 0, flowMod: 0, packetOut: 0 };
+                this.idleTimeout = 30;                        // idle timeout for reactive flows (s)
+                this.tls = false;                             // control-channel encryption (TLS on 6653)
+                this.ip = `192.168.255.${deviceCounter.SDNController - 1}`; // controller address switches point at
+                this.ofPort = 6653;                           // OpenFlow listening port
+            }
+            connectedSwitches() {
+                return Object.values(devices).filter(d => d.type === 'Switch' && d.controllerId === this.id && d.mgmtLink && links[d.mgmtLink]);
+            }
+            aclMatch(f) {
+                const rules = (this.acl || []).slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
+                for (const r of rules) {
+                    if (!ofFieldMatch(r.dl_type, f.dl_type)) continue;
+                    if (!ofFieldMatch(r.nw_proto, f.nw_proto)) continue;
+                    if (!ofFieldMatch(r.nw_src, f.nw_src)) continue;
+                    if (!ofFieldMatch(r.nw_dst, f.nw_dst)) continue;
+                    if (!ofFieldMatch(r.tp_dst, f.tp_dst)) continue;
+                    return r;
+                }
+                return null;
+            }
+            handlePacketIn(sw, frame, inPortId, frameVlan) {
+                this.stats.packetIn++;
+                const f = sw.ofPacketFields(frame, inPortId, frameVlan);
+                // 1. Centralised security policy (ACL) app
+                if (this.apps.acl) {
+                    const rule = this.aclMatch(f);
+                    if (rule && rule.action === 'drop') {
+                        sw.ofInstallFlow({ priority: 200, match: aclToFlowMatch(rule), actions: [{ type: 'drop' }], idle: 0, by: 'acl', note: 'deny ' + aclDesc(rule) });
+                        this.stats.flowMod++;
+                        log(`[${this.name}] ACL DENY (${aclDesc(rule)}) \u2014 drop flow pushed to ${sw.name}`, 'warning');
+                        return; // packet dropped, no Packet-Out
+                    }
+                }
+                // 2. Reactive L2 learning app
+                if (this.apps.learning) {
+                    const view = this.macView[sw.id] || (this.macView[sw.id] = {});
+                    view[`${frameVlan}-${frame.sourceMac}`] = inPortId;
+                    const isBcast = frame.destMac === 'FF:FF:FF:FF:FF:FF';
+                    const outPort = isBcast ? undefined : view[`${frameVlan}-${frame.destMac}`];
+                    if (outPort !== undefined && outPort != inPortId) {
+                        sw.ofInstallFlow({ priority: 100, match: { in_port: inPortId, dl_dst: frame.destMac, dl_vlan: frameVlan }, actions: [{ type: 'output', port: outPort }], idle: this.idleTimeout, by: 'learning' });
+                        this.stats.flowMod++;
+                        this.ofPacketOut(sw, frame, inPortId, frameVlan, [{ type: 'output', port: outPort }]);
+                    } else {
+                        this.ofPacketOut(sw, frame, inPortId, frameVlan, [{ type: 'flood' }]);
+                    }
+                    return;
+                }
+                this.ofPacketOut(sw, frame, inPortId, frameVlan, [{ type: 'flood' }]);
+            }
+            async ofPacketOut(sw, frame, inPortId, frameVlan, actions) {
+                this.stats.packetOut++;
+                sw.ofInit(); sw.openflow.stats.pktOutRx++;
+                await sw.ofControlAnim('from-controller', 'PacketOut');
+                await sw.ofApplyActions(actions, frame, inPortId, frameVlan);
+            }
+            // Production controllers push policy proactively to every switch, not just on miss
+            pushAclProactive(rule) {
+                if (rule.action !== 'drop') return;
+                this.connectedSwitches().filter(sw => sw.ofEnabled() && ofChannelStatus(sw).up).forEach(sw => {
+                    sw.ofInstallFlow({ priority: 200, match: aclToFlowMatch(rule), actions: [{ type: 'drop' }], idle: 0, by: 'acl', note: 'deny ' + aclDesc(rule) });
+                    this.stats.flowMod++;
+                });
+            }
+        }
+
+        // Animate a single OpenFlow control message along a control channel. Kept separate from
+        // animatePacket so control traffic is not logged as data frames in the sniffer.
+        async function animateControl(fromDev, toDev, link, label, color) {
+            if (!fromDev || !toDev || !link) return;
+            const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduce) { await sleep(80); return; }
+            const devA = devices[link.source], devB = devices[link.target];
+            if (!devA || !devB) { await sleep(60); return; }
+            const cx = link._cx !== undefined ? link._cx : (devA.x + devB.x) / 2;
+            const cy = link._cy !== undefined ? link._cy : (devA.y + devB.y) / 2;
+            const container = document.createElement('div');
+            container.className = 'absolute top-0 left-0 z-50 pointer-events-none';
+            const dot = document.createElement('div');
+            dot.style.cssText = `position:absolute;width:12px;height:12px;border-radius:3px;border:1px solid rgba(255,255,255,0.5);background:${color};box-shadow:0 0 8px ${color};transform:translate(-50%,-50%) rotate(45deg)`;
+            const lab = document.createElement('div');
+            lab.className = 'absolute text-center text-[8px] font-bold bg-white/90 dark:bg-slate-800/90 rounded text-amber-700 dark:text-amber-300 shadow-sm border border-amber-200 dark:border-amber-700 px-1 py-[1px] whitespace-nowrap';
+            lab.style.transform = 'translate(-50%, 10px)';
+            lab.textContent = label || 'OF';
+            container.appendChild(dot); container.appendChild(lab);
+            VIEWPORT.appendChild(container);
+            const reversed = fromDev.id === link.target;
+            const frames = [];
+            for (let i = 0; i <= 30; i++) {
+                let t = i / 30; let e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                if (reversed) e = 1 - e;
+                const mt = 1 - e;
+                const x = mt * mt * devA.x + 2 * mt * e * cx + e * e * devB.x;
+                const y = mt * mt * devA.y + 2 * mt * e * cy + e * e * devB.y;
+                frames.push({ transform: `translate(${x}px, ${y}px)` });
+            }
+            if (frames.length) container.style.transform = frames[0].transform;
+            try {
+                const anim = container.animate(frames, { duration: 340, easing: 'linear' });
+                await (anim.finished || new Promise(r => (anim.onfinish = r)));
+            } catch (e) {}
+            container.remove();
+        }
+
+        // Called whenever a control channel is created or torn down
+        function ofChannelChanged(sw) {
+            if (!sw || sw.type !== 'Switch') return;
+            sw.ofInit();
+            if (sw.ofControllerReachable() && sw.ofEnabled()) {
+                const ctrl = devices[sw.controllerId];
+                log(`[${sw.name}] OpenFlow channel UP \u2192 ${ctrl ? ctrl.name : 'controller'} (dpid ${sw.openflow.dpid})${ctrl && ctrl.tls ? ' \u2014 TLS/6653' : ' \u2014 plaintext TCP 6653'}`, 'success');
+            }
+            ofRecheckChannels();
+            if (propertiesDeviceId) updatePropertiesPanel(true);
+        }
+
+        // Debounced flow-table panel refresh so counters update live without thrashing the DOM
+        let _ofPanelTimer = null;
+        function scheduleOfPanelRefresh() {
+            if (_ofPanelTimer) return;
+            _ofPanelTimer = setTimeout(() => { _ofPanelTimer = null; if (propertiesDeviceId) updatePropertiesPanel(true); }, 350);
+        }
+
+        // Age out reactive flows by their idle / hard timeouts (like a real switch)
+        setInterval(() => {
+            const now = Date.now();
+            let changed = false;
+            Object.values(devices).forEach(d => {
+                if (d.type !== 'Switch' || !d.openflow || !Array.isArray(d.openflow.flows)) return;
+                const before = d.openflow.flows.length;
+                d.openflow.flows = d.openflow.flows.filter(fl => {
+                    if (fl.idle && now - (fl.lastMatch || fl.installed) > fl.idle * 1000) return false;
+                    if (fl.hard && now - fl.installed > fl.hard * 1000) return false;
+                    return true;
+                });
+                if (d.openflow.flows.length !== before) changed = true;
+            });
+            if (changed && propertiesDeviceId) scheduleOfPanelRefresh();
+        }, 2000);
+
+
         // ================= Packet Playback Controller =================
         // Lets the user pause, resume and step through packet flow. Defaults to 'play'
         // so normal operation is unchanged unless the user interacts with the controls.
@@ -8125,6 +9148,10 @@
                 const w = new WirelessController(x, y);
                 devices[w.id] = w;
                 log(`Added ${w.name}`);
+            } else if (type === 'SDNController') {
+                const c = new SDNController(x, y);
+                devices[c.id] = c;
+                log(`Added ${c.name}: cable it to a switch to form an OpenFlow control channel`);
             } else if (type === 'AP') {
                 const ap = new AccessPoint(x, y);
                 devices[ap.id] = ap;
@@ -8338,6 +9365,8 @@
                 availablePorts = dev.ports.filter(p => !p.connectedLink).map(p => ({ id: p.id, label: `Fa0/${p.id}` }));
             } else if (dev.type === 'Router') {
                 availablePorts = Object.values(dev.interfaces).filter(i => !i.connectedLink).map(i => ({ id: i.id, label: i.id }));
+            } else if (dev.type === 'SDNController') {
+                availablePorts = dev.ports.filter(p => !p.connectedLink).map(p => ({ id: p.id, label: 'mgmt' + p.id }));
             }
             
             if (availablePorts.length === 0) {
@@ -8525,6 +9554,10 @@
                         setMode('select'); renderNodes(); renderLinks();
                         return;
                     }
+                    // SDN control channel: switch side uses the OOB mgmt interface, not a data port
+                    const srcDev = devices[pendingCableSource];
+                    if (srcDev && srcDev.type === 'SDNController') { finalizeLink(id, 'mgmt'); return; }
+                    if (dev.type === 'SDNController') { showPortSelector(id, clickX, clickY, (portId) => finalizeLink(id, portId)); return; }
                     if (isEndDevice(dev)) {
                         if (isBondServer(dev)) {
                             if (dev.port && dev.port2) { log(`Error: ${dev.name} both NICs (eth0, eth1) are already cabled.`, 'error'); return; }
@@ -8563,6 +9596,12 @@
             const devA = devices[sourceId];
             const devB = devices[targetId];
 
+            // An SDN control channel is out-of-band: it attaches to the switch's management
+            // interface (not a data port) and carries only OpenFlow control traffic.
+            if ((devA && devA.type === 'SDNController') || (devB && devB.type === 'SDNController')) {
+                return createControlLink(sourceId, sourcePort, targetId, targetPort);
+            }
+
             pushUndo();
             const linkId = generateId();
             const fiberEnd = (dev, portId) => !!(dev && dev.type === 'Switch' && dev.ports && (() => { const p = dev.ports.find(pt => pt.id == portId); return p && p.media === 'fiber'; })());
@@ -8598,6 +9637,46 @@
             scheduleNetEvents();
         }
 
+        // Wire a controller's management port to a switch's OOB control interface.
+        function createControlLink(sourceId, sourcePort, targetId, targetPort) {
+            const A = devices[sourceId], B = devices[targetId];
+            let ctrl, ctrlPort, sw;
+            if (A && A.type === 'SDNController') { ctrl = A; ctrlPort = sourcePort; sw = B; }
+            else { ctrl = B; ctrlPort = targetPort; sw = A; }
+            if (!sw || sw.type !== 'Switch' || sw.l3) { log('SDN control channels connect an SDN controller to a Layer 2 switch.', 'error'); return; }
+            if (sw.mgmtLink && links[sw.mgmtLink]) { log(`${sw.name} already has a control channel. Delete it first.`, 'error'); return; }
+            const cp = ctrl.ports.find(p => p.id === ctrlPort && !p.connectedLink) || ctrl.ports.find(p => !p.connectedLink);
+            if (!cp) { log(`${ctrl.name} has no free management ports.`, 'error'); return; }
+
+            pushUndo();
+            const linkId = generateId();
+            // Canonical orientation: source = controller (real port), target = switch (virtual mgmt)
+            links[linkId] = { id: linkId, source: ctrl.id, target: sw.id, sourcePort: cp.id, targetPort: 'mgmt', media: 'copper', control: true };
+            cp.connectedLink = linkId;
+            sw.mgmtLink = linkId;
+            sw.controllerId = ctrl.id;
+            sw.ofInit();
+
+            log(`SDN control channel: ${ctrl.name} (mgmt${cp.id}) \u2194 ${sw.name} (mgmt0)`, 'success');
+            ofChannelChanged(sw);
+            renderLinks();
+            if (propertiesDeviceId) updatePropertiesPanel(true);
+        }
+
+        function deleteControlLink(l, linkId, devA, devB, skipUpdate) {
+            const sw = (devA && devA.type === 'Switch') ? devA : (devB && devB.type === 'Switch' ? devB : null);
+            [devA, devB].forEach(d => {
+                if (!d) return;
+                if (d.type === 'SDNController') { const p = d.ports.find(pt => pt.id === (d.id === l.source ? l.sourcePort : l.targetPort)); if (p) p.connectedLink = null; }
+                else if (d.type === 'Switch') { d.mgmtLink = null; d.controllerId = null; }
+            });
+            delete links[linkId];
+            log('SDN control channel removed.', 'warning');
+            if (sw) ofChannelChanged(sw);
+            if (!skipUpdate) { renderLinks(); if (propertiesDeviceId) updatePropertiesPanel(true); }
+        }
+
+
         window.deleteLink = (linkId, skipUpdate = false) => {
             const l = links[linkId];
             if (!l) return;
@@ -8605,6 +9684,7 @@
             if (selectedLinkId === linkId) selectedLinkId = null;
             const devA = devices[l.source];
             const devB = devices[l.target];
+            if (l.control) { return deleteControlLink(l, linkId, devA, devB, skipUpdate); }
             
             if (devA) {
                 if (isEndDevice(devA)) {
@@ -10145,6 +11225,7 @@
         function terminalLabelFor(dev) {
             if (isEndDevice(dev)) return 'Open Command Prompt';
             if (dev.type === 'Router' || dev.type === 'Switch') return 'Open Terminal (CLI)';
+            if (dev.type === 'SDNController') return 'Open Controller Shell';
             return null; // devices without a usable shell (e.g. Access Point)
         }
 
@@ -10199,7 +11280,7 @@
             const items = [
                 { icon: ICON_TRASH, label: 'Delete Link', action: () => { pushUndo(); window.deleteLink(linkId); } },
                 { icon: ICON_SNIFFER, label: 'Open Packet Sniffer', action: () => window.openSnifferForLink(linkId) },
-            ];
+            ].filter(it => !(link.control && it.icon === ICON_SNIFFER));
             menu.innerHTML = items.map((it, i) =>
                 `<button type="button" data-idx="${i}" class="w-full text-left px-3 py-1.5 flex items-center gap-2.5 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors">${it.icon}<span>${it.label}</span></button>`
             ).join('');
@@ -10621,6 +11702,8 @@
 
         function linkPortName(dev, portId) {
             if (!dev) return 'Port';
+            if (portId === 'mgmt') return 'mgmt0';
+            if (dev.type === 'SDNController') return 'mgmt' + portId;
             if (dev.type === 'Switch') return swPortNameById(dev, portId);
             if (dev.type === 'AP') return `Fa0/${portId}`;
             if (dev.type === 'Router') return portId;
@@ -10680,6 +11763,33 @@
                 const devA = devices[link.source];
                 const devB = devices[link.target];
                 if (!devA || !devB) return;
+
+                // Render SDN control channel (out-of-band, dashed amber, labelled OF)
+                if (link.control) {
+                    const cx = (devA.x + devB.x) / 2;
+                    const cy = (devA.y + devB.y) / 2;
+                    link._cx = cx; link._cy = cy;
+                    const path = document.createElementNS(SVG_NS, 'path');
+                    path.setAttribute('d', `M ${devA.x} ${devA.y} L ${devB.x} ${devB.y}`);
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', selectedLinkId === link.id ? '#d97706' : '#f59e0b');
+                    path.setAttribute('stroke-width', selectedLinkId === link.id ? 3 : 2);
+                    path.setAttribute('stroke-dasharray', '2, 5');
+                    path.setAttribute('stroke-linecap', 'round');
+                    path.setAttribute('data-link-id', link.id);
+                    g.appendChild(path);
+                    g.appendChild(makeLinkHitPath(`M ${devA.x} ${devA.y} L ${devB.x} ${devB.y}`, link, devA, devB));
+                    const badge = document.createElementNS(SVG_NS, 'text');
+                    badge.setAttribute('x', cx); badge.setAttribute('y', cy - 4);
+                    badge.setAttribute('font-size', '9'); badge.setAttribute('font-family', 'monospace');
+                    badge.setAttribute('font-weight', 'bold'); badge.setAttribute('fill', '#b45309');
+                    badge.setAttribute('text-anchor', 'middle');
+                    badge.setAttribute('style', 'paint-order: stroke; stroke: #fffbeb; stroke-width: 4px; pointer-events: none;');
+                    badge.textContent = 'OF';
+                    g.appendChild(badge);
+                    return;
+                }
+
 
                 // Render Wireless Link
                 if (link.isWireless) {
@@ -11184,9 +12294,242 @@
             `;
         }
 
+        // ---- OpenFlow: switch flow-table section ----
+        function ofFlowTableRows(dev) {
+            dev.ofInit();
+            const flows = (dev.openflow.flows || []).slice().sort((a, b) => b.priority - a.priority);
+            if (!flows.length) return '<tr><td colspan="3" class="px-2 py-2 text-center text-slate-400">No flows installed</td></tr>';
+            const now = Date.now();
+            return flows.map(fl => {
+                const age = Math.floor((now - (fl.lastMatch || fl.installed)) / 1000);
+                const byColor = fl.by === 'acl' ? 'text-red-500' : (fl.by === 'static' ? 'text-blue-500' : 'text-emerald-600 dark:text-emerald-400');
+                return `<tr>
+                    <td class="px-2 py-1 border-t text-slate-500">${fl.priority}</td>
+                    <td class="px-2 py-1 border-t">${ofMatchSummary(fl, dev)}</td>
+                    <td class="px-2 py-1 border-t"><div class="font-semibold">${ofActionsSummary(fl, dev)}</div><div class="text-slate-500">${fl.counters.packets} pkts, ${fl.counters.bytes} B</div><div class="${byColor}">${fl.by}${fl.idle ? ' <span class="text-slate-400">idle ' + age + 's/' + fl.idle + 's</span>' : ''}</div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderPropSwitchOpenFlow(dev) {
+            dev.ofInit();
+            const of = dev.openflow;
+            const ctrl = devices[dev.controllerId];
+            const reachable = dev.ofControllerReachable();
+            let status;
+            if (!dev.mgmtLink || !links[dev.mgmtLink]) status = '<span class="text-slate-400">No control channel (cable this switch to an SDN controller)</span>';
+            else if (reachable) status = `<span class="text-green-600 dark:text-green-400 font-semibold">Connected \u2192 ${ctrl ? ctrl.name : '?'}</span>${ctrl && !ctrl.tls ? ' <span class="text-amber-600">(plaintext 6653)</span>' : ' <span class="text-green-600">(TLS)</span>'}`;
+            else status = `<span class="text-red-500 font-semibold">Channel down</span><br><span class="text-red-500">${ofChannelStatus(dev).reason}</span>`;
+            status += `<br><span class="text-slate-400">Target: ${of.controllerIp ? of.controllerIp + ':' + (of.controllerPort || 6653) + ' security ' + (of.security || 'none') : 'auto (cabled controller)'}${of.defaultMiss && of.defaultMiss !== 'continue-controller' ? ', table-miss ' + of.defaultMiss : ''}</span>`;
+
+            const failNote = of.enabled && !reachable
+                ? `<div class="text-[11px] mt-2 px-2 py-1 rounded ${of.failMode === 'secure' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'}">Controller unreachable \u2014 ${of.failMode === 'secure' ? 'fail-secure: all data traffic is dropped.' : 'fail-standalone: acting as an ordinary learning switch.'}</div>`
+                : '';
+
+            return `
+                <div class="border border-amber-300 dark:border-amber-700 rounded-lg overflow-hidden">
+                    <div class="flex items-center justify-between px-3 py-2 bg-amber-50 dark:bg-amber-900/30">
+                        <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-200">OpenFlow (SDN)</h3>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Enable</span>
+                            <input type="checkbox" ${of.enabled ? 'checked' : ''} onchange="window.ofToggleEnable('${dev.id}', this.checked)" class="w-4 h-4">
+                        </label>
+                    </div>
+                    ${of.enabled ? `
+                    <div class="p-3 space-y-3">
+                        <div class="space-y-1 text-[11px]">
+                            <div><span class="text-slate-400">Datapath ID</span><br><span class="font-mono break-all">${of.dpid}</span></div>
+                            <div><span class="text-slate-400">Controller</span><br>${status}</div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Fail mode (when controller is unreachable)</label>
+                            <select onchange="window.ofSetFailMode('${dev.id}', this.value)" class="w-full px-2 py-1.5 border rounded text-xs bg-slate-50 dark:bg-slate-900">
+                                <option value="secure" ${of.failMode === 'secure' ? 'selected' : ''}>Secure \u2014 drop all traffic</option>
+                                <option value="standalone" ${of.failMode === 'standalone' ? 'selected' : ''}>Standalone \u2014 fall back to legacy L2</option>
+                            </select>
+                        </div>
+                        ${failNote}
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <h4 class="text-xs font-semibold text-slate-700 dark:text-slate-200">Flow Table <span class="text-slate-400 font-normal">(table-miss: ${of.missCount || 0})</span></h4>
+                                <button onclick="window.ofClearFlows('${dev.id}')" class="text-[11px] text-blue-500 hover:underline">Clear flows</button>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-900 border rounded text-[10px] font-mono max-h-56 overflow-auto">
+                                <table class="w-full text-left">
+                                    <thead class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 sticky top-0"><tr><th class="px-2 py-1">Pri</th><th class="px-2 py-1">Match</th><th class="px-2 py-1">Actions / counters</th></tr></thead>
+                                    <tbody>${ofFlowTableRows(dev)}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>` : `<div class="p-3 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Turn on OpenFlow to hand this switch's forwarding decisions to a central SDN controller. Cable the switch to an SDN Controller to form the control channel, then watch flows appear here as traffic flows.</div>`}
+                </div>`;
+        }
+
+        // ---- OpenFlow: controller panel ----
+        function renderPropController(dev) {
+            if (!dev.apps) dev.apps = { learning: true, acl: true };
+            if (!dev.acl) dev.acl = [];
+            if (!dev.stats) dev.stats = { packetIn: 0, flowMod: 0, packetOut: 0 };
+            const sws = (typeof dev.connectedSwitches === 'function') ? dev.connectedSwitches() : [];
+            const swOptions = sws.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+            const swList = sws.length ? sws.map(s => {
+                s.ofInit();
+                const on = s.ofEnabled();
+                return `<li class="flex justify-between"><span>${s.name} <span class="text-slate-400 font-mono text-[10px]">${s.openflow.dpid}</span></span><span class="${on ? 'text-green-600 dark:text-green-400' : 'text-slate-400'}">${on ? s.openflow.flows.length + ' flows' : 'OF off'}</span></li>`;
+            }).join('') : '<li class="text-slate-400">No switches connected. Cable this controller to a switch.</li>';
+
+            const aclRows = dev.acl.length ? dev.acl.map((r, i) => `
+                <tr>
+                    <td class="px-2 py-1 border-t text-slate-500">${r.priority || 200}</td>
+                    <td class="px-2 py-1 border-t">${aclDesc(r)}</td>
+                    <td class="px-2 py-1 border-t font-semibold ${r.action === 'drop' ? 'text-red-500' : 'text-green-600'}">${(r.action || 'drop').toUpperCase()}</td>
+                    <td class="px-2 py-1 border-t text-right"><button onclick="window.ofRemoveAcl('${dev.id}', ${i})" class="text-red-500 hover:underline">remove</button></td>
+                </tr>`).join('') : '<tr><td colspan="4" class="px-2 py-2 text-center text-slate-400">No policy rules</td></tr>';
+
+            return `
+                <div class="space-y-4">
+                    <div class="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-200">SDN Controller</h3>
+                            <span class="text-[10px] font-mono text-amber-700 dark:text-amber-300">OpenFlow / TCP 6653</span>
+                        </div>
+                        <label class="flex items-center space-x-2 mt-2 cursor-pointer">
+                            <input type="checkbox" ${dev.tls ? 'checked' : ''} onchange="window.ofSetTls('${dev.id}', this.checked)" class="w-4 h-4">
+                            <span class="text-[11px] text-slate-700 dark:text-slate-200">Encrypt control channel (TLS)</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <div><label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Controller IP</label><input value="${dev.ip || ''}" onchange="window.ofSetCtrl('${dev.id}','ip',this.value)" class="w-full px-2 py-1 border rounded text-xs font-mono bg-white dark:bg-slate-800"></div>
+                            <div><label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">OpenFlow port</label><input type="number" value="${dev.ofPort || 6653}" onchange="window.ofSetCtrl('${dev.id}','port',this.value)" class="w-full px-2 py-1 border rounded text-xs font-mono bg-white dark:bg-slate-800"></div>
+                        </div>
+                        ${!dev.tls ? '<div class="text-[11px] mt-1 text-amber-700 dark:text-amber-300">Control channel is plaintext: an attacker who taps or severs it can eavesdrop, inject rogue flows, or black-hole the fabric.</div>' : ''}
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Connected Switches</h3>
+                        <ul class="text-[11px] space-y-0.5 mt-1">${swList}</ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Controller Apps</h3>
+                        <label class="flex items-center space-x-2 mt-2 cursor-pointer"><input type="checkbox" ${dev.apps.learning ? 'checked' : ''} onchange="window.ofSetApp('${dev.id}','learning',this.checked)" class="w-4 h-4"><span class="text-[11px] text-slate-700 dark:text-slate-200">Reactive L2 learning switch</span></label>
+                        <label class="flex items-center space-x-2 mt-1 cursor-pointer"><input type="checkbox" ${dev.apps.acl ? 'checked' : ''} onchange="window.ofSetApp('${dev.id}','acl',this.checked)" class="w-4 h-4"><span class="text-[11px] text-slate-700 dark:text-slate-200">Security policy (ACL firewall)</span></label>
+                        <div class="mt-2 flex items-center space-x-2">
+                            <label class="text-[11px] text-slate-500 dark:text-slate-400">Reactive flow idle timeout</label>
+                            <input type="number" min="0" value="${dev.idleTimeout != null ? dev.idleTimeout : 30}" onchange="window.ofSetIdle('${dev.id}', this.value)" class="w-16 px-2 py-1 border rounded text-xs bg-slate-50 dark:bg-slate-900"><span class="text-[11px] text-slate-400">s</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Security Policy (ACL)</h3>
+                        <div class="bg-slate-50 dark:bg-slate-900 border rounded text-[10px] font-mono max-h-40 overflow-auto mt-1">
+                            <table class="w-full text-left"><thead class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 sticky top-0"><tr><th class="px-2 py-1">Pri</th><th class="px-2 py-1">Match</th><th class="px-2 py-1">Action</th><th class="px-2 py-1"></th></tr></thead><tbody>${aclRows}</tbody></table>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5 mt-2">
+                            <input id="acl-nwsrc-${dev.id}" placeholder="src IP (any)" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800">
+                            <input id="acl-nwdst-${dev.id}" placeholder="dst IP (any)" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800">
+                            <select id="acl-proto-${dev.id}" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800"><option value="any">any proto</option><option value="icmp">icmp</option><option value="tcp">tcp</option><option value="udp">udp</option></select>
+                            <input id="acl-tpdst-${dev.id}" placeholder="dst port (any)" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800">
+                        </div>
+                        <button onclick="window.ofAddAcl('${dev.id}')" class="w-full py-1.5 mt-1.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-bold">Add deny rule &amp; push to switches</button>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Push Static Flow</h3>
+                        <div class="grid grid-cols-2 gap-1.5 mt-2">
+                            <select id="sf-target-${dev.id}" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800"><option value="all">All switches</option>${swOptions}</select>
+                            <input id="sf-pri-${dev.id}" type="number" value="300" placeholder="priority" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800">
+                            <input id="sf-nwdst-${dev.id}" placeholder="match dst IP (any)" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800">
+                            <input id="sf-inport-${dev.id}" placeholder="in-port, such as Fa0/1 (any)" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800">
+                            <select id="sf-action-${dev.id}" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800"><option value="drop">drop</option><option value="flood">flood</option><option value="normal">normal</option><option value="output">output port...</option></select>
+                            <input id="sf-outport-${dev.id}" placeholder="out port, such as Gi0/1" class="px-2 py-1 border rounded text-[11px] bg-white dark:bg-slate-800">
+                        </div>
+                        <button onclick="window.ofPushStatic('${dev.id}')" class="w-full py-1.5 mt-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold">Push flow</button>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Controller Stats</h3>
+                        <div class="grid grid-cols-3 gap-2 text-center mt-2">
+                            <div class="bg-slate-50 dark:bg-slate-900 border rounded py-2"><div class="text-lg font-bold text-slate-700 dark:text-slate-200">${dev.stats.packetIn}</div><div class="text-[9px] text-slate-400 uppercase">Packet-In</div></div>
+                            <div class="bg-slate-50 dark:bg-slate-900 border rounded py-2"><div class="text-lg font-bold text-slate-700 dark:text-slate-200">${dev.stats.flowMod}</div><div class="text-[9px] text-slate-400 uppercase">Flow-Mod</div></div>
+                            <div class="bg-slate-50 dark:bg-slate-900 border rounded py-2"><div class="text-lg font-bold text-slate-700 dark:text-slate-200">${dev.stats.packetOut}</div><div class="text-[9px] text-slate-400 uppercase">Packet-Out</div></div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // ---- OpenFlow action handlers ----
+        window.ofToggleEnable = (id, on) => {
+            const d = devices[id]; if (!d || d.type !== 'Switch') return;
+            d.ofInit(); d.openflow.enabled = !!on;
+            if (on) { d.openflow.flows = []; d.macTable = {}; try { scheduleMacTableRefresh(d.id); } catch (e) {} log(`[${d.name}] OpenFlow enabled (${d.ofControllerReachable() ? 'controller reachable' : 'no controller \u2014 ' + d.openflow.failMode + ' fail mode'})`, 'success'); ofChannelChanged(d); }
+            else { log(`[${d.name}] OpenFlow disabled \u2014 reverting to autonomous switching`); }
+            updatePropertiesPanel(true);
+        };
+        window.ofSetFailMode = (id, mode) => { const d = devices[id]; if (!d) return; d.ofInit(); d.openflow.failMode = mode; updatePropertiesPanel(true); };
+        window.ofClearFlows = (id) => { const d = devices[id]; if (!d) return; d.ofClearFlows(); log(`[${d.name}] flow table cleared`); updatePropertiesPanel(true); };
+        window.ofSetTls = (id, on) => { const d = devices[id]; if (!d) return; d.tls = !!on; log(`[${d.name}] control channel ${on ? 'now TLS encrypted' : 'now plaintext (6653)'}`, on ? 'success' : 'warning'); ofRecheckChannels(); updatePropertiesPanel(true); };
+        window.ofSetCtrl = (id, key, val) => {
+            const d = devices[id]; if (!d) return;
+            if (key === 'ip') { if (!ofIsIp(String(val).trim())) { log(`[${d.name}] "${val}" is not a valid IPv4 address.`, 'error'); updatePropertiesPanel(true); return; } d.ip = String(val).trim(); }
+            if (key === 'port') { const p = parseInt(val, 10); if (!(p >= 1 && p <= 65535)) { log(`[${d.name}] port must be 1 to 65535.`, 'error'); updatePropertiesPanel(true); return; } d.ofPort = p; }
+            log(`[${d.name}] OpenFlow listener now ${d.ip}:${d.ofPort || 6653}`, 'info');
+            ofRecheckChannels(); updatePropertiesPanel(true);
+        };
+        window.ofSetApp = (id, app, on) => { const d = devices[id]; if (!d) return; if (!d.apps) d.apps = {}; d.apps[app] = !!on; log(`[${d.name}] ${app} app ${on ? 'enabled' : 'disabled'}`); updatePropertiesPanel(true); };
+        window.ofSetIdle = (id, val) => { const d = devices[id]; if (!d) return; d.idleTimeout = Math.max(0, parseInt(val) || 0); };
+        window.ofAddAcl = (id) => {
+            const d = devices[id]; if (!d) return;
+            const g = (x) => (document.getElementById(x + '-' + id) || {}).value;
+            const rule = { priority: 200, action: 'drop', dl_type: 'ip', nw_src: (g('acl-nwsrc') || '').trim() || 'any', nw_dst: (g('acl-nwdst') || '').trim() || 'any', nw_proto: g('acl-proto') || 'any', tp_dst: (g('acl-tpdst') || '').trim() || 'any' };
+            d.acl = d.acl || []; d.acl.push(rule);
+            log(`[${d.name}] ACL rule added: deny ${aclDesc(rule)}`, 'warning');
+            if (typeof d.pushAclProactive === 'function') d.pushAclProactive(rule);
+            updatePropertiesPanel(true);
+        };
+        window.ofRemoveAcl = (id, i) => { const d = devices[id]; if (!d || !d.acl) return; d.acl.splice(i, 1); updatePropertiesPanel(true); };
+        window.ofPushStatic = (id) => {
+            const d = devices[id]; if (!d) return;
+            const g = (x) => (document.getElementById(x + '-' + id) || {}).value;
+            const target = g('sf-target');
+            const priority = parseInt(g('sf-pri')) || 300;
+            const match = {};
+            const nwdst = (g('sf-nwdst') || '').trim(); if (nwdst) { match.dl_type = 'ip'; match.nw_dst = nwdst; }
+            const inport = (g('sf-inport') || '').trim();
+            const act = g('sf-action');
+            const op = (g('sf-outport') || '').trim();
+            if (act === 'output' && !op) { log('Static flow: specify an output port.', 'error'); return; }
+            const targets = target === 'all' ? d.connectedSwitches() : [devices[target]].filter(Boolean);
+            if (!targets.length) { log('Static flow: no target switch connected.', 'error'); return; }
+            // Accept 3, Fa0/3, FastEthernet0/3, Gi0/1 or GigabitEthernet0/1 and resolve to the switch's port id
+            const resolvePort = (sw, txt) => {
+                const t = String(txt).trim(); let m;
+                if (/^\d+$/.test(t)) return sw.ports.some(p => p.id === +t) ? +t : null;
+                if ((m = t.match(/^g(?:i|igabitethernet)?\s*0\/(\d+)$/i))) { const p = sw.ports.find(pt => pt.gi === +m[1]); return p ? p.id : null; }
+                if ((m = t.match(/^f(?:a|astethernet)?\s*0\/(\d+)$/i))) { const p = sw.ports.find(pt => pt.id === +m[1] && pt.media !== 'fiber'); return p ? p.id : null; }
+                return null;
+            };
+            for (const sw of targets) {
+                if (inport && resolvePort(sw, inport) == null) { log(`Static flow: ${sw.name} has no port "${inport}".`, 'error'); return; }
+                if (act === 'output' && resolvePort(sw, op) == null) { log(`Static flow: ${sw.name} has no port "${op}".`, 'error'); return; }
+            }
+            let lastMatch = match, lastActions = [{ type: act }], lastSw = null;
+            targets.forEach(sw => {
+                const m = { ...match }; if (inport) m.in_port = resolvePort(sw, inport);
+                const actions = act === 'output' ? [{ type: 'output', port: resolvePort(sw, op) }] : [{ type: act }];
+                sw.ofInit(); sw.ofInstallFlow({ priority, match: m, actions, idle: 0, by: 'static' }); d.stats.flowMod++;
+                lastMatch = m; lastActions = actions; lastSw = sw;
+            });
+            const match_ = lastMatch, actions = lastActions;
+            log(`[${d.name}] static flow pushed to ${targets.length} switch(es): pri ${priority} ${ofMatchSummary({ match: match_ }, lastSw)} \u2192 ${ofActionsSummary({ actions }, lastSw)}`, 'success');
+            updatePropertiesPanel(true);
+        };
+
+
         function renderPropSwitch(dev) {
             return `
                 <div class="space-y-4">
+                    ${dev.l3 ? '' : renderPropSwitchOpenFlow(dev)}
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Port Configuration</h3>
@@ -11500,11 +12843,11 @@
                         ` : ''}
                     </div>
                 `;
-            } else if (dev.type === 'Switch' || dev.type === 'Router') {
+            } else if (dev.type === 'Switch' || dev.type === 'Router' || dev.type === 'SDNController') {
                 html += `
                     <button onclick="window.openCLI('${dev.id}')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-bold transition-colors shadow-sm mb-4 flex items-center justify-center space-x-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
-                        <span>Open Terminal (CLI)</span>
+                        <span>${dev.type === 'SDNController' ? 'Open Controller Shell' : 'Open Terminal (CLI)'}</span>
                     </button>
                 `;
             }
@@ -11531,6 +12874,8 @@
                 html += renderPropAP(dev);
             } else if (dev.type === 'Switch') {
                 html += renderPropSwitch(dev);
+            } else if (dev.type === 'SDNController') {
+                html += renderPropController(dev);
             }
 
             html += `</div>`;
@@ -11965,7 +13310,7 @@
             }
             devices = {}; links = {}; labels = {}; shapes = {};
             selectedDeviceId = null; selectedLabelId = null; selectedShapeId = null; selectedLinkId = null; propertiesDeviceId = null; pendingCableSource = null; pendingCableSourcePort = null;
-            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1 };
+            deviceCounter = { PC: 1, Switch: 1, Router: 1, AP: 1, Laptop: 1, Server: 1, WebServer: 1, DNSServer: 1, L3Switch: 1, ISPRouter: 1, WLC: 1, SDNController: 1 };
             CONSOLE.innerHTML = '<div>> Network cleared.</div>';
             hidePortSelector();
             closeCLI();
