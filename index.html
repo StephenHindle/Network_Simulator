@@ -10,6 +10,9 @@
         #workspace { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
         #workspace .overflow-y-auto, #workspace textarea, #workspace input, #workspace select, #workspace [contenteditable="true"], #console-output, #sniffer-table-body, #properties-panel { touch-action: pan-y; -webkit-user-select: text; user-select: text; }
         .pal-cat.pal-open > .pal-flyout { display: flex !important; }
+        .win-resize-grip { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; z-index: 30; display: flex; align-items: flex-end; justify-content: flex-end; padding: 3px; cursor: nwse-resize; touch-action: none; color: #94a3b8; -webkit-user-select: none; user-select: none; }
+        .win-resize-grip:hover { color: #3b82f6; }
+        #sniffer-table-body tr { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
         @keyframes pbPulse { 0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 0 10px 3px rgba(59,130,246,0.7); } 50% { box-shadow: 0 0 0 3px rgba(255,255,255,1), 0 0 16px 6px rgba(59,130,246,0.95); } }
         .pb-clickable > div:first-child { animation: pbPulse 1.1s ease-in-out infinite; border-radius: 9999px; }
         /* Custom scrollbar for a cleaner look */
@@ -169,7 +172,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">ISP</span>
                     </div>
-                    <div draggable="true" ondragstart="handleDragStart(event, 'Firewall')" ontouchend="palTapItem(event, 'Firewall')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add ISP Router">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'Firewall')" ontouchend="palTapItem(event, 'Firewall')" class="p-3 w-20 flex flex-col items-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-grab" title="Drag to add Firewall">
                         <svg class="mb-1" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M2 15h20M8 4v5M16 9v6M8 15v5"/></svg>
                         <span class="text-[10px] font-bold uppercase tracking-wide">Firewall</span>
                     </div>
@@ -455,6 +458,17 @@
                             <li><b>Click a cable</b> to select it, <b>double-click</b> to delete it</li>
                             <li><b>Click a port label</b> (Fa0/1 and similar) to shut down or enable that interface</li>
                             <li>Use the <b>minimap</b> in the bottom right to jump around large networks</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-1.5">Touch (iPad and phones)</h3>
+                        <ul class="space-y-1 text-xs">
+                            <li><b>Tap</b> a sidebar category, then tap a device to add it to the centre of the view</li>
+                            <li><b>One finger</b> pans the canvas or drags a device, label or shape; <b>pinch</b> zooms</li>
+                            <li><b>Double-tap</b> a device to open its settings, or a cable to delete it</li>
+                            <li><b>Long press</b> (half a second) does what a right-click does: device menu, link menu (delete, sniff this link) and sniffer row menu (apply as filter, follow stream)</li>
+                            <li>In <b>Draw</b> mode, drag with one finger to draw the chosen shape; switch the draw tool to Select to move or resize shapes</li>
+                            <li>Drag a finger across the <b>minimap</b> to move around, and use the <b>corner grip</b> to resize the terminal, browser and sniffer windows</li>
                         </ul>
                     </div>
                     <div>
@@ -1045,6 +1059,16 @@
                 devices[id] = instance;
             }
             links = data.links || {};
+            // DHCP lease clocks stop while a saved file is closed: shift every timestamp by the time away
+            if (data.savedAt) {
+                const shift = Date.now() - data.savedAt;
+                const bump = (o, keys) => keys.forEach(k => { if (o && typeof o[k] === 'number') o[k] += shift; });
+                Object.values(devices).forEach(d => {
+                    Object.values(d.leases || {}).forEach(l => bump(l, ['obtained', 'expires']));
+                    Object.values(d.dhcpPools || {}).forEach(p => Object.values(p.leases || {}).forEach(l => bump(l, ['obtained', 'expires'])));
+                    if (d.dhcpLease) bump(d.dhcpLease, ['obtained', 't1', 't2', 'expires', 'next']);
+                });
+            }
             // Migrate older saves where a laptop's Wi-Fi link was stored in `port`
             Object.values(devices).forEach(d => {
                 if (d.type === 'Laptop' && d.port && links[d.port] && links[d.port].isWireless) {
@@ -1068,7 +1092,7 @@
         }
 
         function snapshotState() {
-            return JSON.stringify({ devices, links, labels, shapes, deviceCounter, stpEnabled });
+            return JSON.stringify({ devices, links, labels, shapes, deviceCounter, stpEnabled, savedAt: Date.now() });
         }
 
         function pushUndo() {
@@ -1221,6 +1245,7 @@
             if (copy.arpCache) copy.arpCache = {};
             if (copy.macTable) copy.macTable = {};
             if (copy.leases) copy.leases = {};
+            if ('dhcpLease' in copy) { copy.dhcpLease = null; if (copy.ipMode === 'dhcp') { copy.ip = '0.0.0.0'; copy.subnet = '0.0.0.0'; copy.gateway = '0.0.0.0'; } }
             if (copy.ports) copy.ports.forEach(p => { p.connectedLink = null; p.stpState = 'forwarding'; });
             if (copy.interfaces) Object.values(copy.interfaces).forEach(i => { i.connectedLink = null; });
             // SDN: a duplicate has no control channel and starts with an empty flow table
@@ -1381,6 +1406,42 @@
             const dnsResult = await waitForEvent(`dns_replied_${dev.id}`, 10000, (e) => e.detail.domain === domain);
             return dnsResult ? dnsResult.ip : null;
         }
+
+        // DNS query used by nslookup: reports why a lookup failed, can target a specific server, supports PTR
+        async function dnsQuery(dev, name, serverIp, ptr) {
+            if (!dev.ip || dev.ip === '0.0.0.0') return { status: 'nonet' };
+            if (!dev.port && !dev.connectedApId && !dev.wirelessLink) return { status: 'nonet' };
+            const server = serverIp || dev.dns;
+            if (!server || server === '0.0.0.0') return { status: 'noserver' };
+            const hop = isSameSubnet(dev.ip, server, dev.subnet) ? server : dev.gateway;
+            if (!hop || hop === '0.0.0.0') return { status: 'timeout', server };
+            let mac = dev.arpCache[hop];
+            if (!mac) {
+                transmit({ sourceMac: dev.mac, destMac: 'FF:FF:FF:FF:FF:FF', payload: { type: 'ARP_REQ', sourceIp: dev.ip, targetIp: hop } }, dev.id, 1);
+                await waitForEvent(`arp_resolved_${dev.id}`, 4000, (e) => e.detail.ip === hop);
+                mac = dev.arpCache[hop];
+            }
+            if (!mac) return { status: 'timeout', server };
+            // Like Windows, retry once: a router may drop the first query while it ARPs for the server
+            let r = null;
+            for (let attempt = 0; attempt < 2 && !r; attempt++) {
+                const q = { type: 'DNS_REQ', sourceIp: dev.ip, targetIp: server, domain: name, sourcePort: 49152 + Math.floor(Math.random() * 16000), destPort: 53 };
+                if (ptr) q.ptr = true;
+                transmit({ sourceMac: dev.mac, destMac: mac, payload: q }, dev.id, 1);
+                r = await waitForEvent(`dns_replied_${dev.id}`, 4000, (e) => e.detail.domain === name);
+            }
+            if (!r) return { status: 'timeout', server };
+            if (ptr) return r.name ? { status: 'ok', server, name: r.name } : { status: 'nx', server };
+            return r.ip ? { status: 'ok', server, ip: r.ip } : { status: 'nx', server };
+        }
+        // The name nslookup prints for a server: its own A record on that server, like a PTR answer, else UnKnown
+        function dnsServerDisplayName(serverIp) {
+            const srv = Object.values(devices).find(d => d.type === 'DNSServer' && d.ip === serverIp && d.dnsEnabled);
+            if (!srv || !srv.records) return 'UnKnown';
+            const hit = Object.entries(srv.records).find(([, ip]) => ip === serverIp);
+            return hit ? hit[0] : 'UnKnown';
+        }
+        const ptrName = (ip) => ip.split('.').reverse().join('.') + '.in-addr.arpa';
 
         // Simulates a Topology Change Notification (TCN) by flushing MAC tables
         const flushMacTables = () => {
@@ -1578,6 +1639,7 @@
             input.addEventListener('keydown', (e) => handleCliKeydown(e, id));
             win.addEventListener('mousedown', () => bringCliToFront(win));
             makeCliDraggable(win, win.querySelector('.cli-window-header'));
+            addResizeGrip(win, 320, 200);
             return win;
         }
 
@@ -1653,7 +1715,8 @@
             }
 
             if (dev.cli.mode === 'cmd') {
-                if (prevArgs.length === 0) options = ['ipconfig', 'arp', 'ping', 'curl', 'ftp', 'sftp', 'cls', 'clear', 'help'];
+                if (prev1 === 'ipconfig' && prevArgs.length === 1) options = ['/all', '/release', '/renew'];
+                else if (prevArgs.length === 0) options = ['ipconfig', 'arp', 'ping', 'nslookup', 'curl', 'ftp', 'sftp', 'cls', 'clear', 'help'];
                 else if (prev1 === 'arp' && prevArgs.length === 1) options = ['-a'];
                 else if (prev1 === 'ping' && prevArgs.length === 1) options = ['<target-ip>'];
                 else if (prev1 === 'curl' && prevArgs.length === 1) options = ['<target-url>'];
@@ -2051,6 +2114,16 @@
                 print('[OK]');
                 return;
             }
+            // clear ip dhcp binding {* | address} (privileged EXEC)
+            if ((dev.type === 'Router' || (dev.type === 'Switch' && dev.l3)) && cmd === 'clear' && args[1] === 'ip' && args[2] === 'dhcp' && /^bind/.test(args[3] || '')) {
+                if (dev.cli.mode !== 'priv') { print('% Invalid input detected.'); return; }
+                const target = args[4];
+                if (!target) { print('% Incomplete command.'); return; }
+                let n = 0;
+                Object.values(dev.dhcpPools || {}).forEach(p => Object.keys(p.leases || {}).forEach(ip => { if (target === '*' || ip === target) { delete p.leases[ip]; n++; } }));
+                if (target !== '*' && !n) print(`% Address ${target} not in use`);
+                return;
+            }
             // clear mac address-table [dynamic] (privileged EXEC)
             if (dev.type === 'Switch' && cmd === 'clear' && args[1] === 'mac' && /^address(-table)?$/.test(args[2] || '')) {
                 if (dev.cli.mode !== 'priv') { print('% Invalid input detected.'); return; }
@@ -2099,6 +2172,7 @@
                     print('  arp -a        Display ARP table');
                     print('  ping <target> Send ICMP Echo Requests');
                     print('  curl <target> Fetch HTTP content from a web server');
+                    print('  nslookup <name|ip> [server]  Query DNS (forward or reverse lookup)');
                     print('  ftp <ip> [user] [pass]      Connect to an FTP server (cleartext)');
                     print('  sftp <user>@<ip> [pass]     Connect to an SFTP server (encrypted)');
                     print('    then: ls, get <file>, put <file>, bye');
@@ -2148,6 +2222,43 @@
                     print('Topology saved.');
                     return;
                 }
+                if (cmd === 'ipconfig' && args[1] === '/release') {
+                    if (dev.ipMode !== 'dhcp') { print('\nWindows IP Configuration\n'); print('The operation failed as no adapter is in the state permissible for'); print('this operation.'); return; }
+                    const had = dev.ip;
+                    dhcpClientRelease(dev);
+                    print('\nWindows IP Configuration\n'); print('Ethernet adapter Local Area Connection:\n');
+                    print('   Connection-specific DNS Suffix  . :'); print('   IPv4 Address. . . . . . . . . . . : 0.0.0.0'); print('   Default Gateway . . . . . . . . . :');
+                    if (!had || had === '0.0.0.0') print('\n(No lease was held.)');
+                    return;
+                }
+                if (cmd === 'ipconfig' && args[1] === '/renew') {
+                    if (dev.ipMode !== 'dhcp') { print('\nWindows IP Configuration\n'); print('The operation failed as no adapter is in the state permissible for'); print('this operation.'); return; }
+                    dev.cli.isRunning = true;
+                    dhcpClientRenew(dev).then(r => {
+                        print('\nWindows IP Configuration\n');
+                        if (r === 'timeout' && (!dev.ip || dev.ip === '0.0.0.0')) { print('An error occurred while renewing interface Local Area Connection : unable to contact'); print('your DHCP server. Request has timed out.'); return; }
+                        if (r === 'timeout') { print('An error occurred while renewing interface Local Area Connection : unable to contact'); print('your DHCP server. Request has timed out. The current lease is kept until it expires.'); return; }
+                        print('Ethernet adapter Local Area Connection:\n');
+                        print(`   IPv4 Address. . . . . . . . . . . : ${dev.ip}`); print(`   Subnet Mask . . . . . . . . . . . : ${dev.subnet}`); print(`   Default Gateway . . . . . . . . . : ${dev.gateway}`);
+                    }).finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
+                    return;
+                }
+                if (cmd === 'ipconfig' && args[1] === '/all') {
+                    const L = dev.ipMode === 'dhcp' ? dev.dhcpLease : null;
+                    print(`\nWindows IP Configuration\n`);
+                    print(`   Host Name . . . . . . . . . . . . : ${dev.name}\n`);
+                    print(`Ethernet adapter Local Area Connection:\n`);
+                    print(`   Physical Address. . . . . . . . . : ${String(dev.mac || '').replace(/:/g, '-')}`);
+                    print(`   DHCP Enabled. . . . . . . . . . . : ${dev.ipMode === 'dhcp' ? 'Yes' : 'No'}`);
+                    print(`   IPv4 Address. . . . . . . . . . . : ${dev.ip}${L ? '(Preferred)' : ''}`);
+                    print(`   Subnet Mask . . . . . . . . . . . : ${dev.subnet}`);
+                    if (L) { print(`   Lease Obtained. . . . . . . . . . : ${dhcpWinTime(L.obtained)}`); print(`   Lease Expires . . . . . . . . . . : ${dhcpWinTime(L.expires)}`); }
+                    print(`   Default Gateway . . . . . . . . . : ${dev.gateway}`);
+                    if (L) print(`   DHCP Server . . . . . . . . . . . : ${L.serverId || 'unknown'}`);
+                    print(`   DNS Servers . . . . . . . . . . . : ${dev.dns}`);
+                    if (L && L.expires != null) print(`\n   (Lease state ${L.state}: renews at 50% (T1), rebinds at 87.5% (T2). Time left ${dhcpFmtDur(L.expires - Date.now())}.)`);
+                    return;
+                }
                 if (cmd === 'ipconfig') {
                     print(`\nWindows IP Configuration\n`);
                     print(`Ethernet adapter Local Area Connection:\n`);
@@ -2173,6 +2284,39 @@
                 if (cmd === 'nmap') {
                     dev.cli.isRunning = true;
                     runNmap(dev, input.trim().split(/\s+/)).finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
+                    return;
+                }
+                if (cmd === 'nslookup') {
+                    const toks = input.trim().split(/\s+/);
+                    const name = toks[1] ? toks[1].toLowerCase().replace(/\.$/, '') : null, server = toks[2] || null;
+                    const isIp = (s) => /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(s) && s.split('.').every(o => +o <= 255);
+                    if (server && !isIp(server)) { print(`*** Can't find address for server ${server}: Non-existent domain`); return; }
+                    const srvIp = server || dev.dns;
+                    if (!name) {
+                        if (!srvIp || srvIp === '0.0.0.0') { print('*** Default servers are not available'); print('Default Server:  UnKnown'); print('Address:  127.0.0.1'); }
+                        else { print(`Default Server:  ${dnsServerDisplayName(srvIp)}`); print(`Address:  ${srvIp}`); }
+                        print(''); print('Usage: nslookup <name or IP address> [dns server]'); return;
+                    }
+                    if (!srvIp || srvIp === '0.0.0.0') { print('*** Default servers are not available'); print('Server:  UnKnown'); print('Address:  127.0.0.1'); print(''); print(`*** UnKnown can't find ${name}: No response from server`); return; }
+                    dev.cli.isRunning = true;
+                    (async () => {
+                        const ptr = isIp(name);
+                        const q = ptr ? ptrName(name) : name;
+                        const r = await dnsQuery(dev, q, server, ptr);
+                        if (r.status === 'nonet') { print('*** Can\'t find server address: the network is not available (check the IP configuration and cable).'); return; }
+                        const sName = r.status === 'timeout' ? 'UnKnown' : dnsServerDisplayName(srvIp);
+                        if (r.status === 'timeout') {
+                            print('DNS request timed out.'); print('    timeout was 2 seconds.');
+                            print(`Server:  UnKnown`); print(`Address:  ${srvIp}`); print('');
+                            print('DNS request timed out.'); print('    timeout was 2 seconds.');
+                            print(`*** Request to UnKnown timed-out`);
+                            return;
+                        }
+                        print(`Server:  ${sName}`); print(`Address:  ${srvIp}`); print('');
+                        if (r.status === 'nx') { print(`*** ${sName} can't find ${ptr ? name : name}: Non-existent domain`); return; }
+                        if (ptr) { print(`Name:    ${r.name}`); print(`Address:  ${name}`); }
+                        else { print('Name:    ' + name); print(`Address:  ${r.ip}`); }
+                    })().finally(() => { if (devices[dev.id]) { dev.cli.isRunning = false; renderCLI(dev.id); } });
                     return;
                 }
                 if (cmd === 'ping') {
@@ -2655,12 +2799,12 @@
                         });
                         return;
                     }
-                    if (dev.type === 'Router' && args[1] === 'ip' && args[2] === 'dhcp' && (args[3] === 'binding' || args[3] === 'bind')) {
+                    if ((dev.type === 'Router' || (dev.type === 'Switch' && dev.l3)) && args[1] === 'ip' && args[2] === 'dhcp' && (args[3] === 'binding' || args[3] === 'bind')) {
                         print('Bindings from all pools not associated with VRF:');
                         print('IP address          Client-ID/              Lease expiration        Type');
                         print('                    Hardware address/');
                         let any = false;
-                        Object.values(dev.dhcpPools || {}).forEach(p => Object.entries(p.leases || {}).forEach(([ip, l]) => { any = true; print(`${ip.padEnd(20)}${(l.mac || '').padEnd(24)}${'Infinite'.padEnd(24)}Automatic`); }));
+                        Object.values(dev.dhcpPools || {}).forEach(p => Object.entries(p.leases || {}).forEach(([ip, l]) => { any = true; const mac = String(l.mac || '').toLowerCase().replace(/:/g, ''); const cid = '01' + mac.replace(/(....)(?=.)/g, '$1.'); print(`${ip.padEnd(20)}${cid.padEnd(24)}${dhcpIosTime(l.expires == null || !isFinite(l.expires) ? null : l.expires).padEnd(24)}Automatic`); }));
                         if (!any) print('');
                         return;
                     }
@@ -4950,7 +5094,7 @@
             async requestDHCP() {
                 if (!this.port && !this.wirelessLink) { log(`[${this.name}] Network interface disconnected. Cannot reach DHCP.`, 'error'); return; }
                 log(`[${this.name}] Broadcasting DHCP Discover...`, 'info');
-                
+                this.dhcpLease = null; this._dhcpSel = null;
                 this.ip = '0.0.0.0';
                 this.subnet = '0.0.0.0';
                 this.gateway = '0.0.0.0';
@@ -5010,8 +5154,8 @@
                     document.dispatchEvent(new CustomEvent(`http_replied_${this.id}`, { detail: { content: payload.content } }));
                 }
                 else if (payload.type === 'DNS_REP' && payload.targetIp === this.ip) {
-                    log(`[${this.name}] Received DNS Reply: ${payload.domain} is ${payload.resolvedIp || 'not found'}`, 'success');
-                    document.dispatchEvent(new CustomEvent(`dns_replied_${this.id}`, { detail: { domain: payload.domain, ip: payload.resolvedIp } }));
+                    log(`[${this.name}] Received DNS Reply: ${payload.domain} is ${payload.resolvedIp || payload.resolvedName || 'not found'}`, (payload.resolvedIp || payload.resolvedName) ? 'success' : 'warning');
+                    document.dispatchEvent(new CustomEvent(`dns_replied_${this.id}`, { detail: { domain: payload.domain, ip: payload.resolvedIp, name: payload.resolvedName } }));
                 }
                 else if (payload.type === 'TCP' && payload.targetIp === this.ip) {
                     const fl = payload.flags || {};
@@ -5066,14 +5210,32 @@
                     document.dispatchEvent(new CustomEvent(`udp_recv_${this.id}`, { detail: { from: payload.sourceIp, port: payload.destPort, sourcePort: payload.sourcePort, data: payload.data } }));
                 }
                 else if (payload.type === 'DHCP_OFFER' && payload.targetMac === this.mac && this.ipMode === 'dhcp') {
-                    log(`[${this.name}] Received DHCP Offer (${payload.offeredIp}). Requesting lease...`, 'info');
+                    // SELECTING: take the first offer, ignore the rest (the REQUEST names the chosen server)
+                    if (this.dhcpLease || (this._dhcpSel && Date.now() - this._dhcpSel < 10000)) return;
+                    this._dhcpSel = Date.now();
+                    log(`[${this.name}] Received DHCP Offer (${payload.offeredIp}) from ${payload.serverId || frame.sourceMac}. Requesting lease...`, 'info');
                     await sleep(35);
                     transmit({
                         sourceMac: this.mac, destMac: 'FF:FF:FF:FF:FF:FF',
-                        payload: { type: 'DHCP_REQUEST', sourceMac: this.mac, requestedIp: payload.offeredIp, serverMac: frame.sourceMac }
+                        payload: { type: 'DHCP_REQUEST', sourceMac: this.mac, requestedIp: payload.offeredIp, serverMac: frame.sourceMac, serverId: payload.serverId }
                     }, this.id, 1);
                 }
+                else if (payload.type === 'DHCP_NAK' && payload.targetMac === this.mac && this.ipMode === 'dhcp') {
+                    dhcpClientDrop(this, `DHCP NAK from ${payload.serverId || 'server'}: lease refused. Restarting discovery.`);
+                    this._dhcpSel = null;
+                    document.dispatchEvent(new CustomEvent(`dhcp_nak_${this.id}`, { detail: true }));
+                    this.requestDHCP();
+                }
                 else if (payload.type === 'DHCP_ACK' && payload.targetMac === this.mac && this.ipMode === 'dhcp') {
+                    if (this.dhcpLease && payload.offeredIp !== this.ip) return; // stray ACK for someone else's offer
+                    const renewed = dhcpApplyAck(this, payload);
+                    this._dhcpSel = null;
+                    if (renewed) {
+                        log(`[${this.name}] DHCP lease on ${this.ip} renewed${payload.leaseSecs == null ? ' (infinite)' : ' for ' + dhcpFmtDur(payload.leaseSecs * 1000)}.`, 'success');
+                        document.dispatchEvent(new CustomEvent(`dhcp_ack_${this.id}`, { detail: true }));
+                        if (propertiesDeviceId === this.id) updatePropertiesPanel();
+                        return;
+                    }
                     this.ip = payload.offeredIp;
                     this.subnet = payload.mask;
                     this.gateway = payload.gw;
@@ -5159,24 +5321,40 @@
                         await sleep(35);
                         transmit({
                             sourceMac: this.mac, destMac: frame.sourceMac,
-                            payload: { type: 'DHCP_OFFER', targetMac: payload.sourceMac, offeredIp, mask: this.poolMask, gw: this.poolGateway, dns: this.poolDns }
+                            payload: { type: 'DHCP_OFFER', targetMac: payload.sourceMac, offeredIp, mask: this.poolMask, gw: this.poolGateway, dns: this.poolDns, leaseSecs: dhcpParseLeaseSecs(this.leaseTime), serverId: this.ip }
                         }, this.id, 1);
                     } else {
                         log(`[${this.name}] DHCP Pool exhausted. Cannot offer IP to ${payload.sourceMac}.`, 'warning');
                     }
                 }
+                else if (payload.type === 'DHCP_RELEASE') {
+                    const b = this.leases[payload.ciaddr];
+                    if (b && b.mac === payload.sourceMac) { delete this.leases[payload.ciaddr]; dhcpServerLog(this, `DHCP Release from ${payload.sourceMac}: ${payload.ciaddr} returned to the pool.`); }
+                }
                 else if (payload.type === 'DHCP_REQUEST') {
-                    if (payload.requestedIp) {
-                        this.leases[payload.requestedIp] = { mac: payload.sourceMac, expires: Date.now() + (parseInt(this.leaseTime)*1000) };
-                        log(`[${this.name}] DHCP Request from ${payload.sourceMac}. Leased ${payload.requestedIp}.`, 'success');
+                    if (payload.requestedIp || payload.ciaddr) {
+                        const s0 = ipToInt(this.poolStart), s1 = ipToInt(this.poolEnd);
+                        const inPool = (ip) => { const n = ipToInt(ip); return n >= s0 && n <= s1 && ip !== this.ip; };
+                        const verdict = dhcpRequestVerdict(this.leases, inPool, payload, [this.ip]);
+                        if (verdict === 'ignore') return;
+                        const ip = payload.requestedIp || payload.ciaddr;
                         await sleep(35);
+                        if (verdict === 'nak') {
+                            dhcpServerLog(this, `DHCP NAK to ${payload.sourceMac} for ${ip}.`, 'warning');
+                            transmit({ sourceMac: this.mac, destMac: frame.sourceMac, payload: { type: 'DHCP_NAK', targetMac: payload.sourceMac, serverId: this.ip } }, this.id, 1);
+                            return;
+                        }
+                        const secs = dhcpParseLeaseSecs(this.leaseTime);
+                        const renewing = !!payload.ciaddr && !!this.leases[ip];
+                        this.leases[ip] = { mac: payload.sourceMac, obtained: Date.now(), expires: secs == null ? null : Date.now() + secs * 1000 };
+                        dhcpServerLog(this, `DHCP ${renewing ? 'renewal' : 'Request'} from ${payload.sourceMac}. ${renewing ? 'Renewed' : 'Leased'} ${ip}${secs == null ? ' (infinite)' : ' for ' + dhcpFmtDur(secs * 1000)}.`, 'success');
                         transmit({
                             sourceMac: this.mac, destMac: frame.sourceMac,
-                            payload: { type: 'DHCP_ACK', targetMac: payload.sourceMac, offeredIp: payload.requestedIp, mask: this.poolMask, gw: this.poolGateway, dns: this.poolDns }
+                            payload: { type: 'DHCP_ACK', targetMac: payload.sourceMac, offeredIp: ip, mask: this.poolMask, gw: this.poolGateway, dns: this.poolDns, leaseSecs: secs, serverId: this.ip }
                         }, this.id, 1);
                         if (propertiesDeviceId === this.id) {
                             const tbody = document.getElementById(`dhcp-table-body-${this.id}`);
-                            if (tbody) tbody.innerHTML = Object.entries(this.leases).map(([ip, data]) => `<tr><td class="px-2 py-1 border-t text-pink-600 font-bold">${ip}</td><td class="px-2 py-1 border-t">${data.mac}</td></tr>`).join('');
+                            if (tbody) tbody.innerHTML = dhcpServerRowsHtml(this);
                         }
                     }
                 }
@@ -5208,12 +5386,18 @@
                     log(`[${this.name}] Received DNS REQ for ${payload.domain} from ${payload.sourceIp}.`, 'info');
                     await sleep(35);
                     
-                    // Simple exact match lookup
-                    const resolvedIp = this.records[payload.domain] || null;
+                    // Simple exact match lookup (case-insensitive); PTR queries search the A records in reverse
+                    const q = String(payload.domain || '').toLowerCase();
+                    let resolvedIp = null, resolvedName = null;
+                    if (payload.ptr) {
+                        const ip = q.replace(/\.in-addr\.arpa$/, '').split('.').reverse().join('.');
+                        const hit = Object.entries(this.records).find(([, v]) => v === ip);
+                        resolvedName = hit ? hit[0] : null;
+                    } else resolvedIp = this.records[q] || null;
                     
                     transmit({
                         sourceMac: this.mac, destMac: frame.sourceMac,
-                        payload: { type: 'DNS_REP', sourceIp: this.ip, targetIp: payload.sourceIp, domain: payload.domain, resolvedIp: resolvedIp, sourcePort: 53, destPort: payload.sourcePort }
+                        payload: { type: 'DNS_REP', sourceIp: this.ip, targetIp: payload.sourceIp, domain: payload.domain, resolvedIp: resolvedIp, resolvedName, ptr: payload.ptr || undefined, sourcePort: 53, destPort: payload.sourcePort }
                     }, this.id, 1);
                     return;
                 }
@@ -5368,7 +5552,7 @@
                 if (this.ripEnabled && p && p.type === 'RIP_UPDATE' && this.svis && this.svis[frameVlan]) { if (ripLearn(this, p, `Vlan${frameVlan}`)) this.ripBroadcastCount = 0; return; }
 
                 // Layer 3 switch: act as DHCP server / relay for a VLAN that has an SVI
-                if (this.l3 && svi && p && (p.type === 'DHCP_DISCOVER' || p.type === 'DHCP_REQUEST') && ((this.dhcpPools && Object.keys(this.dhcpPools).length) || (svi.helperAddresses && svi.helperAddresses.length))) {
+                if (this.l3 && svi && p && (p.type === 'DHCP_DISCOVER' || p.type === 'DHCP_REQUEST' || p.type === 'DHCP_RELEASE') && ((this.dhcpPools && Object.keys(this.dhcpPools).length) || (svi.helperAddresses && svi.helperAddresses.length))) {
                     await routerHandleDhcp(this, frame, { ip: svi.ip, mac: this.mac, id: `Vlan${frameVlan}`, vlan: frameVlan, kind: 'svi', helperAddresses: svi.helperAddresses }, p);
                     return;
                 }
@@ -5609,8 +5793,8 @@
                     if (p && p.type === 'ARP_REP' && p.targetIp === port.ip) { this.arpCache[p.sourceIp] = frame.sourceMac; document.dispatchEvent(new CustomEvent(`switch_arp_${this.id}`, { detail: { ip: p.sourceIp, mac: frame.sourceMac } })); return; }
                     if (frame.destMac !== this.mac && frame.destMac !== 'FF:FF:FF:FF:FF:FF') return;
                     if (p && p.type === 'ICMP_REQ' && p.targetIp === port.ip) { transmit({ sourceMac: this.mac, destMac: frame.sourceMac, payload: { type: 'ICMP_REP', sourceIp: port.ip, targetIp: p.sourceIp, natId: p.natId } }, this.id, port.id); return; }
-                    if (p && (p.type === 'DHCP_DISCOVER' || p.type === 'DHCP_REQUEST') && this.dhcpPools) { await routerHandleDhcp(this, frame, { ip: port.ip, mac: this.mac, id: port.id, vlan: null, helperAddresses: port.helperAddresses }, p); return; }
-                    if ((p && (p.type === 'DHCP_OFFER' || p.type === 'DHCP_ACK')) && p.relay) { await routerRelayDhcpReply(this, p); return; }
+                    if (p && (p.type === 'DHCP_DISCOVER' || p.type === 'DHCP_REQUEST' || p.type === 'DHCP_RELEASE') && this.dhcpPools) { await routerHandleDhcp(this, frame, { ip: port.ip, mac: this.mac, id: port.id, vlan: null, helperAddresses: port.helperAddresses }, p); return; }
+                    if ((p && (p.type === 'DHCP_OFFER' || p.type === 'DHCP_ACK' || p.type === 'DHCP_NAK')) && p.relay) { await routerRelayDhcpReply(this, p); return; }
                     if (p && p.type === 'RIP_UPDATE' && this.ripEnabled) { if (ripLearn(this, p, swPortName(port))) this.ripBroadcastCount = 0; return; }
                     if (this.ipRouting && p && p.targetIp) { await this.routeSviPacket(frame); return; }
                     return;
@@ -5659,6 +5843,13 @@
             if (pool) {
                 const srcIp = (Object.values(dev.interfaces).find(i => i.ip && i.ip !== '0.0.0.0') || {}).ip || scopeIp;
                 const gw = pool.gateway || (relayed ? scopeIp : inIface.ip);
+                const myId = relayed ? srcIp : (inIface.ip || srcIp);
+                if (payload.type === 'DHCP_RELEASE') {
+                    pool.leases = pool.leases || {};
+                    const b = pool.leases[payload.ciaddr];
+                    if (b && b.mac === payload.sourceMac) { delete pool.leases[payload.ciaddr]; log(`[${dev.name}] DHCP pool ${pool.name}: ${payload.ciaddr} released by ${payload.sourceMac}.`, 'info'); if (propertiesDeviceId === dev.id) updatePropertiesPanel(); }
+                    return;
+                }
                 if (payload.type === 'DHCP_DISCOVER') {
                     pool.leases = pool.leases || {};
                     let offeredIp = null;
@@ -5666,18 +5857,31 @@
                     if (!offeredIp) offeredIp = dhcpFindFreeIp(dev, pool);
                     if (!offeredIp) { log(`[${dev.name}] DHCP pool ${pool.name} exhausted for ${payload.sourceMac}.`, 'warning'); return; }
                     await sleep(35);
-                    const opt = { type: 'DHCP_OFFER', targetMac: payload.sourceMac, offeredIp, mask: pool.mask, gw, dns: pool.dns };
+                    const opt = { type: 'DHCP_OFFER', targetMac: payload.sourceMac, offeredIp, mask: pool.mask, gw, dns: pool.dns, leaseSecs: pool.leaseSecs === undefined ? 86400 : pool.leaseSecs, serverId: myId };
                     log(`[${dev.name}] DHCP: offering ${offeredIp} to ${payload.sourceMac}${relayed ? ' (relayed)' : ''}.`, 'info');
                     if (relayed) await dev.routePacket({ payload: Object.assign({}, opt, { sourceIp: srcIp, targetIp: payload.giaddr, giaddr: payload.giaddr, relay: payload.relay }) });
                     else dhcpEgress(dev, inIface, frame.sourceMac, opt);
                     return;
                 }
-                if (payload.type === 'DHCP_REQUEST' && payload.requestedIp) {
+                if (payload.type === 'DHCP_REQUEST' && (payload.requestedIp || payload.ciaddr)) {
                     pool.leases = pool.leases || {};
-                    pool.leases[payload.requestedIp] = { mac: payload.sourceMac, expires: pool.leaseSecs == null ? Infinity : Date.now() + pool.leaseSecs * 1000 };
+                    const inPool = (ip) => isSameSubnet(ip, pool.network, pool.mask) && !dhcpIsExcluded(dev, ipToInt(ip)) && ip !== pool.gateway;
+                    const verdict = dhcpRequestVerdict(pool.leases, inPool, payload, [myId]);
+                    if (verdict === 'ignore') return;
+                    const ip = payload.requestedIp || payload.ciaddr;
                     await sleep(35);
-                    const opt = { type: 'DHCP_ACK', targetMac: payload.sourceMac, offeredIp: payload.requestedIp, mask: pool.mask, gw, dns: pool.dns };
-                    log(`[${dev.name}] DHCP: leased ${payload.requestedIp} to ${payload.sourceMac}.`, 'success');
+                    if (verdict === 'nak') {
+                        const nak = { type: 'DHCP_NAK', targetMac: payload.sourceMac, serverId: myId };
+                        log(`[${dev.name}] DHCP: NAK to ${payload.sourceMac} for ${ip}.`, 'warning');
+                        if (relayed) await dev.routePacket({ payload: Object.assign({}, nak, { sourceIp: srcIp, targetIp: payload.giaddr, giaddr: payload.giaddr, relay: payload.relay }) });
+                        else dhcpEgress(dev, inIface, frame.sourceMac, nak);
+                        return;
+                    }
+                    const secs = pool.leaseSecs === undefined ? 86400 : pool.leaseSecs;
+                    const renewing = !!payload.ciaddr && !!pool.leases[ip];
+                    pool.leases[ip] = { mac: payload.sourceMac, obtained: Date.now(), expires: secs == null ? null : Date.now() + secs * 1000 };
+                    const opt = { type: 'DHCP_ACK', targetMac: payload.sourceMac, offeredIp: ip, mask: pool.mask, gw, dns: pool.dns, leaseSecs: secs, serverId: myId };
+                    log(`[${dev.name}] DHCP: ${renewing ? 'renewed' : 'leased'} ${ip} to ${payload.sourceMac}${secs == null ? ' (infinite)' : ' for ' + dhcpFmtDur(secs * 1000)}.`, 'success');
                     if (relayed) await dev.routePacket({ payload: Object.assign({}, opt, { sourceIp: srcIp, targetIp: payload.giaddr, giaddr: payload.giaddr, relay: payload.relay }) });
                     else dhcpEgress(dev, inIface, frame.sourceMac, opt);
                     if (propertiesDeviceId === dev.id) updatePropertiesPanel();
@@ -5691,6 +5895,7 @@
                     log(`[${dev.name}] DHCP relay: forwarding ${payload.type} from ${payload.sourceMac} to ${helper}.`, 'info');
                     await dev.routePacket({ payload: {
                         type: payload.type, sourceMac: payload.sourceMac, requestedIp: payload.requestedIp,
+                        ciaddr: payload.ciaddr, serverId: payload.serverId, renew: payload.renew, rebind: payload.rebind,
                         sourceIp: inIface.ip, targetIp: helper, giaddr: inIface.ip,
                         relay: { routerId: dev.id, ifaceId: inIface.id, clientMac: payload.sourceMac }
                     } });
@@ -5718,9 +5923,156 @@
             const iface = dev.interfaces[r.ifaceId];
             if (!iface) return;
             await sleep(20);
-            dhcpEgress(dev, iface, r.clientMac, { type: payload.type, targetMac: r.clientMac, offeredIp: payload.offeredIp, mask: payload.mask, gw: payload.gw, dns: payload.dns });
+            dhcpEgress(dev, iface, r.clientMac, { type: payload.type, targetMac: r.clientMac, offeredIp: payload.offeredIp, mask: payload.mask, gw: payload.gw, dns: payload.dns, leaseSecs: payload.leaseSecs, serverId: payload.serverId });
             log(`[${dev.name}] DHCP relay: delivering ${payload.type} (${payload.offeredIp || ''}) to ${r.clientMac}.`, 'info');
         }
+
+        // ================= DHCP lease lifecycle =================
+        // Servers record an expiry per binding and reclaim it when it lapses. Clients run the RFC 2131
+        // timers: RENEWING at T1 (50%), REBINDING at T2 (87.5%) and give the address up at expiry.
+        // Renewals are broadcast so they cross DHCP relays in this simulator; the sniffer shows ciaddr set.
+        function dhcpParseLeaseSecs(v) {
+            if (v === null) return null;
+            const s = String(v == null ? '' : v).trim().toLowerCase();
+            if (s === 'infinite' || s === 'inf') return null;
+            const n = parseInt(s, 10);
+            return (isNaN(n) || n <= 0) ? 86400 : n;
+        }
+        function dhcpFmtDur(ms) {
+            if (ms == null) return 'Infinite';
+            let s = Math.max(0, Math.round(ms / 1000));
+            const d = Math.floor(s / 86400); s -= d * 86400; const h = Math.floor(s / 3600); s -= h * 3600; const m = Math.floor(s / 60); s -= m * 60;
+            if (d) return `${d}d ${h}h ${m}m`;
+            if (h) return `${h}h ${m}m ${s}s`;
+            if (m) return `${m}m ${String(s).padStart(2, '0')}s`;
+            return `${s}s`;
+        }
+        const DHCP_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        function dhcpIosTime(t) {
+            if (t == null) return 'Infinite';
+            const d = new Date(t); let h = d.getHours(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+            return `${DHCP_MON[d.getMonth()]} ${String(d.getDate()).padStart(2, '0')} ${d.getFullYear()} ${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${ap}`;
+        }
+        function dhcpWinTime(t) {
+            if (t == null) return 'Never (infinite lease)';
+            const d = new Date(t); let h = d.getHours(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} ${h}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${ap}`;
+        }
+        function dhcpOwnsIp(dev, ip) {
+            if (!ip) return false;
+            if (dev.interfaces && Object.values(dev.interfaces).some(i => i.ip === ip)) return true;
+            if (dev.svis && Object.values(dev.svis).some(s => s.ip === ip)) return true;
+            if (dev.ports && dev.ports.some(pt => pt.routed && pt.ip === ip)) return true;
+            return dev.ip === ip;
+        }
+        // Server side decision for a REQUEST. Returns 'ack', 'nak' or 'ignore'.
+        //  - SELECTING (after an OFFER): serverId names the chosen server; other servers stay silent.
+        //  - RENEWING / REBINDING (ciaddr set): ACK our own binding, NAK an address bound to someone else,
+        //    stay silent when we have no record (another server may own it).
+        function dhcpRequestVerdict(leases, inPool, payload, myIds) {
+            const ip = payload.requestedIp || payload.ciaddr;
+            if (payload.serverId && !myIds.includes(payload.serverId)) return 'ignore';
+            const b = leases[ip];
+            if (!ip || !inPool(ip)) return payload.ciaddr ? 'ignore' : 'nak';
+            if (b && b.mac !== payload.sourceMac) return 'nak';
+            if (payload.ciaddr && !b) return payload.serverId ? 'nak' : 'ignore';
+            return 'ack';
+        }
+        function dhcpServerLog(dev, msg, kind) { log(`[${dev.name}] ${msg}`, kind || 'info'); try { if (typeof deviceSyslog === 'function' && dev.type !== 'Router' && dev.type !== 'Switch') deviceSyslog(dev, 6, `DHCPD: ${msg}`); } catch (e) {} }
+        // Client: send a REQUEST for the current lease (renew = unicast semantics with server id, rebind = any server)
+        function dhcpClientSendRequest(dev, rebind) {
+            const L = dev.dhcpLease; if (!L || !dev.ip || dev.ip === '0.0.0.0') return;
+            const payload = { type: 'DHCP_REQUEST', sourceMac: dev.mac, requestedIp: dev.ip, ciaddr: dev.ip, sourceIp: dev.ip };
+            if (rebind) payload.rebind = true; else { payload.renew = true; payload.serverId = L.serverId; }
+            try { transmit({ sourceMac: dev.mac, destMac: 'FF:FF:FF:FF:FF:FF', payload }, dev.id, 1); } catch (e) {}
+        }
+        function dhcpClientDrop(dev, why) {
+            dev.ip = '0.0.0.0'; dev.subnet = '0.0.0.0'; dev.gateway = '0.0.0.0'; dev.dns = '0.0.0.0';
+            dev.dhcpLease = null; if (dev.arpCache) dev.arpCache = {};
+            log(`[${dev.name}] ${why}`, 'warning');
+            if (propertiesDeviceId === dev.id) updatePropertiesPanel();
+        }
+        function dhcpApplyAck(dev, payload) {
+            const prev = dev.dhcpLease;
+            const secs = payload.leaseSecs === undefined ? 86400 : payload.leaseSecs;
+            const now = Date.now();
+            dev.dhcpLease = { serverId: payload.serverId || (prev && prev.serverId) || null, leaseSecs: secs, obtained: now,
+                t1: secs == null ? null : now + secs * 500, t2: secs == null ? null : now + secs * 875, expires: secs == null ? null : now + secs * 1000,
+                state: 'BOUND', next: null };
+            return prev && prev.state !== 'BOUND' && payload.offeredIp === dev.ip;
+        }
+        function dhcpTick() {
+            const now = Date.now();
+            Object.values(devices).forEach(d => {
+                // Server appliance bindings
+                if (d.leases && typeof d.findFreeIp === 'function') {
+                    for (const [ip, l] of Object.entries(d.leases)) if (l && l.expires != null && isFinite(l.expires) && now >= l.expires) { delete d.leases[ip]; dhcpServerLog(d, `Lease for ${ip} (${l.mac}) expired. Address returned to the pool.`, 'warning'); }
+                }
+                // IOS pools (routers and multilayer switches)
+                if (d.dhcpPools) Object.values(d.dhcpPools).forEach(pool => {
+                    for (const [ip, l] of Object.entries(pool.leases || {})) if (l && l.expires != null && isFinite(l.expires) && now >= l.expires) { delete pool.leases[ip]; log(`[${d.name}] DHCP pool ${pool.name}: binding ${ip} (${l.mac}) expired.`, 'warning'); }
+                });
+                // Clients
+                if (typeof d.requestDHCP === 'function') {
+                    if (d.ipMode !== 'dhcp') { if (d.dhcpLease) d.dhcpLease = null; return; }
+                    const L = d.dhcpLease; if (!L || L.expires == null) return;
+                    if (now >= L.expires) { dhcpClientDrop(d, `DHCP lease on ${d.ip || 'address'} expired with no reply from a server. Address released; restarting discovery.`); d.requestDHCP(); return; }
+                    if (now >= L.t2 && L.state !== 'REBINDING') { L.state = 'REBINDING'; L.next = now + Math.max(4000, (L.expires - now) / 2); log(`[${d.name}] DHCP T2 reached: no reply from ${L.serverId || 'server'}. Rebinding (broadcast to any server).`, 'warning'); dhcpClientSendRequest(d, true); }
+                    else if (L.state === 'REBINDING' && now >= L.next) { L.next = now + Math.max(4000, (L.expires - now) / 2); dhcpClientSendRequest(d, true); }
+                    else if (now >= L.t1 && L.state === 'BOUND') { L.state = 'RENEWING'; L.next = now + Math.max(4000, (L.t2 - now) / 2); log(`[${d.name}] DHCP T1 reached: renewing lease on ${d.ip} with ${L.serverId || 'server'}.`, 'info'); dhcpClientSendRequest(d, false); }
+                    else if (L.state === 'RENEWING' && now >= L.next) { L.next = now + Math.max(4000, (L.t2 - now) / 2); dhcpClientSendRequest(d, false); }
+                }
+            });
+            // Live countdowns in open panels
+            const pd = propertiesDeviceId && devices[propertiesDeviceId];
+            if (pd) {
+                const tb = document.getElementById(`dhcp-table-body-${pd.id}`);
+                if (tb && pd.leases) tb.innerHTML = dhcpServerRowsHtml(pd);
+                const st = document.getElementById(`dhcp-lease-status-${pd.id}`);
+                if (st) st.innerHTML = dhcpClientStatusHtml(pd);
+            }
+        }
+        function dhcpServerRowsHtml(dev) {
+            const rows = Object.entries(dev.leases || {});
+            if (!rows.length) return '<tr><td colspan="3" class="px-2 py-2 text-center text-slate-400">No active leases</td></tr>';
+            const now = Date.now();
+            return rows.map(([ip, data]) => `<tr><td class="px-2 py-1 border-t text-pink-600 font-bold">${ip}</td><td class="px-2 py-1 border-t">${data.mac}</td><td class="px-2 py-1 border-t">${data.expires == null || !isFinite(data.expires) ? 'Infinite' : dhcpFmtDur(data.expires - now)}</td></tr>`).join('');
+        }
+        function dhcpClientStatusHtml(dev) {
+            if (dev.ipMode !== 'dhcp') return '';
+            const L = dev.dhcpLease;
+            if (!L) return '<span class="text-slate-400">No DHCP lease</span>';
+            const now = Date.now();
+            if (L.expires == null) return `Lease from <b>${L.serverId || '?'}</b>: infinite`;
+            const colour = L.state === 'BOUND' ? 'text-green-600 dark:text-green-400' : (L.state === 'RENEWING' ? 'text-amber-600' : 'text-red-500');
+            return `<span class="${colour} font-semibold">${L.state}</span> &middot; server ${L.serverId || '?'} &middot; expires in <b>${dhcpFmtDur(L.expires - now)}</b>${L.state === 'BOUND' ? ` &middot; renew in ${dhcpFmtDur(L.t1 - now)}` : ''}`;
+        }
+        // ipconfig /release: tell the server, then drop the address
+        function dhcpClientRelease(dev) {
+            if (dev.ipMode !== 'dhcp' || !dev.ip || dev.ip === '0.0.0.0') return false;
+            const L = dev.dhcpLease;
+            try { transmit({ sourceMac: dev.mac, destMac: 'FF:FF:FF:FF:FF:FF', payload: { type: 'DHCP_RELEASE', sourceMac: dev.mac, ciaddr: dev.ip, sourceIp: dev.ip, serverId: L && L.serverId } }, dev.id, 1); } catch (e) {}
+            dhcpClientDrop(dev, `DHCP lease on ${dev.ip} released by the user.`);
+            return true;
+        }
+        // ipconfig /renew: renew the current lease (REQUEST to the leasing server) or run full discovery
+        async function dhcpClientRenew(dev) {
+            if (dev.ipMode !== 'dhcp') return 'static';
+            if (dev.dhcpLease && dev.ip && dev.ip !== '0.0.0.0') {
+                dev.dhcpLease.state = 'RENEWING'; dev.dhcpLease.next = Date.now() + 4000;
+                dhcpClientSendRequest(dev, false);
+                const ok = await waitForEvent(`dhcp_ack_${dev.id}`, 6000);
+                if (ok) return 'renewed';
+                if (!dev.dhcpLease) return 'nak';
+                dev.dhcpLease.state = 'BOUND';
+                return 'timeout';
+            }
+            await dev.requestDHCP();
+            return dev.ip && dev.ip !== '0.0.0.0' ? 'renewed' : 'timeout';
+        }
+        setInterval(() => { try { dhcpTick(); } catch (e) {} }, 1000);
 
         class Router extends Device {
             constructor(x, y) {
@@ -5871,11 +6223,11 @@
                     return;
                 }
 
-                if (payload.type === 'DHCP_DISCOVER' || payload.type === 'DHCP_REQUEST') {
+                if (payload.type === 'DHCP_DISCOVER' || payload.type === 'DHCP_REQUEST' || payload.type === 'DHCP_RELEASE') {
                     await routerHandleDhcp(this, frame, inIface, payload);
                     return;
                 }
-                if ((payload.type === 'DHCP_OFFER' || payload.type === 'DHCP_ACK') && payload.relay) {
+                if ((payload.type === 'DHCP_OFFER' || payload.type === 'DHCP_ACK' || payload.type === 'DHCP_NAK') && payload.relay) {
                     await routerRelayDhcpReply(this, payload);
                     return;
                 }
@@ -8214,7 +8566,7 @@
         function pbDescribe(frame){
             const p = frame && frame.payload; if (!p) return 'frame';
             const t = p.type || 'frame';
-            const map = { ICMP_REQ:'ICMP echo request', ICMP_REP:'ICMP echo reply', ARP_REQ:'ARP request', ARP_REP:'ARP reply', TCP:'TCP segment', UDP:'UDP datagram', DHCP_DISCOVER:'DHCP discover', DHCP_OFFER:'DHCP offer', DHCP_REQUEST:'DHCP request', DHCP_ACK:'DHCP ack', DNS_REQ:'DNS query', DNS_REP:'DNS reply', HTTP_REQ:'HTTP request', HTTP_REP:'HTTP reply' };
+            const map = { ICMP_REQ:'ICMP echo request', ICMP_REP:'ICMP echo reply', ARP_REQ:'ARP request', ARP_REP:'ARP reply', TCP:'TCP segment', UDP:'UDP datagram', DHCP_DISCOVER:'DHCP discover', DHCP_OFFER:'DHCP offer', DHCP_REQUEST:'DHCP request', DHCP_ACK:'DHCP ack', DHCP_NAK:'DHCP nak', DHCP_RELEASE:'DHCP release', DNS_REQ:'DNS query', DNS_REP:'DNS reply', HTTP_REQ:'HTTP request', HTTP_REP:'HTTP reply' };
             let d = map[t] || t;
             if (p.sourceIp && p.targetIp) d += ` (${p.sourceIp} \u2192 ${p.targetIp})`;
             return d;
@@ -9770,7 +10122,7 @@
                 // (a blocked access port) when the lab file is reopened.
                 (d.ports || []).forEach(p => { delete p.stpVlan; if (p.stpState) p.stpState = 'forwarding'; });
             }
-            return { devices: cleanDevices, links, labels, shapes, deviceCounter, stpEnabled };
+            return { devices: cleanDevices, links, labels, shapes, deviceCounter, stpEnabled, savedAt: Date.now() };
         }
 
         function applyLoadedTopology(data, sourceName) {
@@ -9998,11 +10350,11 @@
             if (t.startsWith('ICMP')) return `Echo (ping) ${t === 'ICMP_REQ' ? 'request' : 'reply'}`;
             if (t === 'RIP_UPDATE') return `RIPv2 Response (${Array.isArray(p.routes) ? p.routes.length : 0} routes)`;
             if (t.startsWith('DHCP')) {
-                const m = { DHCP_DISCOVER: 'Discover', DHCP_OFFER: `Offer ${p.offeredIp || ''}`, DHCP_REQUEST: `Request ${p.requestedIp || ''}`, DHCP_ACK: `ACK ${p.offeredIp || ''}` };
+                const m = { DHCP_DISCOVER: 'Discover', DHCP_OFFER: `Offer ${p.offeredIp || ''}`, DHCP_REQUEST: `Request ${p.requestedIp || ''}${p.renew ? ' (renewing)' : p.rebind ? ' (rebinding)' : ''}`, DHCP_ACK: `ACK ${p.offeredIp || ''}${p.leaseSecs === null ? ' lease infinite' : p.leaseSecs ? ' lease ' + p.leaseSecs + 's' : ''}`, DHCP_NAK: 'NAK', DHCP_RELEASE: `Release ${p.ciaddr || ''}` };
                 return `DHCP ${m[t] || t}`;
             }
             if (t.startsWith('HTTP')) return t === 'HTTP_GET' ? 'GET / HTTP/1.1' : 'HTTP/1.1 200 OK (text/html)';
-            if (t.startsWith('DNS')) return t === 'DNS_REQ' ? `Standard query A ${p.domain || ''}` : `Standard query response ${p.domain || ''} A ${p.resolvedIp || ''}`;
+            if (t.startsWith('DNS')) { const qt = p.ptr ? 'PTR' : 'A'; if (t === 'DNS_REQ') return `Standard query ${qt} ${p.domain || ''}`; const ans = p.ptr ? p.resolvedName : p.resolvedIp; return ans ? `Standard query response ${qt} ${p.domain || ''} ${qt} ${ans}` : `Standard query response ${qt} ${p.domain || ''} No such name`; }
             if (t === 'TCP') {
                 const fl = p.flags || {};
                 if (p.data != null && (p.destPort === 21 || p.sourcePort === 21)) return `FTP Control (cleartext): ${p.data && p.data.ftp ? p.data.ftp + ' ' + (p.data.arg || '') : JSON.stringify(String(p.data)).slice(0, 30)}`;
@@ -10068,7 +10420,7 @@
             else if (t === 'HTTP_GET') { r.kind = 'tcp'; r.sport = p.sourcePort || 49152; r.dport = p.destPort || 80; r.flags = { psh: true, ack: true }; r.app = 'http'; }
             else if (t === 'HTTP_REP') { r.kind = 'tcp'; r.sport = p.sourcePort || 80; r.dport = p.destPort || 49152; r.flags = { psh: true, ack: true }; r.app = 'http'; }
             else if (t.startsWith('DNS')) { r.kind = 'udp'; const q = t === 'DNS_REQ'; r.sport = p.sourcePort || (q ? 53001 : 53); r.dport = p.destPort || (q ? 53 : 53001); r.app = 'dns'; }
-            else if (t.startsWith('DHCP')) { r.kind = 'udp'; const srv = t === 'DHCP_OFFER' || t === 'DHCP_ACK'; r.sport = srv ? 67 : 68; r.dport = srv ? 68 : 67; r.app = 'dhcp'; }
+            else if (t.startsWith('DHCP')) { r.kind = 'udp'; const srv = t === 'DHCP_OFFER' || t === 'DHCP_ACK' || t === 'DHCP_NAK'; r.sport = srv ? 67 : 68; r.dport = srv ? 68 : 67; r.app = 'dhcp'; }
             else if (t === 'RIP_UPDATE') { r.kind = 'udp'; r.sport = 520; r.dport = 520; r.app = 'rip'; }
             else if (t === 'UDP') { r.kind = 'udp'; r.sport = p.sourcePort; r.dport = p.destPort; }
             if (!r.app && (r.kind === 'tcp' || r.kind === 'udp')) r.app = SF_APP_PORTS[r.dport] || SF_APP_PORTS[r.sport] || null;
@@ -10107,7 +10459,7 @@
                 put('arp.src.proto_ipv4', p.sourceIp); put('arp.dst.proto_ipv4', p.targetIp);
             } else if (L.kind !== 'other' || p.sourceIp || p.targetIp) {
                 protos.add('ip');
-                const src = p.sourceIp || (t.startsWith('DHCP') && !(t === 'DHCP_OFFER' || t === 'DHCP_ACK') ? '0.0.0.0' : null);
+                const src = p.sourceIp || (t.startsWith('DHCP') ? ((t === 'DHCP_OFFER' || t === 'DHCP_ACK' || t === 'DHCP_NAK') ? (p.serverId || null) : '0.0.0.0') : null);
                 const dst = p.targetIp || (t.startsWith('DHCP') ? '255.255.255.255' : null);
                 put('ip.src', src); put('ip.dst', dst); put('ip.addr', src); put('ip.addr', dst);
                 put('ip.proto', L.kind === 'icmp' ? 1 : L.kind === 'tcp' ? 6 : L.kind === 'udp' ? 17 : null);
@@ -10279,7 +10631,7 @@
             }
             if (L.kind === 'other' && !p.sourceIp) { mark('app', () => B.push(...sfAscii(t))); return { bytes: B, ranges: R }; }
             // Layer 4 + application first, so IP knows its length
-            const src = p.sourceIp || '0.0.0.0', dst = p.targetIp || '255.255.255.255';
+            const src = p.sourceIp || ((t === 'DHCP_OFFER' || t === 'DHCP_ACK' || t === 'DHCP_NAK') && p.serverId) || '0.0.0.0', dst = p.targetIp || '255.255.255.255';
             let l4 = [], app = [];
             const text = sfPayloadText(rec);
             if (L.kind === 'icmp') {
@@ -10289,15 +10641,19 @@
             } else {
                 if (L.app === 'dns') {
                     const q = t === 'DNS_REQ';
-                    app = [...sfU16(rec.seq & 0xffff), ...sfU16(q ? 0x0100 : 0x8180), 0, 1, 0, q ? 0 : 1, 0, 0, 0, 0, ...sfDnsName(p.domain), 0, 1, 0, 1];
-                    if (!q) app.push(0xc0, 0x0c, 0, 1, 0, 1, ...sfU32(300), 0, 4, ...sfIpB(p.resolvedIp));
+                    const qtype = p.ptr ? 12 : 1, ans = p.ptr ? p.resolvedName : p.resolvedIp;
+                    app = [...sfU16(rec.seq & 0xffff), ...sfU16(q ? 0x0100 : (ans ? 0x8180 : 0x8183)), 0, 1, 0, (!q && ans) ? 1 : 0, 0, 0, 0, 0, ...sfDnsName(p.domain), 0, qtype, 0, 1];
+                    if (!q && ans) { if (p.ptr) { const nm = sfDnsName(ans); app.push(0xc0, 0x0c, 0, 12, 0, 1, ...sfU32(300), ...sfU16(nm.length), ...nm); } else app.push(0xc0, 0x0c, 0, 1, 0, 1, ...sfU32(300), 0, 4, ...sfIpB(p.resolvedIp)); }
                 } else if (L.app === 'dhcp') {
-                    const srv = t === 'DHCP_OFFER' || t === 'DHCP_ACK';
+                    const srv = t === 'DHCP_OFFER' || t === 'DHCP_ACK' || t === 'DHCP_NAK';
                     const cmac = sfMacB(p.clientMac || p.mac || (srv && rec.destMac !== 'FF:FF:FF:FF:FF:FF' ? rec.destMac : rec.srcMac));
-                    const yi = srv ? sfIpB(p.offeredIp || p.assignedIp || p.ip) : [0, 0, 0, 0];
-                    const mt = { DHCP_DISCOVER: 1, DHCP_OFFER: 2, DHCP_REQUEST: 3, DHCP_ACK: 5 }[t] || 1;
-                    app = [srv ? 2 : 1, 1, 6, 0, ...sfU32((rec.seq * 2654435761) >>> 0), 0, 0, 0x80, 0, 0, 0, 0, 0, ...yi, 0, 0, 0, 0, 0, 0, 0, 0, ...cmac, ...new Array(10).fill(0), ...new Array(192).fill(0), 0x63, 0x82, 0x53, 0x63, 53, 1, mt];
-                    if (t === 'DHCP_REQUEST' && p.requestedIp) app.push(50, 4, ...sfIpB(p.requestedIp));
+                    const yi = srv && t !== 'DHCP_NAK' ? sfIpB(p.offeredIp || p.assignedIp || p.ip) : [0, 0, 0, 0];
+                    const ci = p.ciaddr ? sfIpB(p.ciaddr) : [0, 0, 0, 0];
+                    const mt = { DHCP_DISCOVER: 1, DHCP_OFFER: 2, DHCP_REQUEST: 3, DHCP_ACK: 5, DHCP_NAK: 6, DHCP_RELEASE: 7 }[t] || 1;
+                    app = [srv ? 2 : 1, 1, 6, 0, ...sfU32((rec.seq * 2654435761) >>> 0), 0, 0, 0x80, 0, ...ci, ...yi, 0, 0, 0, 0, 0, 0, 0, 0, ...cmac, ...new Array(10).fill(0), ...new Array(192).fill(0), 0x63, 0x82, 0x53, 0x63, 53, 1, mt];
+                    if (t === 'DHCP_REQUEST' && p.requestedIp && !p.ciaddr) app.push(50, 4, ...sfIpB(p.requestedIp));
+                    if (p.serverId && (srv || (t === 'DHCP_REQUEST' && !p.ciaddr) || t === 'DHCP_RELEASE')) app.push(54, 4, ...sfIpB(p.serverId));
+                    if ((t === 'DHCP_OFFER' || t === 'DHCP_ACK') && p.leaseSecs !== undefined) { const ls = p.leaseSecs == null ? 0xffffffff : p.leaseSecs; app.push(51, 4, ...sfU32(ls >>> 0)); if (p.leaseSecs != null) { app.push(58, 4, ...sfU32(Math.floor(ls / 2) >>> 0)); app.push(59, 4, ...sfU32(Math.floor(ls * 0.875) >>> 0)); } }
                     app.push(255);
                 } else if (L.app === 'rip') {
                     app = [2, 2, 0, 0];
@@ -10703,8 +11059,8 @@
             const ipProto = proto.startsWith('ICMP') ? 'ICMP (1)' : ((proto.startsWith('HTTP') || proto === 'TCP') ? 'TCP (6)' : 'UDP (17)');
             let ipSrc = p.sourceIp, ipDst = p.targetIp;
             if (proto.startsWith('DHCP')) {
-                const fromServer = (proto === 'DHCP_OFFER' || proto === 'DHCP_ACK');
-                ipSrc = ipSrc || (fromServer ? '(server)' : '0.0.0.0');
+                const fromServer = (proto === 'DHCP_OFFER' || proto === 'DHCP_ACK' || proto === 'DHCP_NAK');
+                ipSrc = ipSrc || (fromServer ? (p.serverId || '(server)') : '0.0.0.0');
                 ipDst = ipDst || (fromServer ? '255.255.255.255' : '255.255.255.255');
             }
             layers.push(layerBlock('Internet Protocol Version 4', [
@@ -10733,19 +11089,25 @@
                 ]));
                 const dnsRows = [
                     ['Transaction ID', '0x1a2b'],
-                    ['Flags', isReq ? '0x0100 Standard query' : '0x8180 Standard query response'],
-                    ['Query', `${p.domain || ''}: type A`]
+                    ['Flags', isReq ? '0x0100 Standard query' : ((p.ptr ? p.resolvedName : p.resolvedIp) ? '0x8180 Standard query response, No error' : '0x8183 Standard query response, No such name')],
+                    ['Query', `${p.domain || ''}: type ${p.ptr ? 'PTR' : 'A'}`]
                 ];
-                if (!isReq) dnsRows.push(['Answer', `${p.domain || ''}: A ${p.resolvedIp || '(none)'}`]);
+                if (!isReq) dnsRows.push(['Answer', (p.ptr ? p.resolvedName : p.resolvedIp) ? `${p.domain || ''}: ${p.ptr ? 'PTR ' + p.resolvedName : 'A ' + p.resolvedIp}` : '(none)']);
                 layers.push(layerBlock(`Domain Name System (${isReq ? 'query' : 'response'})`, dnsRows));
             } else if (proto.startsWith('DHCP')) {
-                const fromServer = (proto === 'DHCP_OFFER' || proto === 'DHCP_ACK');
+                const fromServer = (proto === 'DHCP_OFFER' || proto === 'DHCP_ACK' || proto === 'DHCP_NAK');
                 layers.push(layerBlock('User Datagram Protocol', [
                     ['Source port', fromServer ? '67 (bootps)' : '68 (bootpc)'],
                     ['Destination port', fromServer ? '68 (bootpc)' : '67 (bootps)']
                 ]));
-                const msgType = { DHCP_DISCOVER: 'Discover (1)', DHCP_OFFER: 'Offer (2)', DHCP_REQUEST: 'Request (3)', DHCP_ACK: 'ACK (5)' }[proto] || proto;
+                const msgType = { DHCP_DISCOVER: 'Discover (1)', DHCP_OFFER: 'Offer (2)', DHCP_REQUEST: 'Request (3)', DHCP_ACK: 'ACK (5)', DHCP_NAK: 'NAK (6)', DHCP_RELEASE: 'Release (7)' }[proto] || proto;
                 const dhcpRows = [['Message type', msgType]];
+                if (p.ciaddr) dhcpRows.push(['Client IP address (ciaddr)', p.ciaddr + (p.renew ? '  (RENEWING)' : p.rebind ? '  (REBINDING)' : '')]);
+                if (p.serverId) dhcpRows.push(['DHCP Server Identifier (option 54)', p.serverId]);
+                if (p.leaseSecs !== undefined && (proto === 'DHCP_OFFER' || proto === 'DHCP_ACK')) {
+                    dhcpRows.push(['IP Address Lease Time (option 51)', p.leaseSecs == null ? 'Infinity' : `${p.leaseSecs} s (${dhcpFmtDur(p.leaseSecs * 1000)})`]);
+                    if (p.leaseSecs != null) { dhcpRows.push(['Renewal Time T1 (option 58)', `${Math.floor(p.leaseSecs / 2)} s`]); dhcpRows.push(['Rebinding Time T2 (option 59)', `${Math.floor(p.leaseSecs * 0.875)} s`]); }
+                }
                 if (p.offeredIp) dhcpRows.push(['Your (client) IP', p.offeredIp]);
                 if (p.requestedIp) dhcpRows.push(['Requested IP', p.requestedIp]);
                 if (p.mask) dhcpRows.push(['Subnet mask', p.mask]);
@@ -11527,9 +11889,34 @@
         (function () {
             const HANDLES = '#console-header, #ping-header, #pb-handle, #toolbar-grip, #legend-header, #zoom-grip, .cli-window-header, #browser-header, #sniffer-header, #prop-header';
             const INTERACTIVE = 'button, select, input, textarea, a, option, [contenteditable="true"]';
-            const PANELS = '#floating-console, #floating-ping, #floating-properties, .cli-window, #floating-browser, #floating-sniffer, #bottom-toolbar, #zoom-controls, #protocol-legend, #help-modal, #playback-bar, #port-selector, #packet-inspector';
+            const PANELS = '#floating-console, #floating-ping, #floating-properties, .cli-window, #floating-browser, #floating-sniffer, #bottom-toolbar, #zoom-controls, #protocol-legend, #help-modal, #playback-bar, #port-selector, #packet-inspector, #draw-panel, #device-context-menu, .win-resize-grip';
+            const LONG_PRESS_MS = 500, LONG_PRESS_SLOP = 8;
             let ts = null, lastTap = null;
-            const synth = (type, target, x, y) => target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 }));
+            // Long press state is kept apart from ts so it also works on panel content (sniffer rows)
+            let lp = null, lpFired = false, lpSuppressUntil = 0;
+            // A touch stays bound to the element it started on. If a re-render removes that element
+            // (shapes redraw on every move, a Wi-Fi roam rebuilds the nodes) its events stop bubbling
+            // to the workspace, so the element also forwards them while it is detached.
+            let boundEl = null;
+            const fwdMove = (e) => { if (!e.currentTarget.isConnected) onTouchMove(e); };
+            const fwdEnd = (e) => { if (!e.currentTarget.isConnected) onTouchEnd(e); };
+            const fwdCancel = (e) => { if (!e.currentTarget.isConnected) onTouchCancel(e); };
+            function bindTarget(el) {
+                unbindTarget();
+                if (!el || el === WORKSPACE) return;
+                boundEl = el;
+                el.addEventListener('touchmove', fwdMove, { passive: false });
+                el.addEventListener('touchend', fwdEnd, { passive: false });
+                el.addEventListener('touchcancel', fwdCancel);
+            }
+            function unbindTarget() {
+                if (!boundEl) return;
+                boundEl.removeEventListener('touchmove', fwdMove);
+                boundEl.removeEventListener('touchend', fwdEnd);
+                boundEl.removeEventListener('touchcancel', fwdCancel);
+                boundEl = null;
+            }
+            const synth = (type, target, x, y) => target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: type === 'contextmenu' ? 2 : 0 }));
             const distance = (a, b) => Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
             const middle = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
             function doTap(target, x, y) {
@@ -11539,19 +11926,54 @@
                     synth('dblclick', target, x, y); lastTap = null;      // double-tap opens a device
                 } else { lastTap = { t: now, x, y }; }
             }
+            function cancelLongPress() { if (lp) { clearTimeout(lp.timer); lp = null; } }
+            // Long press stands in for right-click: device, link and sniffer-row menus
+            function startLongPress(target, x, y) {
+                cancelLongPress();
+                if (target.closest(INTERACTIVE) || target.closest('canvas, .win-resize-grip')) return;
+                lp = { target, x, y, timer: setTimeout(() => {
+                    const cur = lp; lp = null;
+                    if (!cur) return;
+                    // End any drag or pan quietly so the menu is not followed by a tap
+                    if (ts && ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y);
+                    ts = null;
+                    lpFired = true;
+                    lpSuppressUntil = Date.now() + 800;
+                    try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) {}
+                    synth('contextmenu', cur.target, cur.x, cur.y);
+                }, LONG_PRESS_MS) };
+            }
+            // Some Android browsers fire their own contextmenu on long press: keep only one menu
+            WORKSPACE.addEventListener('contextmenu', (e) => {
+                if (!e.isTrusted) return;
+                if (lp) { cancelLongPress(); lpFired = true; if (ts && ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y); ts = null; return; }
+                if (Date.now() < lpSuppressUntil) { e.preventDefault(); e.stopPropagation(); }
+            }, true);
             WORKSPACE.addEventListener('touchstart', (e) => {
                 document.querySelectorAll('.pal-cat.pal-open').forEach(c => c.classList.remove('pal-open'));
+                lpFired = false;
                 if (e.touches.length === 2) {
+                    cancelLongPress();
                     if (ts && ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y);
                     ts = { kind: 'pinch', d: distance(e.touches[0], e.touches[1]), m: middle(e.touches[0], e.touches[1]) };
                     e.preventDefault(); return;
                 }
-                if (e.touches.length !== 1) return;
+                if (e.touches.length !== 1) { cancelLongPress(); return; }
                 const t = e.touches[0];
                 const target = t.target || document.elementFromPoint(t.clientX, t.clientY);
                 if (!target) { ts = null; return; }
+                bindTarget(target);
+                startLongPress(target, t.clientX, t.clientY);
                 if (target.closest(INTERACTIVE)) { ts = null; return; } // native tap -> click on buttons/inputs
-                const handle = target.closest('.device-node, .text-label-node') || target.closest(HANDLES);
+                // Draw mode: a one-finger drag draws the chosen shape instead of panning
+                if (currentMode === 'draw' && drawShapeKind && !target.closest(PANELS) && !target.closest(HANDLES)) {
+                    cancelLongPress();
+                    ts = { kind: 'drag', target, startX: t.clientX, startY: t.clientY, x: t.clientX, y: t.clientY, moved: false };
+                    synth('mousedown', target, t.clientX, t.clientY);
+                    e.preventDefault(); return;
+                }
+                // Drawn shapes and their resize handles move and resize like devices
+                const handle = target.closest('.device-node, .text-label-node') || target.closest('#shapes [data-shape], #shapes [data-handle]') || target.closest(HANDLES);
                 if (handle) {
                     ts = { kind: 'drag', target, startX: t.clientX, startY: t.clientY, x: t.clientX, y: t.clientY, moved: false };
                     synth('mousedown', target, t.clientX, t.clientY);
@@ -11561,7 +11983,11 @@
                 ts = { kind: 'pan', x: t.clientX, y: t.clientY, target, moved: false };
                 e.preventDefault();
             }, { passive: false });
-            WORKSPACE.addEventListener('touchmove', (e) => {
+            function onTouchMove(e) {
+                if (lp && e.touches.length === 1) {
+                    const t0 = e.touches[0];
+                    if (Math.abs(t0.clientX - lp.x) > LONG_PRESS_SLOP || Math.abs(t0.clientY - lp.y) > LONG_PRESS_SLOP) cancelLongPress();
+                } else if (lp) cancelLongPress();
                 if (!ts) return;
                 if (ts.kind === 'pinch' && e.touches.length >= 2) {
                     const nd = distance(e.touches[0], e.touches[1]), nm = middle(e.touches[0], e.touches[1]);
@@ -11577,11 +12003,15 @@
                     synth('mousemove', document, t.clientX, t.clientY);
                     e.preventDefault();
                 } else if (ts.kind === 'pan') {
-                    view.x += t.clientX - ts.x; view.y += t.clientY - ts.y; applyView();
+                    const dx = t.clientX - ts.x, dy = t.clientY - ts.y;
+                    // Ignore finger jitter while a long press might still be building
+                    if (lp && !ts.moved && Math.abs(dx) + Math.abs(dy) < 3) { e.preventDefault(); return; }
+                    view.x += dx; view.y += dy; applyView();
                     ts.x = t.clientX; ts.y = t.clientY; ts.moved = true; didPan = true;
                     e.preventDefault();
                 }
-            }, { passive: false });
+            }
+            WORKSPACE.addEventListener('touchmove', onTouchMove, { passive: false });
             function endTouch() {
                 if (!ts) return false; // nothing we handled -> let the native tap/click through (port picker, inputs, buttons)
                 if (ts.kind === 'drag') { synth('mouseup', document, ts.x, ts.y); if (!ts.moved) doTap(ts.target, ts.x, ts.y); }
@@ -11591,9 +12021,66 @@
             }
             // Only cancel the touch when we actually drove a gesture; otherwise the browser's
             // synthetic click must fire so taps on the port selector, panel inputs and buttons work.
-            WORKSPACE.addEventListener('touchend', (e) => { if (endTouch() && e.cancelable) e.preventDefault(); }, { passive: false });
-            WORKSPACE.addEventListener('touchcancel', () => { if (ts && ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y); ts = null; });
+            // After a long press the click is always suppressed so it cannot close the menu it opened.
+            function onTouchEnd(e) {
+                cancelLongPress();
+                if (e.touches && e.touches.length === 0) unbindTarget();
+                if (lpFired) { lpFired = false; ts = null; if (e.cancelable) e.preventDefault(); return; }
+                if (endTouch() && e.cancelable) e.preventDefault();
+            }
+            function onTouchCancel() { cancelLongPress(); unbindTarget(); lpFired = false; if (ts && ts.kind === 'drag') synth('mouseup', document, ts.x, ts.y); ts = null; }
+            WORKSPACE.addEventListener('touchend', onTouchEnd, { passive: false });
+            WORKSPACE.addEventListener('touchcancel', onTouchCancel);
+
+            // Minimap: drag a finger across it to move the view
+            const mm = document.getElementById('minimap');
+            if (mm) {
+                const jumpTo = (t) => {
+                    const m = mm._map; if (!m) return;
+                    const r = mm.getBoundingClientRect();
+                    const worldX = (t.clientX - r.left - m.ox) / m.s + m.minX;
+                    const worldY = (t.clientY - r.top - m.oy) / m.s + m.minY;
+                    const rect = WORKSPACE.getBoundingClientRect();
+                    view.x = rect.width / 2 - worldX * view.scale;
+                    view.y = rect.height / 2 - worldY * view.scale;
+                    applyView();
+                };
+                mm.style.touchAction = 'none';
+                mm.addEventListener('touchstart', (e) => { if (e.touches.length !== 1) return; e.preventDefault(); jumpTo(e.touches[0]); }, { passive: false });
+                mm.addEventListener('touchmove', (e) => { if (e.touches.length !== 1) return; e.preventDefault(); jumpTo(e.touches[0]); }, { passive: false });
+            }
         })();
+
+        // --- Resize grip for floating windows ---
+        // The CSS resize corner does not work on iPadOS, so each resizable window also gets a
+        // grip driven by pointer events (works for finger, pen and mouse alike).
+        function addResizeGrip(win, minW = 320, minH = 200) {
+            if (!win || win.querySelector(':scope > .win-resize-grip')) return;
+            const grip = document.createElement('div');
+            grip.className = 'win-resize-grip';
+            grip.title = 'Drag to resize';
+            grip.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M13 5 5 13M13 9 9 13M13 1 1 13"/></svg>';
+            win.appendChild(grip);
+            grip.addEventListener('pointerdown', (e) => {
+                if (e.button !== 0 && e.pointerType === 'mouse') return;
+                e.preventDefault(); e.stopPropagation();
+                const r = win.getBoundingClientRect();
+                const sx = e.clientX, sy = e.clientY, sw = r.width, sh = r.height;
+                try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+                const move = (ev) => {
+                    const maxW = window.innerWidth - r.left - 4, maxH = window.innerHeight - r.top - 4;
+                    win.style.width = Math.max(minW, Math.min(maxW, sw + ev.clientX - sx)) + 'px';
+                    win.style.height = Math.max(minH, Math.min(maxH, sh + ev.clientY - sy)) + 'px';
+                };
+                const up = () => { grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up); };
+                grip.addEventListener('pointermove', move);
+                grip.addEventListener('pointerup', up);
+                grip.addEventListener('pointercancel', up);
+            });
+            grip.addEventListener('mousedown', (e) => e.stopPropagation());
+        }
+        addResizeGrip(document.getElementById('floating-browser'), 360, 240);
+        addResizeGrip(document.getElementById('floating-sniffer'), 480, 280);
 
         // --- Keyboard shortcuts ---
         window.addEventListener('keydown', (e) => {
@@ -12145,7 +12632,7 @@
                 ${dualHomeSectionHtml(dev)}
                 <div class="pt-2 border-t mt-4">
                     <div class="flex items-center space-x-2 mb-3 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                        <input type="checkbox" id="prop-dns-en" ${dev.dnsEnabled ? 'checked' : ''} onchange="document.getElementById('dns-settings-container').className = this.checked ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'" class="w-4 h-4 text-blue-600 rounded">
+                        <input type="checkbox" id="prop-dns-en" ${dev.dnsEnabled ? 'checked' : ''} onchange="document.getElementById('dns-settings-container').className = this.checked ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'; window.svcToggle('${dev.id}','dnsEnabled','DNS',this.checked)" class="w-4 h-4 text-blue-600 rounded">
                         <label for="prop-dns-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable DNS Service</label>
                     </div>
                     <div id="dns-settings-container" class="${dev.dnsEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'} transition-opacity space-y-2">
@@ -12154,14 +12641,11 @@
                             <div class="bg-slate-50 dark:bg-slate-900 border rounded text-[10px] font-mono max-h-32 overflow-y-auto mb-2">
                                 <table class="w-full text-left">
                                     <thead class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 sticky top-0"><tr><th class="px-2 py-1">Domain</th><th class="px-2 py-1">IP Address</th><th class="px-1 py-1 w-6"></th></tr></thead>
-                                    <tbody>
-                                        ${Object.keys(dev.records).length === 0 ? '<tr><td colspan="3" class="px-2 py-2 text-center text-slate-400">No records found</td></tr>' : 
-                                        Object.entries(dev.records).map(([domain, ip]) => `<tr><td class="px-2 py-1 border-t text-blue-600 font-bold truncate max-w-[100px] hover:text-clip hover:overflow-visible hover:whitespace-normal" title="${domain}">${domain}</td><td class="px-2 py-1 border-t">${ip}</td><td class="px-1 py-1 border-t text-center"><button onclick="window.removeDNSRecord('${dev.id}', '${domain}')" class="text-red-500 hover:text-red-700 font-bold" title="Remove Record">✕</button></td></tr>`).join('')}
-                                    </tbody>
+                                    <tbody id="dns-records-body-${dev.id}">${dnsRecordRowsHtml(dev)}</tbody>
                                 </table>
                             </div>
                             <div class="flex space-x-1">
-                                <input type="text" id="new-dns-domain" placeholder="Domain (e.g. site.com)" class="w-1/2 px-2 py-1 border rounded text-[10px] focus:outline-none focus:border-blue-500 bg-white dark:bg-slate-800">
+                                <input type="text" id="new-dns-domain" placeholder="Domain, such as site.com" class="w-1/2 px-2 py-1 border rounded text-[10px] focus:outline-none focus:border-blue-500 bg-white dark:bg-slate-800">
                                 <input type="text" id="new-dns-ip" placeholder="IP Address" class="w-1/2 px-2 py-1 border rounded text-[10px] focus:outline-none focus:border-blue-500 bg-white dark:bg-slate-800">
                                 <button onclick="window.addDNSRecord('${dev.id}')" class="px-2 py-1 bg-slate-700 text-white rounded text-[10px] font-bold hover:bg-slate-600 transition whitespace-nowrap">Add</button>
                             </div>
@@ -12638,7 +13122,7 @@
 
                     <div class="pt-2 border-t">
                         <div class="flex items-center space-x-2 mb-3 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                            <input type="checkbox" id="prop-dhcp-en" ${dev.dhcpEnabled ? 'checked' : ''} onchange="document.getElementById('dhcp-settings-container').className = this.checked ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'" class="w-4 h-4 text-blue-600 rounded">
+                            <input type="checkbox" id="prop-dhcp-en" ${dev.dhcpEnabled ? 'checked' : ''} onchange="document.getElementById('dhcp-settings-container').className = this.checked ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'; window.svcToggle('${dev.id}','dhcpEnabled','DHCP',this.checked)" class="w-4 h-4 text-blue-600 rounded">
                             <label for="prop-dhcp-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable DHCP Service</label>
                         </div>
                         
@@ -12669,7 +13153,7 @@
                                     <input type="text" id="prop-pool-dns" value="${dev.poolDns}" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
                                 </div>
                                 <div class="w-1/2">
-                                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Lease Time (s)</label>
+                                    <label class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Lease Time (seconds or "infinite")</label>
                                     <input type="text" id="prop-pool-lease" value="${dev.leaseTime}" class="w-full px-2 py-1.5 border rounded text-xs focus:outline-none focus:border-blue-500 bg-slate-50 dark:bg-slate-900">
                                 </div>
                             </div>
@@ -12685,11 +13169,8 @@
                         </div>
                         <div class="bg-slate-50 dark:bg-slate-900 border rounded text-[10px] font-mono max-h-32 overflow-y-auto">
                             <table class="w-full text-left">
-                                <thead class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 sticky top-0"><tr><th class="px-2 py-1">IP Address</th><th class="px-2 py-1">MAC Address</th></tr></thead>
-                                <tbody id="dhcp-table-body-${dev.id}">
-                                    ${Object.keys(dev.leases).length === 0 ? '<tr><td colspan="2" class="px-2 py-2 text-center text-slate-400">No active leases</td></tr>' : 
-                                    Object.entries(dev.leases).map(([ip, data]) => `<tr><td class="px-2 py-1 border-t text-pink-600 font-bold">${ip}</td><td class="px-2 py-1 border-t">${data.mac}</td></tr>`).join('')}
-                                </tbody>
+                                <thead class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 sticky top-0"><tr><th class="px-2 py-1">IP Address</th><th class="px-2 py-1">MAC Address</th><th class="px-2 py-1">Expires in</th></tr></thead>
+                                <tbody id="dhcp-table-body-${dev.id}">${dhcpServerRowsHtml(dev)}</tbody>
                             </table>
                         </div>
                     </div>
@@ -12722,7 +13203,7 @@
 
                     <div class="pt-2 border-t mt-4">
                         <div class="flex items-center space-x-2 mb-3 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                            <input type="checkbox" id="prop-http-en" ${dev.httpEnabled ? 'checked' : ''} onchange="document.getElementById('http-settings-container').className = this.checked ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'" class="w-4 h-4 text-blue-600 rounded">
+                            <input type="checkbox" id="prop-http-en" ${dev.httpEnabled ? 'checked' : ''} onchange="document.getElementById('http-settings-container').className = this.checked ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'; window.svcToggle('${dev.id}','httpEnabled','HTTP',this.checked)" class="w-4 h-4 text-blue-600 rounded">
                             <label for="prop-http-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable HTTP Web Server</label>
                         </div>
                         
@@ -12736,11 +13217,11 @@
 
                     <div class="pt-2 border-t mt-4">
                         <div class="flex items-center space-x-2 mb-2 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                            <input type="checkbox" id="prop-ftp-en" ${dev.ftpEnabled ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <input type="checkbox" id="prop-ftp-en" ${dev.ftpEnabled ? 'checked' : ''} onchange="window.svcToggle('${dev.id}','ftpEnabled','FTP',this.checked)" class="w-4 h-4 text-blue-600 rounded">
                             <label for="prop-ftp-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable FTP Server &middot; TCP 21 &middot; <span class="text-amber-600 dark:text-amber-400">cleartext</span></label>
                         </div>
                         <div class="flex items-center space-x-2 mb-3 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                            <input type="checkbox" id="prop-sftp-en" ${dev.sftpEnabled ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <input type="checkbox" id="prop-sftp-en" ${dev.sftpEnabled ? 'checked' : ''} onchange="window.svcToggle('${dev.id}','sftpEnabled','SFTP',this.checked)" class="w-4 h-4 text-blue-600 rounded">
                             <label for="prop-sftp-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable SFTP Server &middot; TCP 22 &middot; <span class="text-green-600 dark:text-green-400">encrypted</span></label>
                         </div>
                         <div class="flex space-x-2">
@@ -12758,7 +13239,7 @@
 
                     <div class="pt-2 border-t mt-4">
                         <div class="flex items-center space-x-2 mb-2 bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                            <input type="checkbox" id="prop-tftp-en" ${dev.tftpEnabled ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded">
+                            <input type="checkbox" id="prop-tftp-en" ${dev.tftpEnabled ? 'checked' : ''} onchange="window.svcToggle('${dev.id}','tftpEnabled','TFTP',this.checked)" class="w-4 h-4 text-blue-600 rounded">
                             <label for="prop-tftp-en" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Enable TFTP Server &middot; UDP 69 &middot; <span class="text-amber-600 dark:text-amber-400">no authentication</span></label>
                         </div>
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2 leading-snug">Back up a switch or router with <span class="font-mono">copy running-config tftp:</span> and restore with <span class="font-mono">copy tftp: running-config</span>, using server address <span class="font-mono">${dev.ip}</span>.</p>
@@ -12892,7 +13373,8 @@
                         btnHtml += `<button onclick="window.savePCSettings('${dev.id}')" id="btn-save-pc" class="w-full py-2 mt-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition-colors shadow-sm">Save IP Settings</button>`;
                     }
                     if (dev.ipMode === 'dhcp') {
-                        btnHtml += `<button onclick="devices['${dev.id}'].requestDHCP()" class="w-full py-2 mt-1 bg-pink-600 hover:bg-pink-500 text-white rounded text-xs font-bold transition-colors shadow-sm">Renew DHCP Lease</button>`;
+                        btnHtml += `<div id="dhcp-lease-status-${dev.id}" class="text-[10px] mt-2 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${dhcpClientStatusHtml(dev)}</div>`;
+                        btnHtml += `<div class="flex gap-1 mt-1"><button onclick="window.dhcpRenewNow('${dev.id}')" class="flex-1 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded text-xs font-bold transition-colors shadow-sm">Renew Lease</button><button onclick="window.dhcpReleaseNow('${dev.id}')" class="flex-1 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs font-bold transition-colors shadow-sm">Release</button></div>`;
                     }
                     baseBlock.insertAdjacentHTML('beforeend', btnHtml);
                 }
@@ -12906,6 +13388,8 @@
             }
         };
 
+        window.dhcpReleaseNow = (id) => { const d = devices[id]; if (d) dhcpClientRelease(d); };
+        window.dhcpRenewNow = (id) => { const d = devices[id]; if (d) dhcpClientRenew(d); };
         window.setIpMode = (id, mode) => {
             const dev = devices[id];
             if (dev && (dev.type === 'PC' || dev.type === 'Laptop' || dev.type === 'DNSServer')) {
@@ -12938,6 +13422,17 @@
             log(`[${dev.name}] Configuration saved.`);
         };
         
+        // Service checkboxes take effect as soon as they are ticked (Save still applies the other fields)
+        window.svcToggle = (id, prop, label, on) => {
+            const d = devices[id]; if (!d) return;
+            d[prop] = !!on;
+            log(`[${d.name}] ${label} service ${on ? 'enabled' : 'disabled'}.`, on ? 'success' : 'warning');
+            try { scheduleAutosave(); } catch (e) {}
+        };
+        const dnsRecordRowsHtml = (dev) => Object.keys(dev.records).length === 0 ? '<tr><td colspan="3" class="px-2 py-2 text-center text-slate-400">No records found</td></tr>' :
+            Object.entries(dev.records).map(([domain, ip]) => `<tr><td class="px-2 py-1 border-t text-blue-600 font-bold truncate max-w-[100px] hover:text-clip hover:overflow-visible hover:whitespace-normal" title="${domain}">${domain}</td><td class="px-2 py-1 border-t">${ip}</td><td class="px-1 py-1 border-t text-center"><button onclick="window.removeDNSRecord('${dev.id}', '${domain.replace(/'/g, "\\'")}')" class="text-red-500 hover:text-red-700 font-bold" title="Remove Record">\u2715</button></td></tr>`).join('');
+        // Redraw only the record table, so unsaved edits elsewhere in the panel are kept
+        const refreshDnsRecords = (dev) => { const tb = document.getElementById(`dns-records-body-${dev.id}`); if (tb) tb.innerHTML = dnsRecordRowsHtml(dev); else updatePropertiesPanel(); };
         window.addDNSRecord = (id) => {
             const dev = devices[id];
             if (!dev || dev.type !== 'DNSServer') return;
@@ -12946,8 +13441,11 @@
             const ip = document.getElementById('new-dns-ip').value.trim();
             
             if (domain && ip) {
+                if (!/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(ip) || ip.split('.').some(o => +o > 255)) { log(`[${dev.name}] "${ip}" is not a valid IPv4 address.`, 'warning'); return; }
                 dev.records[domain] = ip;
-                updatePropertiesPanel();
+                refreshDnsRecords(dev);
+                document.getElementById('new-dns-domain').value = ''; document.getElementById('new-dns-ip').value = '';
+                try { scheduleAutosave(); } catch (e) {}
                 log(`[${dev.name}] Added DNS Record: ${domain} -> ${ip}`);
             } else {
                 log(`[${dev.name}] Both Domain and IP Address are required to add a record.`, 'warning');
@@ -12959,7 +13457,8 @@
             if (!dev || dev.type !== 'DNSServer') return;
             
             delete dev.records[domain];
-            updatePropertiesPanel();
+            refreshDnsRecords(dev);
+            try { scheduleAutosave(); } catch (e) {}
             log(`[${dev.name}] Removed DNS Record: ${domain}`);
         };
 
@@ -13082,6 +13581,8 @@
             if (devices[id]) {
                 devices[id].leases = {};
                 log(`[${devices[id].name}] DHCP leases cleared.`, 'info');
+                const tb = document.getElementById(`dhcp-table-body-${id}`);
+                if (tb) { tb.innerHTML = dhcpServerRowsHtml(devices[id]); return; }
             }
             updatePropertiesPanel(true);
         };
